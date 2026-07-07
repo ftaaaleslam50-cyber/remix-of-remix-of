@@ -135,25 +135,51 @@ function BookingPage() {
     queryKey: ["buses", tripId],
     enabled: !!tripId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("*").eq("trip_id", tripId!).eq("active", true).order("bus_number");
+      const { data, error } = await supabase
+        .from("buses")
+        .select("*")
+        .eq("trip_id", tripId!)
+        .in("status", ["active"])
+        .order("is_active_booking", { ascending: false })
+        .order("priority", { ascending: true })
+        .order("bus_number", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Bus[];
+      return (data ?? []) as unknown as (Bus & { name?: string | null; status?: string; priority?: number; is_active_booking?: boolean })[];
     },
   });
 
-  const activeBus = buses[0] ?? null;
-
-  const { data: bookedSeats = [] } = useQuery({
-    queryKey: ["booked_seats", activeBus?.id, editingCode],
-    enabled: !!activeBus?.id,
+  // Load reserved-seat counts for all candidate buses to pick the first with room.
+  const { data: busReserved = {} } = useQuery({
+    queryKey: ["bus_reserved_all", tripId, editingCode],
+    enabled: !!tripId && buses.length > 0,
     queryFn: async () => {
-      let q = supabase.from("bookings").select("seat_numbers,booking_code").eq("bus_id", activeBus!.id).neq("status", "cancelled");
+      let q = supabase.from("bookings").select("bus_id,seat_numbers,booking_code").eq("trip_id", tripId!).neq("status", "cancelled");
       if (editingCode) q = q.neq("booking_code", editingCode);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []).flatMap((b: { seat_numbers: string[] }) => b.seat_numbers);
+      const map: Record<string, string[]> = {};
+      for (const b of (data ?? []) as { bus_id: string; seat_numbers: string[] }[]) {
+        if (!b.bus_id) continue;
+        (map[b.bus_id] ??= []).push(...(b.seat_numbers ?? []));
+      }
+      return map;
     },
   });
+
+  // Auto-assign: first bus with enough free seats, respecting priority ordering.
+  const activeBus = useMemo(() => {
+    for (const b of buses) {
+      const cap = b.capacity ?? 49;
+      const blocked = (b.blocked_seats ?? ["A2"]).length;
+      const used = (busReserved[b.id] ?? []).length;
+      const free = cap - blocked - used;
+      if (free >= passengerCount) return b;
+    }
+    return buses[0] ?? null;
+  }, [buses, busReserved, passengerCount]);
+
+  const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
+  const remainingSeats = activeBus ? (activeBus.capacity ?? 49) - ((activeBus.blocked_seats ?? ["A2"]).length) - bookedSeats.length : 0;
 
   useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
   useEffect(() => { if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount)); }, [passengerCount]);
@@ -415,6 +441,7 @@ function BookingPage() {
                   reserved={bookedSeats}
                   onChange={setSeats}
                   bus={activeBus}
+                  remainingSeats={remainingSeats}
                   mode={seatMode}
                   onModeChange={(m) => {
                     setSeatMode(m);
@@ -673,13 +700,18 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
   );
 }
 
-function StepSeats({ count, seats, reserved, onChange, bus, mode, onModeChange }: {
-  count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: Bus | null;
+function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode, onModeChange }: {
+  count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: (Bus & { name?: string | null }) | null;
+  remainingSeats: number;
   mode: "manual" | "random"; onModeChange: (m: "manual" | "random") => void;
 }) {
+  const busLabel = bus?.name || `الحافلة رقم ${bus?.bus_number ?? 1}`;
   return (
     <div>
-      <StepHeader title="اختر مقاعدك" desc={`اختر ${count} ${count === 1 ? "مقعد" : "مقاعد"} في الحافلة رقم ${bus?.bus_number ?? 1}`} />
+      <StepHeader title="اختر مقاعدك" desc={`اختر ${count} ${count === 1 ? "مقعد" : "مقاعد"} في ${busLabel}`} />
+      <div className="mb-4 rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-3 text-sm text-center font-semibold">
+        🚌 حافلتك: <span className="text-primary">{busLabel}</span> — <span className="text-primary">{remainingSeats}</span> مقعد متبقٍ
+      </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
         <button onClick={() => onModeChange("manual")}
