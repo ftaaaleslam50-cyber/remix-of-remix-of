@@ -441,6 +441,7 @@ function BookingPage() {
                   reserved={bookedSeats}
                   onChange={setSeats}
                   bus={activeBus}
+                  remainingSeats={remainingSeats}
                   mode={seatMode}
                   onModeChange={(m) => {
                     setSeatMode(m);
