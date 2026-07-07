@@ -1,0 +1,880 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import {
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+  Plus,
+  Star,
+  Upload,
+  Users,
+  User,
+  Calendar,
+  Loader2,
+  X,
+  Package as PackageIcon,
+  Ticket,
+  Shuffle,
+  MousePointerClick,
+} from "lucide-react";
+
+import { SiteLayout } from "@/components/site/SiteLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { BusSeatMap, pickRandomSeats } from "@/components/booking/BusSeatMap";
+import { supabase } from "@/integrations/supabase/client";
+import { BRAND } from "@/lib/brand";
+import { sar } from "@/lib/format";
+import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
+import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
+
+export const Route = createFileRoute("/booking")({
+  head: () => ({
+    meta: [
+      { title: `الحجز | ${BRAND.name}` },
+      { name: "description", content: "احجز رحلة العمرة الخاصة بك — باقات مرنة، مقاعد محددة، تأكيد فوري." },
+    ],
+  }),
+  component: BookingPage,
+});
+
+// Steps are dynamic — "نوع الغرفة" is removed when the transport-only package is chosen.
+const FULL_STEPS = [
+  "نوع الحجز",
+  "عدد الأفراد",
+  "الباقة",
+  "نوع الغرفة",
+  "الرحلة",
+  "المقاعد",
+  "البيانات",
+  "التأكيد",
+] as const;
+const TRANSPORT_STEPS = [
+  "نوع الحجز",
+  "عدد الأفراد",
+  "الباقة",
+  "الرحلة",
+  "المقاعد",
+  "البيانات",
+  "التأكيد",
+] as const;
+
+function isTransportPackage(pkg: { slug?: string; tier?: string; name?: string } | null | undefined): boolean {
+  if (!pkg) return false;
+  const s = (pkg.slug ?? "").toLowerCase();
+  const t = (pkg.tier ?? "").toLowerCase();
+  if (s.includes("transport") || s === "bus" || s.includes("مواصلات")) return true;
+  if (t === "transport" || t === "bus") return true;
+  return (pkg.name ?? "").includes("مواصلات فقط");
+}
+
+function BookingPage() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+
+  const [bookingType, setBookingType] = useState<BookingType | null>(null);
+  const [passengerCount, setPassengerCount] = useState(1);
+  const [packageId, setPackageId] = useState<string | null>(null);
+  const [roomType, setRoomType] = useState<RoomType>("5");
+  const [tripId, setTripId] = useState<string | null>(null);
+  const [seatMode, setSeatMode] = useState<"manual" | "random">("manual");
+  const [seats, setSeats] = useState<string[]>([]);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    prize_type: "percent" | "fixed";
+    prize_value: number;
+    label?: string | null;
+  } | null>(null);
+  const [customer, setCustomer] = useState({
+    customer_name: "",
+    id_number: "",
+    contact_phone: "",
+    whatsapp_phone: "",
+    same_whatsapp: true,
+  });
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingCode, setEditingCode] = useState<string | null>(null);
+
+  const { data: packages = [] } = useQuery({
+    queryKey: ["packages"],
+    queryFn: async () => {
+      const { data } = await supabase.from("packages" as never).select("*").eq("active", true).order("display_order");
+      return ((data as unknown as Package[]) ?? []);
+    },
+  });
+
+  const { data: pricing = [] } = useQuery({
+    queryKey: ["pricing_matrix"],
+    queryFn: async () => {
+      const { data } = await supabase.from("pricing_matrix" as never).select("*").eq("active", true);
+      return ((data as unknown as PricingCell[]) ?? []);
+    },
+  });
+
+  const { data: trips = [] } = useQuery({
+    queryKey: ["trips"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("*").eq("active", true).order("display_order");
+      if (error) throw error;
+      return (data ?? []) as Trip[];
+    },
+  });
+
+  const { data: buses = [] } = useQuery({
+    queryKey: ["buses", tripId],
+    enabled: !!tripId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("buses").select("*").eq("trip_id", tripId!).eq("active", true).order("bus_number");
+      if (error) throw error;
+      return (data ?? []) as Bus[];
+    },
+  });
+
+  const activeBus = buses[0] ?? null;
+
+  const { data: bookedSeats = [] } = useQuery({
+    queryKey: ["booked_seats", activeBus?.id, editingCode],
+    enabled: !!activeBus?.id,
+    queryFn: async () => {
+      let q = supabase.from("bookings").select("seat_numbers,booking_code").eq("bus_id", activeBus!.id).neq("status", "cancelled");
+      if (editingCode) q = q.neq("booking_code", editingCode);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []).flatMap((b: { seat_numbers: string[] }) => b.seat_numbers);
+    },
+  });
+
+  useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
+  useEffect(() => { if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount)); }, [passengerCount]);
+  useEffect(() => {
+    if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
+  }, [customer.same_whatsapp, customer.contact_phone]);
+
+  // Apply pending coupon from wheel
+  useEffect(() => {
+    const pending = typeof window !== "undefined" ? localStorage.getItem("pending_coupon") : null;
+    if (pending) {
+      setCouponInput(pending);
+      localStorage.removeItem("pending_coupon");
+    }
+  }, []);
+
+  // Prefill from an existing booking when the user clicks "تعديل الحجز" on the ticket page.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const editCode = localStorage.getItem("edit_booking_code");
+    if (!editCode) return;
+    localStorage.removeItem("edit_booking_code");
+    (async () => {
+      const { data } = await supabase
+        .from("bookings")
+        .select("booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code")
+        .eq("booking_code", editCode)
+        .maybeSingle();
+      if (!data) return;
+      setBookingType(data.booking_type as BookingType);
+      setPassengerCount(data.passenger_count);
+      setRoomType((data.room_type ?? "5") as RoomType);
+      setPackageId(data.package_id ?? null);
+      setTripId(data.trip_id ?? null);
+      setSeats(data.seat_numbers ?? []);
+      setCustomer((c) => ({
+        ...c,
+        customer_name: data.customer_name ?? "",
+        id_number: data.id_number ?? "",
+        contact_phone: data.contact_phone ?? "",
+        whatsapp_phone: data.whatsapp_phone ?? "",
+        same_whatsapp: (data.contact_phone ?? "") === (data.whatsapp_phone ?? ""),
+      }));
+      if (data.coupon_code) setCouponInput(data.coupon_code);
+      setEditingCode(editCode);
+      toast.info("تم تحميل بيانات الحجز — سيتم تحديث نفس الحجز عند التأكيد");
+    })();
+  }, []);
+
+  const selectedPackage = packages.find((p) => p.id === packageId) ?? null;
+  const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
+  const transportOnly = isTransportPackage(selectedPackage);
+  const STEPS: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
+  const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
+
+  // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
+  useEffect(() => {
+    if (step > STEPS.length - 1) setStep(STEPS.length - 1);
+  }, [STEPS.length, step]);
+
+  const pricePerPerson = useMemo(
+    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing),
+    [selectedPackage, roomType, passengerCount, pricing]
+  );
+
+  const subtotal = pricePerPerson * passengerCount;
+  const discount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.prize_type === "percent") return Math.round(subtotal * (appliedCoupon.prize_value / 100));
+    return Math.min(appliedCoupon.prize_value, subtotal);
+  }, [appliedCoupon, subtotal]);
+  const total = Math.max(0, subtotal - discount);
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    const { data } = await supabase.from("coupons" as never).select("*").eq("code", code).maybeSingle();
+    const c = data as unknown as {
+      code: string; prize_type: "percent" | "fixed"; prize_value: number;
+      used: boolean; expiry_date: string; label?: string | null;
+      active?: boolean; max_uses?: number | null; usage_count?: number;
+    } | null;
+    if (!c) { toast.error("الكود غير موجود"); setAppliedCoupon(null); return; }
+    if (c.active === false) { toast.error("الكود معطّل"); setAppliedCoupon(null); return; }
+    if (new Date(c.expiry_date) < new Date()) { toast.error("الكود منتهي الصلاحية"); setAppliedCoupon(null); return; }
+    // Multi-use enforcement: if max_uses is set, allow while usage_count < max_uses;
+    // otherwise fall back to single-use `used` flag.
+    if (c.max_uses != null) {
+      if ((c.usage_count ?? 0) >= c.max_uses) { toast.error("تم استنفاد استخدامات الكود"); setAppliedCoupon(null); return; }
+    } else if (c.used) {
+      toast.error("الكود مستخدم مسبقاً"); setAppliedCoupon(null); return;
+    }
+    setAppliedCoupon({ code: c.code, prize_type: c.prize_type, prize_value: Number(c.prize_value), label: c.label });
+    toast.success("تم تطبيق كود الخصم");
+  }
+
+  function canProceed(): boolean {
+    switch (stepName) {
+      case "نوع الحجز": return !!bookingType;
+      case "عدد الأفراد": return passengerCount > 0;
+      case "الباقة": return !!packageId;
+      case "نوع الغرفة": return !!roomType;
+      case "الرحلة": return !!tripId;
+      case "المقاعد": return seats.length === passengerCount;
+      case "البيانات":
+        return (
+          customer.customer_name.trim().length > 1 &&
+          customer.id_number.trim().length > 3 &&
+          /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
+          /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
+          (!!idFile || !!editingCode)
+        );
+      default: return true;
+    }
+  }
+
+  async function uploadIdImage(): Promise<string | null> {
+    if (!idFile) return null;
+    const ext = idFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("id-uploads").upload(path, idFile, {
+      contentType: idFile.type, cacheControl: "3600",
+    });
+    if (error) throw error;
+    return path;
+  }
+
+  function generateBookingCode(): string {
+    const year = new Date().getFullYear();
+    const n = Math.floor(Math.random() * 900000 + 100000);
+    return `ZT-${year}-${n}`;
+  }
+
+  async function submitBooking() {
+    if (!activeBus || !selectedTrip || !selectedPackage) return;
+    setSubmitting(true);
+    try {
+      const id_image_url = await uploadIdImage();
+      const code = editingCode ?? generateBookingCode();
+
+      const payload = {
+        booking_code: code,
+        booking_type: bookingType!,
+        passenger_count: passengerCount,
+        room_type: roomType,
+        package_id: selectedPackage.id,
+        trip_id: tripId!,
+        bus_id: activeBus.id,
+        seat_numbers: seats,
+        customer_name: customer.customer_name.trim(),
+        id_number: customer.id_number.trim(),
+        contact_phone: customer.contact_phone.trim(),
+        whatsapp_phone: customer.whatsapp_phone.trim(),
+        // Only overwrite id_image_url when a new file was uploaded (edit mode may keep the old one).
+        ...(id_image_url ? { id_image_url } : {}),
+        price_per_person: pricePerPerson,
+        total_price: total,
+        coupon_code: appliedCoupon?.code ?? null,
+        discount_amount: discount,
+        status: "confirmed",
+      };
+
+      let bookingId: string | null = null;
+      if (editingCode) {
+        // UPDATE existing booking — no duplicates.
+        const { data: updated, error } = await supabase
+          .from("bookings")
+          .update(payload as never)
+          .eq("booking_code", editingCode)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        bookingId = (updated as { id: string } | null)?.id ?? null;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from("bookings")
+          .insert(payload as never)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        bookingId = (inserted as { id: string } | null)?.id ?? null;
+      }
+
+      // Increment coupon usage; mark used when limit reached or single-use.
+      if (appliedCoupon && bookingId && !editingCode) {
+        const { data: cur } = await supabase.from("coupons" as never)
+          .select("usage_count,max_uses")
+          .eq("code", appliedCoupon.code)
+          .maybeSingle();
+        const c = cur as unknown as { usage_count: number; max_uses: number | null } | null;
+        const nextCount = (c?.usage_count ?? 0) + 1;
+        const nowUsed = c?.max_uses == null ? true : nextCount >= c.max_uses;
+        await supabase.from("coupons" as never)
+          .update({
+            usage_count: nextCount,
+            used: nowUsed,
+            used_in_booking_id: bookingId,
+          } as never)
+          .eq("code", appliedCoupon.code);
+      }
+
+      const cache = {
+        booking_code: code,
+        booking_type: bookingType,
+        passenger_count: passengerCount,
+        room_type: roomType,
+        customer_name: customer.customer_name.trim(),
+        id_number: customer.id_number.trim(),
+        contact_phone: customer.contact_phone.trim(),
+        whatsapp_phone: customer.whatsapp_phone.trim(),
+        seat_numbers: seats,
+        price_per_person: pricePerPerson,
+        total_price: total,
+        discount_amount: discount,
+        coupon_code: appliedCoupon?.code ?? null,
+        id_image_url,
+        created_at: new Date().toISOString(),
+        packages: selectedPackage ? { name: selectedPackage.name } : null,
+        trips: selectedTrip ? { name: selectedTrip.name, departure_day: selectedTrip.departure_day, return_day: selectedTrip.return_day } : null,
+        buses: activeBus ? { bus_number: activeBus.bus_number } : null,
+      };
+      try { localStorage.setItem(`booking:${code}`, JSON.stringify(cache)); } catch { /* ignore */ }
+      toast.success(editingCode ? "تم تحديث الحجز بنجاح 🌹" : "تم تأكيد الحجز بنجاح 🌹");
+      setEditingCode(null);
+      navigate({ to: "/ticket/$code", params: { code } });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "حدث خطأ";
+      toast.error("تعذر إتمام الحجز: " + msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <SiteLayout>
+      <section className="relative">
+        <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-navy)" }} />
+        <div className="container-luxe py-14 text-white">
+          <h1 className="text-3xl md:text-5xl font-extrabold">احجز رحلتك للعمرة</h1>
+          <p className="mt-3 text-white/75 max-w-2xl">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
+        </div>
+      </section>
+
+      <section className="container-luxe -mt-8 relative z-10 pb-40">
+        <Stepper steps={STEPS} step={step} />
+
+        <div className="surface-card p-6 md:p-10 mt-6 min-h-[400px]">
+          <AnimatePresence mode="wait">
+            <motion.div key={stepName} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+              {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
+              {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
+              {stepName === "الباقة" && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
+              {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
+              {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
+              {stepName === "المقاعد" && (
+                <StepSeats
+                  count={passengerCount}
+                  seats={seats}
+                  reserved={bookedSeats}
+                  onChange={setSeats}
+                  bus={activeBus}
+                  mode={seatMode}
+                  onModeChange={(m) => {
+                    setSeatMode(m);
+                    if (m === "random") {
+                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"]);
+                      setSeats(auto);
+                    }
+                  }}
+                />
+              )}
+              {stepName === "البيانات" && <StepCustomer customer={customer} setCustomer={setCustomer} idFile={idFile} setIdFile={setIdFile} />}
+              {stepName === "التأكيد" && (
+                <StepConfirm
+                  bookingType={bookingType}
+                  passengerCount={passengerCount}
+                  roomType={roomType}
+                  transportOnly={transportOnly}
+                  pkg={selectedPackage}
+                  trip={selectedTrip}
+                  seats={seats}
+                  customer={customer}
+                  pricePerPerson={pricePerPerson}
+                  subtotal={subtotal}
+                  discount={discount}
+                  total={total}
+                  busNumber={activeBus?.bus_number ?? 1}
+                  couponInput={couponInput}
+                  setCouponInput={setCouponInput}
+                  appliedCoupon={appliedCoupon}
+                  applyCoupon={applyCoupon}
+                  clearCoupon={() => { setAppliedCoupon(null); setCouponInput(""); }}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-10 flex items-center justify-between">
+            <Button variant="outline" size="lg" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-full">
+              <ChevronRight className="h-4 w-4 ml-1" />
+              السابق
+            </Button>
+            {step < STEPS.length - 1 ? (
+              <Button size="lg" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full" disabled={!canProceed()} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+                التالي
+                <ChevronLeft className="h-4 w-4 mr-1" />
+              </Button>
+            ) : (
+              <Button size="lg" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full" disabled={submitting} onClick={submitBooking}>
+                {submitting && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
+                تأكيد الحجز
+                <Check className="h-4 w-4 mr-2" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <PriceBar
+        packageName={selectedPackage?.name}
+        passengerCount={passengerCount}
+        roomType={roomType}
+        tripName={selectedTrip?.name}
+        pricePerPerson={pricePerPerson}
+        subtotal={subtotal}
+        discount={discount}
+        total={total}
+      />
+    </SiteLayout>
+  );
+}
+
+function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
+  return (
+    <div className="surface-card p-4 md:p-5 overflow-x-auto">
+      <ol className="flex items-center gap-2 min-w-max">
+        {steps.map((label, i) => {
+          const active = i === step;
+          const done = i < step;
+          return (
+            <li key={label} className="flex items-center gap-2">
+              <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}>
+                {done ? <Check className="h-4 w-4" /> : i + 1}
+              </div>
+              <span className={`text-xs md:text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+              {i < steps.length - 1 && <div className="h-[2px] w-8 bg-border" />}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function StepHeader({ title, desc }: { title: string; desc?: string }) {
+  return (
+    <div className="mb-6">
+      <h2 className="text-2xl font-extrabold text-[color:var(--color-navy)]">{title}</h2>
+      {desc && <p className="mt-2 text-muted-foreground">{desc}</p>}
+    </div>
+  );
+}
+
+function StepBookingType({ value, onChange }: { value: BookingType | null; onChange: (v: BookingType) => void }) {
+  const options: { value: BookingType; label: string; desc: string; icon: typeof User }[] = [
+    { value: "individual", label: "أفراد", desc: "حجز بمقعد فردي في غرفة خماسية مشتركة", icon: User },
+    { value: "family", label: "عوائل", desc: "حجز عائلي مع اختيار نوع الغرفة", icon: Users },
+  ];
+  return (
+    <div>
+      <StepHeader title="نوع الحجز" desc="اختر طريقة الحجز التي تناسبك" />
+      <div className="grid sm:grid-cols-2 gap-4">
+        {options.map((o) => {
+          const active = value === o.value;
+          return (
+            <button key={o.value} type="button" onClick={() => onChange(o.value)} className={`text-right rounded-3xl border-2 p-6 transition-all bg-white ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.02]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-soft)]"}`}>
+              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${active ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+                <o.icon className="h-7 w-7" />
+              </div>
+              <h3 className="mt-4 text-xl font-extrabold">{o.label}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{o.desc}</p>
+              {active && <div className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepCount({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div>
+      <StepHeader title="عدد الأفراد" desc="يرجى تحديد عدد الأفراد" />
+      <div className="mx-auto max-w-sm surface-card p-6 flex items-center justify-between">
+        <Button size="icon" variant="outline" className="h-12 w-12 rounded-full" onClick={() => onChange(Math.max(1, value - 1))}><Minus className="h-5 w-5" /></Button>
+        <div className="text-center">
+          <p className="text-5xl font-extrabold text-[color:var(--color-navy)]">{value}</p>
+          <p className="text-xs text-muted-foreground mt-1">عدد المقاعد المطلوبة</p>
+        </div>
+        <Button size="icon" className="h-12 w-12 rounded-full btn-primary-glow" onClick={() => onChange(Math.min(48, value + 1))}><Plus className="h-5 w-5" /></Button>
+      </div>
+    </div>
+  );
+}
+
+function StepPackage({ packages, pricing, value, onChange, passengerCount, roomType }: {
+  packages: Package[]; pricing: PricingCell[]; value: string | null; onChange: (id: string) => void;
+  passengerCount: number; roomType: RoomType;
+}) {
+  const [openPkg, setOpenPkg] = useState<Package | null>(null);
+  return (
+    <div>
+      <StepHeader title="اختر الباقة" desc="اختر الباقة الأنسب لرحلتك" />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {packages.map((p) => {
+          const active = value === p.id;
+          const price = getPackagePrice(p, roomType, passengerCount, pricing);
+          return (
+            <div key={p.id} onClick={() => onChange(p.id)}
+              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]"}`}>
+              <div className="relative h-40 overflow-hidden" style={{ background: "var(--gradient-navy)" }}>
+                {p.image_url ? (
+                  <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-white/60"><PackageIcon className="h-14 w-14" /></div>
+                )}
+                {p.tier && p.tier !== "basic" && p.tier !== "economy" && (
+                  <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
+                    {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                  </div>
+                )}
+                {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
+              </div>
+              <div className="p-5 text-center">
+                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{p.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.description}</p>
+                <p className="mt-3 text-primary font-extrabold text-xl">{sar(price)} <span className="text-xs text-muted-foreground font-normal">للفرد</span></p>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setOpenPkg(p); }} className="mt-3 text-xs font-semibold text-[color:var(--color-navy)] underline-offset-2 hover:underline">التفاصيل</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
+        <DialogContent className="max-w-2xl">
+          {openPkg && (
+            <>
+              <DialogHeader><DialogTitle className="text-2xl">{openPkg.name}</DialogTitle></DialogHeader>
+              {openPkg.image_url && <img src={openPkg.image_url} alt={openPkg.name} className="rounded-xl w-full h-64 object-cover" />}
+              <p className="text-muted-foreground">{openPkg.description}</p>
+              {openPkg.includes?.length > 0 && (
+                <ul className="grid grid-cols-2 gap-2 text-sm">
+                  {openPkg.includes.map((it, i) => (
+                    <li key={i} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" />{it}</li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-lg font-bold text-primary">{sar(getPackagePrice(openPkg, roomType, passengerCount, pricing))} للفرد</p>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: RoomType) => void; forced: boolean }) {
+  const rooms: RoomType[] = ["1", "2", "3", "4", "5"];
+  return (
+    <div>
+      <StepHeader title="نوع الغرفة" desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة" : "اختر نوع الغرفة المناسبة لعائلتك"} />
+      {forced && <div className="mb-4 rounded-2xl bg-accent/60 border border-[color:var(--color-gold)]/40 p-4 text-sm">🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة.</div>}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {rooms.map((r) => {
+          const active = value === r;
+          return (
+            <button key={r} type="button" disabled={forced && r !== "5"} onClick={() => onChange(r)}
+              className={`rounded-2xl border-2 p-5 text-center bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"} ${forced && r !== "5" ? "opacity-40 cursor-not-allowed" : ""}`}>
+              <p className="text-lg font-extrabold">{ROOM_LABEL[r]}</p>
+              <p className="text-xs text-muted-foreground mt-1">{r} {r === "1" ? "شخص" : "أشخاص"}</p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | null; onChange: (id: string) => void }) {
+  return (
+    <div>
+      <StepHeader title="اختر الرحلة" desc="حدد موعد الرحلة المناسب" />
+      <div className="grid md:grid-cols-2 gap-4">
+        {trips.map((t) => {
+          const active = value === t.id;
+          return (
+            <button key={t.id} type="button" onClick={() => onChange(t.id)}
+              className={`text-right rounded-3xl border-2 p-6 bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"}`}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
+                  <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
+                  <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    الذهاب: {t.departure_day} • العودة: {t.return_day}
+                  </div>
+                </div>
+                {active && <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepSeats({ count, seats, reserved, onChange, bus, mode, onModeChange }: {
+  count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: Bus | null;
+  mode: "manual" | "random"; onModeChange: (m: "manual" | "random") => void;
+}) {
+  return (
+    <div>
+      <StepHeader title="اختر مقاعدك" desc={`اختر ${count} ${count === 1 ? "مقعد" : "مقاعد"} في الحافلة رقم ${bus?.bus_number ?? 1}`} />
+
+      <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
+        <button onClick={() => onModeChange("manual")}
+          className={`rounded-2xl border-2 p-4 transition-all ${mode === "manual" ? "border-primary bg-primary/5" : "border-border"}`}>
+          <MousePointerClick className="h-6 w-6 mx-auto text-primary" />
+          <p className="mt-2 font-bold text-sm">اختيار يدوي</p>
+        </button>
+        <button onClick={() => onModeChange("random")}
+          className={`rounded-2xl border-2 p-4 transition-all ${mode === "random" ? "border-primary bg-primary/5" : "border-border"}`}>
+          <Shuffle className="h-6 w-6 mx-auto text-primary" />
+          <p className="mt-2 font-bold text-sm">اختيار عشوائي</p>
+        </button>
+      </div>
+
+      <div className="rounded-2xl bg-accent/40 border border-border p-4 mb-6 flex items-center justify-between">
+        <div className="font-semibold">
+          المقاعد المختارة: <span className="text-primary">{seats.length} من {count}</span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {seats.map((s) => <Badge key={s} variant="secondary" className="font-bold">{s}</Badge>)}
+        </div>
+      </div>
+      <div className="max-w-md mx-auto">
+        <BusSeatMap
+          selected={seats}
+          reserved={reserved}
+          maxSelectable={count}
+          onChange={onChange}
+          blocked={bus?.blocked_seats ?? ["A2"]}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
+  customer: { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; same_whatsapp: boolean };
+  setCustomer: (c: typeof customer) => void; idFile: File | null; setIdFile: (f: File | null) => void;
+}) {
+  return (
+    <div>
+      <StepHeader title="بيانات الحجز" desc="أدخل بيانات صاحب الحجز" />
+      <div className="grid md:grid-cols-2 gap-5 max-w-3xl">
+        <div>
+          <Label className="font-semibold">الاسم الكامل</Label>
+          <Input className="mt-2 h-12 rounded-xl" value={customer.customer_name} onChange={(e) => setCustomer({ ...customer, customer_name: e.target.value })} placeholder="الاسم الثلاثي" />
+        </div>
+        <div>
+          <Label className="font-semibold">رقم الهوية / الإقامة / الجواز</Label>
+          <Input className="mt-2 h-12 rounded-xl" value={customer.id_number} onChange={(e) => setCustomer({ ...customer, id_number: e.target.value })} placeholder="1XXXXXXXXX" />
+        </div>
+        <div>
+          <Label className="font-semibold">رقم جوال الاتصال</Label>
+          <Input dir="ltr" className="mt-2 h-12 rounded-xl text-right" value={customer.contact_phone} onChange={(e) => setCustomer({ ...customer, contact_phone: e.target.value })} placeholder="05XXXXXXXX" />
+        </div>
+        <div>
+          <Label className="font-semibold">رقم واتساب</Label>
+          <Input dir="ltr" disabled={customer.same_whatsapp} className="mt-2 h-12 rounded-xl text-right disabled:opacity-60" value={customer.whatsapp_phone} onChange={(e) => setCustomer({ ...customer, whatsapp_phone: e.target.value })} placeholder="05XXXXXXXX" />
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <Checkbox checked={customer.same_whatsapp} onCheckedChange={(v) => setCustomer({ ...customer, same_whatsapp: !!v })} />
+            رقم الواتساب هو نفسه رقم التواصل
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-6 max-w-3xl">
+        <Label className="font-semibold">رفع صورة الهوية</Label>
+        <IdUploader file={idFile} onChange={setIdFile} />
+      </div>
+    </div>
+  );
+}
+
+function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File | null) => void }) {
+  const [dragging, setDragging] = useState(false);
+  return (
+    <label
+      className={`mt-2 block rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)}
+      onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) onChange(f); }}
+    >
+      <input type="file" className="hidden" accept="image/jpeg,image/png,application/pdf" onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
+      {file ? (
+        <div className="flex flex-col items-center gap-2">
+          <CheckCircle2 className="h-10 w-10 text-success" />
+          <p className="font-semibold">{file.name}</p>
+          <p className="text-xs text-muted-foreground">{Math.round(file.size / 1024)} KB</p>
+          <button type="button" onClick={(e) => { e.preventDefault(); onChange(null); }} className="text-xs font-semibold text-primary inline-flex items-center gap-1">
+            <X className="h-3 w-3" /> إزالة
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <Upload className="h-10 w-10" />
+          <p className="font-semibold text-foreground">اسحب الملف هنا أو اضغط للاختيار</p>
+          <p className="text-xs">JPG / PNG / PDF — حتى 10MB</p>
+        </div>
+      )}
+    </label>
+  );
+}
+
+function StepConfirm(props: {
+  bookingType: BookingType | null; passengerCount: number; roomType: RoomType;
+  transportOnly: boolean;
+  pkg: Package | null; trip: Trip | null; seats: string[];
+  customer: { customer_name: string; id_number: string; contact_phone: string };
+  pricePerPerson: number; subtotal: number; discount: number; total: number; busNumber: number;
+  couponInput: string; setCouponInput: (v: string) => void;
+  appliedCoupon: { code: string; prize_type: "percent" | "fixed"; prize_value: number; label?: string | null } | null;
+  applyCoupon: () => void; clearCoupon: () => void;
+}) {
+  const rows: [string, string][] = [
+    ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
+    ["عدد الأفراد", String(props.passengerCount)],
+    ["الباقة", props.pkg?.name ?? "—"],
+    ...(!props.transportOnly ? [["نوع الغرفة", ROOM_LABEL[props.roomType]] as [string, string]] : []),
+    ["الرحلة", props.trip?.name ?? "—"],
+    ["رقم الباص", String(props.busNumber)],
+    ["المقاعد", props.seats.join(", ")],
+    ["الاسم", props.customer.customer_name],
+    ["رقم الهوية", props.customer.id_number],
+    ["رقم التواصل", props.customer.contact_phone],
+  ];
+  return (
+    <div>
+      <StepHeader title="مراجعة الحجز" desc="تأكد من البيانات قبل التأكيد" />
+      <div className="grid md:grid-cols-2 gap-3">
+        {rows.map(([k, v]) => (
+          <div key={k} className="surface-card p-4 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">{k}</span>
+            <span className="font-bold text-left">{v}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 surface-card p-5">
+        <Label className="font-semibold flex items-center gap-2"><Ticket className="h-4 w-4 text-primary" /> كود الخصم</Label>
+        <div className="mt-2 flex gap-2">
+          <Input dir="ltr" className="h-12 rounded-xl text-right flex-1" placeholder="ZT-XXXXXXXX" value={props.couponInput} onChange={(e) => props.setCouponInput(e.target.value)} disabled={!!props.appliedCoupon} />
+          {props.appliedCoupon ? (
+            <Button variant="outline" className="rounded-xl h-12" onClick={props.clearCoupon}>إزالة</Button>
+          ) : (
+            <Button className="btn-primary-glow rounded-xl h-12" onClick={props.applyCoupon}>تطبيق</Button>
+          )}
+        </div>
+        {props.appliedCoupon && (
+          <p className="mt-2 text-sm text-success font-semibold">
+            تم تطبيق: {props.appliedCoupon.prize_type === "percent" ? `${props.appliedCoupon.prize_value}%` : `${props.appliedCoupon.prize_value} ريال`} خصم
+          </p>
+        )}
+      </div>
+
+      <div className="mt-6 rounded-3xl p-6 text-white" style={{ background: "var(--gradient-navy)" }}>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between"><span className="text-white/70">المجموع الفرعي</span><span className="font-bold">{sar(props.subtotal)}</span></div>
+          {props.discount > 0 && (
+            <div className="flex justify-between text-[color:var(--color-gold)]"><span>الخصم</span><span className="font-bold">− {sar(props.discount)}</span></div>
+          )}
+          <div className="h-px bg-white/20 my-2" />
+          <div className="flex justify-between items-baseline">
+            <span className="text-white/80">الإجمالي النهائي</span>
+            <span className="text-3xl font-extrabold">{sar(props.total)}</span>
+          </div>
+          <p className="text-xs text-white/60 text-center">{sar(props.pricePerPerson)} × {props.passengerCount}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PriceBar(props: {
+  packageName?: string; passengerCount: number; roomType: RoomType; tripName?: string;
+  pricePerPerson: number; subtotal: number; discount: number; total: number;
+}) {
+  return (
+    <div className="fixed bottom-0 inset-x-0 z-30 glass-bar border-t shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)]">
+      <div className="container-luxe py-3 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
+          <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
+          <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
+          <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
+          {props.packageName && <PriceCell label="الباقة" value={props.packageName} />}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">الإجمالي</p>
+            {props.discount > 0 && <p className="text-xs text-muted-foreground line-through">{sar(props.subtotal)}</p>}
+            <p className="text-xl md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function PriceCell({ label, value }: { label: string; value: string }) {
+  return <div className="flex flex-col"><span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span><span className="font-bold">{value}</span></div>;
+}
