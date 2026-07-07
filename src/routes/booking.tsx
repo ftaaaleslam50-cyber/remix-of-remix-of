@@ -700,13 +700,18 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
   );
 }
 
-function StepSeats({ count, seats, reserved, onChange, bus, mode, onModeChange }: {
-  count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: Bus | null;
+function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode, onModeChange }: {
+  count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: (Bus & { name?: string | null }) | null;
+  remainingSeats: number;
   mode: "manual" | "random"; onModeChange: (m: "manual" | "random") => void;
 }) {
+  const busLabel = bus?.name || `الحافلة رقم ${bus?.bus_number ?? 1}`;
   return (
     <div>
-      <StepHeader title="اختر مقاعدك" desc={`اختر ${count} ${count === 1 ? "مقعد" : "مقاعد"} في الحافلة رقم ${bus?.bus_number ?? 1}`} />
+      <StepHeader title="اختر مقاعدك" desc={`اختر ${count} ${count === 1 ? "مقعد" : "مقاعد"} في ${busLabel}`} />
+      <div className="mb-4 rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-3 text-sm text-center font-semibold">
+        🚌 حافلتك: <span className="text-primary">{busLabel}</span> — <span className="text-primary">{remainingSeats}</span> مقعد متبقٍ
+      </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
         <button onClick={() => onModeChange("manual")}
