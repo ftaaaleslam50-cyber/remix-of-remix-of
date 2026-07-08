@@ -1,9 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Printer, MessageCircle, Copy, Check, Loader2, FileImage, Home, Pencil, Archive } from "lucide-react";
-import JSZip from "jszip";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { Printer, MessageCircle, Copy, Check, Loader2, FileImage, Home, Pencil } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
