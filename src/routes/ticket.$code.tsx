@@ -113,7 +113,7 @@ function TicketPage() {
         <h1 className="text-2xl font-extrabold">تذكرة حجز رحلة العمرة</h1>
         <div className="flex gap-2 flex-wrap">
           <Button onClick={() => window.print()} className="btn-primary-glow rounded-full"><Printer className="h-4 w-4 ml-2" /> تحميل التذكرة PDF</Button>
-          <Button onClick={downloadZip} variant="outline" className="rounded-full"><Archive className="h-4 w-4 ml-2" /> تنزيل الحجز (ZIP)</Button>
+          
           <Button onClick={shareWhatsApp} variant="outline" className="rounded-full bg-[#25D366] text-white border-0 hover:bg-[#25D366]/90 hover:text-white"><MessageCircle className="h-4 w-4 ml-2" /> مشاركة عبر واتساب</Button>
           <Button onClick={copyDetails} variant="outline" className="rounded-full">{copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />} نسخ البيانات</Button>
           <Button
