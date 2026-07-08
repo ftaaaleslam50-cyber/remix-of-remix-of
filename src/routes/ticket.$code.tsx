@@ -104,41 +104,8 @@ function TicketPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function downloadZip() {
-    if (!booking || !printRef.current) return;
-    try {
-      toast.loading("جاري تجهيز الملف...", { id: "zip" });
-      const zip = new JSZip();
-      // Render ticket to PDF
-      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [canvas.width, canvas.height] });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      const pdfBlob = pdf.output("blob");
-      zip.file(`ticket-${booking.booking_code}.pdf`, pdfBlob);
-      // ID image
-      if (idImageUrl) {
-        try {
-          const res = await fetch(idImageUrl);
-          const blob = await res.blob();
-          const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
-          zip.file(`id-${booking.booking_code}.${ext}`, blob);
-        } catch { /* ignore */ }
-      }
-      const out = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(out);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `booking-${booking.booking_code}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success("تم تنزيل ملف الحجز", { id: "zip" });
-    } catch (e: unknown) {
-      toast.error("تعذر تجهيز الملف: " + (e instanceof Error ? e.message : ""), { id: "zip" });
-    }
-  }
+
+
 
   return (
     <div className="min-h-screen bg-muted py-10 print:bg-white print:py-0">
