@@ -92,7 +92,8 @@ function TicketPage() {
   }
 
   function shareWhatsApp() {
-    const text = `تم تأكيد حجز رحلة العمرة 🌹\nرقم الحجز: ${booking!.booking_code}\nالرحلة: ${booking!.trips?.name ?? "-"}\nرقم الباص: ${booking!.buses?.bus_number ?? 1}\nالمقاعد: ${booking!.seat_numbers.join(", ")}\nالإجمالي: ${sar(Number(booking!.total_price))}\nيرجى الاحتفاظ بالتذكرة عند الصعود للباص.`;
+    const busLine = `رقم الباص: ${booking!.buses?.bus_number ?? 1}${booking!.buses?.name ? ` (${booking!.buses.name})` : ""}${booking!.buses?.plate ? ` — لوحة ${booking!.buses.plate}` : ""}`;
+    const text = `تم تأكيد حجز رحلة العمرة 🌹\nرقم الحجز: ${booking!.booking_code}\nالرحلة: ${booking!.trips?.name ?? "-"}\n${busLine}\nالمقاعد: ${booking!.seat_numbers.join(", ")}\nالإجمالي: ${sar(Number(booking!.total_price))}\nيرجى الاحتفاظ بالتذكرة عند الصعود للباص.`;
     window.open(whatsappLink(text), "_blank");
   }
 
