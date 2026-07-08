@@ -1,9 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Printer, MessageCircle, Copy, Check, Loader2, FileImage, Home, Pencil, Archive } from "lucide-react";
-import JSZip from "jszip";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { Printer, MessageCircle, Copy, Check, Loader2, FileImage, Home, Pencil } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,7 +39,7 @@ interface Booking {
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
-  buses?: { bus_number: number } | null;
+  buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
 }
 
 function TicketPage() {
@@ -59,7 +56,7 @@ function TicketPage() {
     (async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number)")
+        .select("booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)")
         .eq("booking_code", code)
         .maybeSingle();
       if (error || !data) {
@@ -95,7 +92,8 @@ function TicketPage() {
   }
 
   function shareWhatsApp() {
-    const text = `تم تأكيد حجز رحلة العمرة 🌹\nرقم الحجز: ${booking!.booking_code}\nالرحلة: ${booking!.trips?.name ?? "-"}\nرقم الباص: ${booking!.buses?.bus_number ?? 1}\nالمقاعد: ${booking!.seat_numbers.join(", ")}\nالإجمالي: ${sar(Number(booking!.total_price))}\nيرجى الاحتفاظ بالتذكرة عند الصعود للباص.`;
+    const busLine = `رقم الباص: ${booking!.buses?.bus_number ?? 1}${booking!.buses?.name ? ` (${booking!.buses.name})` : ""}${booking!.buses?.plate ? ` — لوحة ${booking!.buses.plate}` : ""}`;
+    const text = `تم تأكيد حجز رحلة العمرة 🌹\nرقم الحجز: ${booking!.booking_code}\nالرحلة: ${booking!.trips?.name ?? "-"}\n${busLine}\nالمقاعد: ${booking!.seat_numbers.join(", ")}\nالإجمالي: ${sar(Number(booking!.total_price))}\nيرجى الاحتفاظ بالتذكرة عند الصعود للباص.`;
     window.open(whatsappLink(text), "_blank");
   }
 
@@ -107,41 +105,8 @@ function TicketPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function downloadZip() {
-    if (!booking || !printRef.current) return;
-    try {
-      toast.loading("جاري تجهيز الملف...", { id: "zip" });
-      const zip = new JSZip();
-      // Render ticket to PDF
-      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [canvas.width, canvas.height] });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      const pdfBlob = pdf.output("blob");
-      zip.file(`ticket-${booking.booking_code}.pdf`, pdfBlob);
-      // ID image
-      if (idImageUrl) {
-        try {
-          const res = await fetch(idImageUrl);
-          const blob = await res.blob();
-          const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
-          zip.file(`id-${booking.booking_code}.${ext}`, blob);
-        } catch { /* ignore */ }
-      }
-      const out = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(out);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `booking-${booking.booking_code}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success("تم تنزيل ملف الحجز", { id: "zip" });
-    } catch (e: unknown) {
-      toast.error("تعذر تجهيز الملف: " + (e instanceof Error ? e.message : ""), { id: "zip" });
-    }
-  }
+
+
 
   return (
     <div className="min-h-screen bg-muted py-10 print:bg-white print:py-0">
@@ -149,7 +114,7 @@ function TicketPage() {
         <h1 className="text-2xl font-extrabold">تذكرة حجز رحلة العمرة</h1>
         <div className="flex gap-2 flex-wrap">
           <Button onClick={() => window.print()} className="btn-primary-glow rounded-full"><Printer className="h-4 w-4 ml-2" /> تحميل التذكرة PDF</Button>
-          <Button onClick={downloadZip} variant="outline" className="rounded-full"><Archive className="h-4 w-4 ml-2" /> تنزيل الحجز (ZIP)</Button>
+          
           <Button onClick={shareWhatsApp} variant="outline" className="rounded-full bg-[#25D366] text-white border-0 hover:bg-[#25D366]/90 hover:text-white"><MessageCircle className="h-4 w-4 ml-2" /> مشاركة عبر واتساب</Button>
           <Button onClick={copyDetails} variant="outline" className="rounded-full">{copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />} نسخ البيانات</Button>
           <Button
@@ -198,6 +163,8 @@ function TicketPage() {
             <TicketRow label="نوع الغرفة" value={ROOM_LABEL[booking.room_type as RoomType]} />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
             <TicketRow label="رقم الباص" value={String(booking.buses?.bus_number ?? 1)} />
+            {booking.buses?.name && <TicketRow label="اسم الباص" value={booking.buses.name} />}
+            {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
