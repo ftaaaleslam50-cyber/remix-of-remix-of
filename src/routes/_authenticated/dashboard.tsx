@@ -47,6 +47,17 @@ function Dashboard() {
     })();
   }, []);
 
+  // Realtime: refresh bookings list & stats when anything changes server-side
+  useEffect(() => {
+    if (!isAdmin) return;
+    const ch = supabase.channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => {
+        qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [isAdmin, qc]);
+
   const { data: bookings = [] } = useQuery({
     queryKey: ["admin-bookings", showArchived],
     enabled: isAdmin === true,
