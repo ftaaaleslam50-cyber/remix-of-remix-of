@@ -162,6 +162,8 @@ function TicketPage() {
             <TicketRow label="نوع الغرفة" value={ROOM_LABEL[booking.room_type as RoomType]} />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
             <TicketRow label="رقم الباص" value={String(booking.buses?.bus_number ?? 1)} />
+            {booking.buses?.name && <TicketRow label="اسم الباص" value={booking.buses.name} />}
+            {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
