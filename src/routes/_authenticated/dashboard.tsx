@@ -137,6 +137,8 @@ function Dashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="hidden md:inline text-sm text-white/70">{email}</span>
             {isAdmin && <NotificationBell />}
+            {isAdmin && <Link to="/notifications"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">الإشعارات</Button></Link>}
+            {isAdmin && <Link to="/audit"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">السجل</Button></Link>}
             {isAdmin && <Link to="/admin-buses"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Bus className="h-4 w-4 ml-1" /> الأسطول</Button></Link>}
             {isAdmin && <Link to="/admin-users"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Users className="h-4 w-4 ml-1" /> المستخدمون</Button></Link>}
             <Link to="/" className="text-sm text-white/80 hover:text-white">الموقع</Link>
