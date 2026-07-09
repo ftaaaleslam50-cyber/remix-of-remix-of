@@ -36,7 +36,7 @@ interface BusRow {
   id: string; trip_id: string; bus_number: number; capacity: number; active: boolean;
   name: string | null; plate: string | null; model: string | null;
   status: "active" | "disabled" | "maintenance" | "stopped"; priority: number; is_active_booking: boolean;
-  blocked_seats: string[] | null;
+  blocked_seats: string[] | null; layout: "A" | "B";
 }
 interface TripRow { id: string; name: string; active: boolean; }
 
@@ -120,7 +120,7 @@ function AdminBuses() {
     const next = (buses.filter((b) => b.trip_id === trip.id).reduce((m, b) => Math.max(m, b.bus_number), 0)) + 1;
     const maxPriority = buses.reduce((m, b) => Math.max(m, b.priority ?? 0), 0);
     const { error } = await supabase.from("buses").insert({
-      trip_id: trip.id, bus_number: next, capacity: 49, name: `حافلة ${next}`, priority: maxPriority + 10,
+      trip_id: trip.id, bus_number: next, capacity: 49, name: `حافلة ${next}`, priority: maxPriority + 10, layout: "A",
     });
     if (error) return toast.error(error.message);
     toast.success("تمت الإضافة");
@@ -129,7 +129,7 @@ function AdminBuses() {
 
   async function save(b: BusRow) {
     const { error } = await supabase.from("buses").update({
-      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority, active: b.status === "active",
+      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority, active: b.status === "active", layout: b.layout,
     }).eq("id", b.id);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
@@ -175,6 +175,7 @@ function AdminBuses() {
               <TableHeader><TableRow>
                 <TableHead className="w-6"></TableHead>
                 <TableHead>الاسم</TableHead><TableHead>اللوحة</TableHead><TableHead>الطراز</TableHead>
+                <TableHead>التخطيط</TableHead>
                 <TableHead>السعة</TableHead><TableHead>المحجوز</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>الحجز النشط</TableHead><TableHead></TableHead>
@@ -240,6 +241,18 @@ function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTrans
       <TableCell><Input className="h-9 w-32" value={local.name ?? ""} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.plate ?? ""} onChange={(e) => setLocal({ ...local, plate: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.model ?? ""} onChange={(e) => setLocal({ ...local, model: e.target.value })} /></TableCell>
+      <TableCell>
+        <Select value={local.layout ?? "A"} onValueChange={(v) => {
+          const layout = v as "A" | "B";
+          setLocal({ ...local, layout, capacity: layout === "B" ? 53 : 49 });
+        }}>
+          <SelectTrigger className="h-9 w-24"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="A">A · 49</SelectItem>
+            <SelectItem value="B">B · 53 (+F1–F4)</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
       <TableCell><Input type="number" className="h-9 w-20" value={local.capacity} onChange={(e) => setLocal({ ...local, capacity: Number(e.target.value) })} /></TableCell>
       <TableCell><span className={free <= 0 ? "text-destructive font-bold" : "font-semibold"}>{used}/{local.capacity}</span><div className="text-[10px] text-muted-foreground">متبقٍ {free}</div></TableCell>
       <TableCell>
