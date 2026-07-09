@@ -446,7 +446,7 @@ function BookingPage() {
                   onModeChange={(m) => {
                     setSeatMode(m);
                     if (m === "random") {
-                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], (activeBus?.layout as "A" | "B") ?? "A");
+                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
                       setSeats(auto);
                     }
                   }}
