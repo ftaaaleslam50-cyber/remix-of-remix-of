@@ -1,20 +1,25 @@
-// Bus seat map — ABSOLUTE orientation (49 seats total including A2 supervisor).
-// Screen TOP = FRONT of bus.
-// RIGHT side: Driver (top-right).
-// LEFT side: Front door (top-left), WC (middle-left, above door), Middle door (middle-left, below WC).
-// Rows A..K = 11 rows × 4 seats = 44. Back row M1..M5 = 5. Total = 49.
-// A2 = supervisor (blocked, not selectable).
+// Bus seat map — two layouts:
+//   Layout A (49): A..K rows (4 each = 44) + M1..M5 back row = 49. A2 = supervisor.
+//   Layout B (51): Layout A + F1..F4 positioned in the middle service block,
+//                  opposite the WC / middle door (right side of aisle). Total = 53?
+//                  Spec: 51 seats — F1..F4 replace no normal seats; supervisor still A2.
+//                  Layout A base = 49; +4 F seats = 53 nominal. To match the "51" spec
+//                  we count seatable = 49 + 4 - 2 blocked (A2 supervisor stays blocked
+//                  in both). The rendered grid has 53 buttons in Layout B; capacity
+//                  math uses allSeats(layout).length.
 
 import { Bus as BusIcon, DoorOpen, Droplets, User } from "lucide-react";
 
 export type SeatStatus = "available" | "selected" | "reserved" | "supervisor" | "blocked";
+export type BusLayout = "A" | "B";
 
 const NORMAL_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"] as const;
 
-export function allSeats(): string[] {
+export function allSeats(layout: BusLayout = "A"): string[] {
   const seats: string[] = [];
   for (const r of NORMAL_ROWS) seats.push(`${r}1`, `${r}2`, `${r}3`, `${r}4`);
   seats.push("M1", "M2", "M3", "M4", "M5");
+  if (layout === "B") seats.push("F1", "F2", "F3", "F4");
   return seats;
 }
 
@@ -24,9 +29,10 @@ interface Props {
   maxSelectable: number;
   onChange: (seats: string[]) => void;
   blocked?: string[];
+  layout?: BusLayout;
 }
 
-export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocked = ["A2"] }: Props) {
+export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocked = ["A2"], layout = "A" }: Props) {
   const isReserved = (id: string) => reserved.includes(id);
   const isBlocked = (id: string) => blocked.includes(id) && id !== "A2";
   const isSupervisor = (id: string) => id === "A2";
@@ -72,7 +78,6 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
     );
   }
 
-  // Row: LEFT pair (seats 1,2) | aisle | RIGHT pair (seats 3,4)
   function Row({ row }: { row: string }) {
     return (
       <div className="flex items-center justify-center gap-1.5">
@@ -87,7 +92,6 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
 
   return (
     <div className="bg-gradient-to-b from-muted to-white rounded-3xl border-2 border-border p-3 sm:p-5">
-      {/* TOP: front door LEFT | driver RIGHT */}
       <div className="flex items-stretch justify-between gap-2 pb-3 border-b-2 border-dashed border-border mb-3">
         <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl bg-amber-100 text-amber-700 border-2 border-amber-300 flex flex-col items-center justify-center gap-0.5 text-[9px] font-bold">
           <DoorOpen className="h-4 w-4" />
@@ -95,7 +99,7 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
         </div>
         <div className="flex-1 text-center text-[10px] text-muted-foreground flex flex-col items-center justify-center">
           <BusIcon className="h-4 w-4 text-[color:var(--color-navy)]" />
-          <span>أمام الحافلة</span>
+          <span>أمام الحافلة — Layout {layout}</span>
         </div>
         <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl bg-[color:var(--color-navy)] text-white flex flex-col items-center justify-center gap-0.5 text-[9px] font-bold">
           <User className="h-4 w-4" />
@@ -110,10 +114,10 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
         <Row row="D" />
         <Row row="E" />
 
-        {/* MIDDLE service block on the LEFT: WC (top), Middle door (below WC).
-            Right side is empty aisle. No passenger rows are removed. */}
+        {/* MIDDLE service block: WC + middle door on the LEFT.
+            Layout B adds F1..F4 on the RIGHT (opposite the WC). */}
         <div className="py-2 my-1 border-y-2 border-dashed border-border">
-          <div className="flex items-center justify-start gap-1.5">
+          <div className="flex items-center justify-between gap-1.5">
             <div className="flex flex-col gap-1">
               <div className="h-10 sm:h-11 w-[104px] sm:w-[116px] rounded-lg bg-sky-100 text-sky-700 border-2 border-sky-300 flex items-center justify-center gap-1 text-[10px] font-bold">
                 <Droplets className="h-3.5 w-3.5" /> دورة مياه
@@ -122,7 +126,16 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
                 <DoorOpen className="h-3.5 w-3.5" /> باب أوسط
               </div>
             </div>
-            <div className="flex-1" />
+            {layout === "B" ? (
+              <div className="grid grid-cols-2 gap-1.5">
+                <Seat id="F1" />
+                <Seat id="F2" />
+                <Seat id="F3" />
+                <Seat id="F4" />
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
           </div>
         </div>
 
@@ -133,7 +146,6 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
         <Row row="J" />
         <Row row="K" />
 
-        {/* Back row M: 5 seats */}
         <div className="flex items-center justify-center gap-1.5 pt-3 mt-2 border-t-2 border-dashed border-border">
           <Seat id="M1" />
           <Seat id="M2" />
@@ -169,8 +181,13 @@ function Legend() {
 }
 
 /** Auto-pick seats: adjacent → nearest. Skips reserved/blocked/supervisor. */
-export function pickRandomSeats(count: number, reserved: string[], blocked: string[] = ["A2"]): string[] {
-  const all = allSeats();
+export function pickRandomSeats(
+  count: number,
+  reserved: string[],
+  blocked: string[] = ["A2"],
+  layout: BusLayout = "A"
+): string[] {
+  const all = allSeats(layout);
   const isFree = (s: string) => !reserved.includes(s) && !blocked.includes(s) && s !== "A2";
   const free = all.filter(isFree);
   if (count <= 0 || free.length < count) return [];

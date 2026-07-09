@@ -446,7 +446,7 @@ function BookingPage() {
                   onModeChange={(m) => {
                     setSeatMode(m);
                     if (m === "random") {
-                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"]);
+                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
                       setSeats(auto);
                     }
                   }}
@@ -741,6 +741,7 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
           maxSelectable={count}
           onChange={onChange}
           blocked={bus?.blocked_seats ?? ["A2"]}
+          layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
         />
       </div>
     </div>

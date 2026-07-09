@@ -274,6 +274,7 @@ export type Database = {
           created_at: string
           id: string
           is_active_booking: boolean
+          layout: string
           model: string | null
           name: string | null
           plate: string | null
@@ -290,6 +291,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active_booking?: boolean
+          layout?: string
           model?: string | null
           name?: string | null
           plate?: string | null
@@ -306,6 +308,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active_booking?: boolean
+          layout?: string
           model?: string | null
           name?: string | null
           plate?: string | null
