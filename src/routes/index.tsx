@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
       { title: `${BRAND.name} | احجز رحلتك للعمرة الآن` },
       { name: "description", content: "رحلات عمرة منظّمة من المدينة المنورة إلى مكة المكرمة. باقات أفراد وعوائل، فنادق مختارة، حافلات حديثة، وأسعار شفافة." },
       { property: "og:title", content: `${BRAND.name} | احجز رحلتك للعمرة` },
-      { property: "og:description", content: "احجز رحلة عمرتك بسهولة مع فنادق وحافلات مختارة." },
+      { property: "og:description", content: "رحلات عمرة منظّمة من المدينة المنورة إلى مكة المكرمة. باقات أفراد وعوائل، فنادق مختارة، حافلات حديثة، وأسعار شفافة." },
       { property: "og:image", content: BRAND.logoUrl },
     ],
   }),
