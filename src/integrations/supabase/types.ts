@@ -16,10 +16,18 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
+          about_body: string | null
+          about_title: string | null
           booking_steps: Json | null
           company_name: string
+          cta_body: string | null
+          cta_button_label: string | null
+          cta_title: string | null
           email: string
+          faq: Json | null
+          features: Json | null
           hero_cta: string
+          hero_image_url: string | null
           hero_subtitle: string
           hero_title: string
           id: number
@@ -37,16 +45,25 @@ export type Database = {
           price_transport_only: number
           snapchat_url: string | null
           terms_text: string | null
+          testimonials: Json | null
           ticket_template: Json | null
           tiktok_url: string | null
           updated_at: string
           whatsapp: string
         }
         Insert: {
+          about_body?: string | null
+          about_title?: string | null
           booking_steps?: Json | null
           company_name?: string
+          cta_body?: string | null
+          cta_button_label?: string | null
+          cta_title?: string | null
           email?: string
+          faq?: Json | null
+          features?: Json | null
           hero_cta?: string
+          hero_image_url?: string | null
           hero_subtitle?: string
           hero_title?: string
           id?: number
@@ -64,16 +81,25 @@ export type Database = {
           price_transport_only?: number
           snapchat_url?: string | null
           terms_text?: string | null
+          testimonials?: Json | null
           ticket_template?: Json | null
           tiktok_url?: string | null
           updated_at?: string
           whatsapp?: string
         }
         Update: {
+          about_body?: string | null
+          about_title?: string | null
           booking_steps?: Json | null
           company_name?: string
+          cta_body?: string | null
+          cta_button_label?: string | null
+          cta_title?: string | null
           email?: string
+          faq?: Json | null
+          features?: Json | null
           hero_cta?: string
+          hero_image_url?: string | null
           hero_subtitle?: string
           hero_title?: string
           id?: number
@@ -91,6 +117,7 @@ export type Database = {
           price_transport_only?: number
           snapchat_url?: string | null
           terms_text?: string | null
+          testimonials?: Json | null
           ticket_template?: Json | null
           tiktok_url?: string | null
           updated_at?: string
@@ -381,6 +408,83 @@ export type Database = {
           usage_count?: number
           used?: boolean
           used_in_booking_id?: string | null
+        }
+        Relationships: []
+      }
+      exhibition_registrations: {
+        Row: {
+          created_at: string
+          exhibition_id: string
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          exhibition_id: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          exhibition_id?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exhibition_registrations_exhibition_id_fkey"
+            columns: ["exhibition_id"]
+            isOneToOne: false
+            referencedRelation: "exhibitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exhibitions: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          ends_at: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -676,30 +780,42 @@ export type Database = {
           capacity: number
           created_at: string
           departure_day: string
+          departure_period: string | null
+          departure_time: string | null
           display_order: number
           id: string
           name: string
           return_day: string
+          return_period: string | null
+          return_time: string | null
         }
         Insert: {
           active?: boolean
           capacity?: number
           created_at?: string
           departure_day: string
+          departure_period?: string | null
+          departure_time?: string | null
           display_order?: number
           id?: string
           name: string
           return_day: string
+          return_period?: string | null
+          return_time?: string | null
         }
         Update: {
           active?: boolean
           capacity?: number
           created_at?: string
           departure_day?: string
+          departure_period?: string | null
+          departure_time?: string | null
           display_order?: number
           id?: string
           name?: string
           return_day?: string
+          return_period?: string | null
+          return_time?: string | null
         }
         Relationships: []
       }
