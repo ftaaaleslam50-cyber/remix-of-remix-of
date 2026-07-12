@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as ExhibitionsRouteImport } from './routes/exhibitions'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BookingRouteImport } from './routes/booking'
@@ -22,12 +23,20 @@ import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authen
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin-users'
+import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
+import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
+import { Route as AuthenticatedAdminExhibitionsRouteImport } from './routes/_authenticated/admin-exhibitions'
 import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
 import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
 
 const GalleryRoute = GalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExhibitionsRoute = ExhibitionsRouteImport.update({
+  id: '/exhibitions',
+  path: '/exhibitions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DrawRoute = DrawRouteImport.update({
@@ -90,6 +99,23 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/admin-users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminTripsRoute = AuthenticatedAdminTripsRouteImport.update({
+  id: '/admin-trips',
+  path: '/admin-trips',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminHomepageRoute =
+  AuthenticatedAdminHomepageRouteImport.update({
+    id: '/admin-homepage',
+    path: '/admin-homepage',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminExhibitionsRoute =
+  AuthenticatedAdminExhibitionsRouteImport.update({
+    id: '/admin-exhibitions',
+    path: '/admin-exhibitions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminBusesRoute = AuthenticatedAdminBusesRouteImport.update({
   id: '/admin-buses',
   path: '/admin-buses',
@@ -107,8 +133,12 @@ export interface FileRoutesByFullPath {
   '/booking': typeof BookingRoute
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
+  '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
+  '/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
+  '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
+  '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -123,8 +153,12 @@ export interface FileRoutesByTo {
   '/booking': typeof BookingRoute
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
+  '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
+  '/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
+  '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
+  '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -141,8 +175,12 @@ export interface FileRoutesById {
   '/booking': typeof BookingRoute
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
+  '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
   '/_authenticated/admin-buses': typeof AuthenticatedAdminBusesRoute
+  '/_authenticated/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
+  '/_authenticated/admin-homepage': typeof AuthenticatedAdminHomepageRoute
+  '/_authenticated/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/_authenticated/admin-users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -159,8 +197,12 @@ export interface FileRouteTypes {
     | '/booking'
     | '/contact'
     | '/draw'
+    | '/exhibitions'
     | '/gallery'
     | '/admin-buses'
+    | '/admin-exhibitions'
+    | '/admin-homepage'
+    | '/admin-trips'
     | '/admin-users'
     | '/audit'
     | '/dashboard'
@@ -175,8 +217,12 @@ export interface FileRouteTypes {
     | '/booking'
     | '/contact'
     | '/draw'
+    | '/exhibitions'
     | '/gallery'
     | '/admin-buses'
+    | '/admin-exhibitions'
+    | '/admin-homepage'
+    | '/admin-trips'
     | '/admin-users'
     | '/audit'
     | '/dashboard'
@@ -192,8 +238,12 @@ export interface FileRouteTypes {
     | '/booking'
     | '/contact'
     | '/draw'
+    | '/exhibitions'
     | '/gallery'
     | '/_authenticated/admin-buses'
+    | '/_authenticated/admin-exhibitions'
+    | '/_authenticated/admin-homepage'
+    | '/_authenticated/admin-trips'
     | '/_authenticated/admin-users'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
@@ -210,6 +260,7 @@ export interface RootRouteChildren {
   BookingRoute: typeof BookingRoute
   ContactRoute: typeof ContactRoute
   DrawRoute: typeof DrawRoute
+  ExhibitionsRoute: typeof ExhibitionsRoute
   GalleryRoute: typeof GalleryRoute
   TicketCodeRoute: typeof TicketCodeRoute
   ApiPublicBootstrapAdminRoute: typeof ApiPublicBootstrapAdminRoute
@@ -222,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/gallery'
       fullPath: '/gallery'
       preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exhibitions': {
+      id: '/exhibitions'
+      path: '/exhibitions'
+      fullPath: '/exhibitions'
+      preLoaderRoute: typeof ExhibitionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/draw': {
@@ -308,6 +366,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-trips': {
+      id: '/_authenticated/admin-trips'
+      path: '/admin-trips'
+      fullPath: '/admin-trips'
+      preLoaderRoute: typeof AuthenticatedAdminTripsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-homepage': {
+      id: '/_authenticated/admin-homepage'
+      path: '/admin-homepage'
+      fullPath: '/admin-homepage'
+      preLoaderRoute: typeof AuthenticatedAdminHomepageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-exhibitions': {
+      id: '/_authenticated/admin-exhibitions'
+      path: '/admin-exhibitions'
+      fullPath: '/admin-exhibitions'
+      preLoaderRoute: typeof AuthenticatedAdminExhibitionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-buses': {
       id: '/_authenticated/admin-buses'
       path: '/admin-buses'
@@ -327,6 +406,9 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminBusesRoute: typeof AuthenticatedAdminBusesRoute
+  AuthenticatedAdminExhibitionsRoute: typeof AuthenticatedAdminExhibitionsRoute
+  AuthenticatedAdminHomepageRoute: typeof AuthenticatedAdminHomepageRoute
+  AuthenticatedAdminTripsRoute: typeof AuthenticatedAdminTripsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -336,6 +418,9 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminBusesRoute: AuthenticatedAdminBusesRoute,
+  AuthenticatedAdminExhibitionsRoute: AuthenticatedAdminExhibitionsRoute,
+  AuthenticatedAdminHomepageRoute: AuthenticatedAdminHomepageRoute,
+  AuthenticatedAdminTripsRoute: AuthenticatedAdminTripsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
@@ -353,6 +438,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookingRoute: BookingRoute,
   ContactRoute: ContactRoute,
   DrawRoute: DrawRoute,
+  ExhibitionsRoute: ExhibitionsRoute,
   GalleryRoute: GalleryRoute,
   TicketCodeRoute: TicketCodeRoute,
   ApiPublicBootstrapAdminRoute: ApiPublicBootstrapAdminRoute,
@@ -360,13 +446,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

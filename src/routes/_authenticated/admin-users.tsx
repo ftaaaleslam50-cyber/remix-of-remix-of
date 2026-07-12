@@ -32,8 +32,8 @@ function AdminUsers() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate({ to: "/auth" }); return; }
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-      setIsAdmin(!!data);
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["admin","user_manager"]);
+      setIsAdmin(!!data && data.length > 0);
     })();
   }, [navigate]);
 
@@ -46,6 +46,28 @@ function AdminUsers() {
       return (data as ProfileRow[]) ?? [];
     },
   });
+
+  const { data: roles = [] } = useQuery({
+    queryKey: ["admin-user-roles"],
+    enabled: isAdmin === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id,role");
+      if (error) throw error;
+      return (data as { user_id: string; role: string }[]) ?? [];
+    },
+  });
+
+  async function toggleRole(uid: string, role: string, on: boolean) {
+    if (on) {
+      const { error } = await supabase.from("user_roles").insert({ user_id: uid, role: role as never });
+      if (error && !error.message.includes("duplicate")) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", role as never);
+      if (error) return toast.error(error.message);
+    }
+    toast.success("تم تحديث الصلاحيات");
+    qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+  }
 
   const filtered = profiles.filter((p) => {
     if (typeFilter !== "all" && p.account_type !== typeFilter) return false;
@@ -108,11 +130,12 @@ function AdminUsers() {
               <TableHeader><TableRow>
                 <TableHead>الاسم</TableHead><TableHead>الجوال</TableHead><TableHead>واتساب</TableHead>
                 <TableHead>الهوية</TableHead><TableHead>النوع</TableHead><TableHead>الحالة</TableHead>
+                <TableHead>الصلاحيات</TableHead>
                 <TableHead>آخر دخول</TableHead><TableHead>التسجيل</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">لا يوجد مستخدمون</TableCell></TableRow>}
-                {filtered.map((p) => <UserRowEditor key={p.id} profile={p} onSave={save} onDelete={() => del(p)} onToggle={() => toggleActive(p)} />)}
+                {filtered.length === 0 && <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">لا يوجد مستخدمون</TableCell></TableRow>}
+                {filtered.map((p) => <UserRowEditor key={p.id} profile={p} userRoles={roles.filter(r => r.user_id === p.id).map(r => r.role)} onToggleRole={(r,on) => toggleRole(p.id, r, on)} onSave={save} onDelete={() => del(p)} onToggle={() => toggleActive(p)} />)}
               </TableBody>
             </Table>
           </div>
@@ -122,7 +145,15 @@ function AdminUsers() {
   );
 }
 
-function UserRowEditor({ profile, onSave, onDelete, onToggle }: { profile: ProfileRow; onSave: (p: ProfileRow) => void; onDelete: () => void; onToggle: () => void }) {
+const ROLE_LABELS: Record<string, string> = {
+  admin: "مسؤول", manager: "مدير", user_manager: "مسؤول مستخدمين", representative: "مندوب", user: "مستخدم",
+};
+const ASSIGNABLE_ROLES = ["admin", "manager", "user_manager", "representative"];
+
+function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onToggle }: {
+  profile: ProfileRow; userRoles: string[]; onToggleRole: (r: string, on: boolean) => void;
+  onSave: (p: ProfileRow) => void; onDelete: () => void; onToggle: () => void;
+}) {
   const [local, setLocal] = useState(profile);
   useEffect(() => setLocal(profile), [profile]);
   return (
@@ -141,6 +172,19 @@ function UserRowEditor({ profile, onSave, onDelete, onToggle }: { profile: Profi
         </Select>
       </TableCell>
       <TableCell>{local.active ? <Badge className="bg-success">نشط</Badge> : <Badge variant="outline">موقوف</Badge>}</TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1 max-w-[220px]">
+          {ASSIGNABLE_ROLES.map(r => {
+            const on = userRoles.includes(r);
+            return (
+              <button key={r} type="button" onClick={() => onToggleRole(r, !on)}
+                className={`text-[10px] px-2 py-1 rounded-full border ${on ? 'bg-[color:var(--color-navy)] text-white border-transparent' : 'bg-white text-foreground/70 border-border hover:bg-muted'}`}>
+                {ROLE_LABELS[r]}
+              </button>
+            );
+          })}
+        </div>
+      </TableCell>
       <TableCell className="text-xs text-muted-foreground">{local.last_login_at ? formatDate(local.last_login_at) : "—"}</TableCell>
       <TableCell className="text-xs text-muted-foreground">{formatDate(local.created_at)}</TableCell>
       <TableCell className="flex gap-1">
