@@ -47,6 +47,28 @@ function AdminUsers() {
     },
   });
 
+  const { data: roles = [] } = useQuery({
+    queryKey: ["admin-user-roles"],
+    enabled: isAdmin === true,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id,role");
+      if (error) throw error;
+      return (data as { user_id: string; role: string }[]) ?? [];
+    },
+  });
+
+  async function toggleRole(uid: string, role: string, on: boolean) {
+    if (on) {
+      const { error } = await supabase.from("user_roles").insert({ user_id: uid, role: role as never });
+      if (error && !error.message.includes("duplicate")) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", role as never);
+      if (error) return toast.error(error.message);
+    }
+    toast.success("تم تحديث الصلاحيات");
+    qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+  }
+
   const filtered = profiles.filter((p) => {
     if (typeFilter !== "all" && p.account_type !== typeFilter) return false;
     if (!q) return true;
