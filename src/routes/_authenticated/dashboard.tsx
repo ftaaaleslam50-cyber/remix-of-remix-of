@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
-import { CalendarCheck, DollarSign, Bus, LogOut, Users, Package as PackageIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard } from "lucide-react";
+import { CalendarCheck, DollarSign, Bus, LogOut, Users, Package as PackageIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Store, Layout } from "lucide-react";
 import { NotificationBell } from "@/components/site/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,6 +140,9 @@ function Dashboard() {
             {isAdmin && <Link to="/notifications"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">الإشعارات</Button></Link>}
             {isAdmin && <Link to="/audit"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">السجل</Button></Link>}
             {isAdmin && <Link to="/admin-buses"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Bus className="h-4 w-4 ml-1" /> الأسطول</Button></Link>}
+            {isAdmin && <Link to="/admin-trips"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><CalendarClock className="h-4 w-4 ml-1" /> الرحلات</Button></Link>}
+            {isAdmin && <Link to="/admin-exhibitions"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Store className="h-4 w-4 ml-1" /> المعارض</Button></Link>}
+            {isAdmin && <Link to="/admin-homepage"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> الرئيسية</Button></Link>}
             {isAdmin && <Link to="/admin-users"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Users className="h-4 w-4 ml-1" /> المستخدمون</Button></Link>}
             <Link to="/" className="text-sm text-white/80 hover:text-white">الموقع</Link>
             <Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={signOut}>
@@ -213,6 +216,11 @@ function Dashboard() {
                         <TableCell>
                           <div className="flex items-center gap-1 flex-wrap">
                             <Link to="/ticket/$code" params={{ code: b.booking_code }} className="text-primary text-sm font-semibold">عرض</Link>
+                            {b.whatsapp_phone && (
+                              <a href={`https://wa.me/${b.whatsapp_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`مرحباً ${b.customer_name}، بخصوص حجزك ${b.booking_code}`)}`} target="_blank" rel="noopener noreferrer" title="واتساب">
+                                <Button size="sm" variant="outline" className="text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"><MessageCircle className="h-3 w-3" /></Button>
+                              </a>
+                            )}
                             {b.id_image_url && <Button size="sm" variant="outline" title="تنزيل صورة الهوية" onClick={() => downloadIdImage(b)}><IdCard className="h-3 w-3" /></Button>}
                             {!b.deleted_at && <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}><Archive className="h-3 w-3" /></Button>}
                             {b.deleted_at && <Button size="sm" variant="outline" title="استرجاع" onClick={() => restoreBooking(b.id)}><RotateCcw className="h-3 w-3" /></Button>}
