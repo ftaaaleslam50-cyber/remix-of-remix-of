@@ -181,8 +181,20 @@ function BookingPage() {
     return buses[0] ?? null;
   }, [buses, busReserved, passengerCount, busId, noBus]);
 
+  // Fetch the assigned bus_layouts row for the active bus (if any).
+  const activeLayoutId = (activeBus as { layout_id?: string | null } | null)?.layout_id ?? null;
+  const { data: activeLayout = null } = useQuery({
+    queryKey: ["bus_layout", activeLayoutId],
+    enabled: !!activeLayoutId,
+    queryFn: async () => {
+      const { data } = await supabase.from("bus_layouts").select("layout_json,seat_count").eq("id", activeLayoutId!).maybeSingle();
+      return (data as { layout_json: LayoutJson; seat_count: number } | null) ?? null;
+    },
+  });
+
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
   const remainingSeats = activeBus ? (activeBus.capacity ?? 49) - ((activeBus.blocked_seats ?? ["A2"]).length) - bookedSeats.length : 0;
+
 
 
   useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
