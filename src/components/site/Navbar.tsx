@@ -117,6 +117,7 @@ export function Navbar() {
             {userId ? (
               <>
                 <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الملف الشخصي</Link>
+                <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">حجوزاتي</Link>
                 {isAdmin && <Link to="/dashboard" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">لوحة التحكم</Link>}
                 <button onClick={signOut} className="text-right px-4 py-3 rounded-xl text-base font-semibold text-red-600 hover:bg-muted">خروج</button>
               </>
