@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2 } from "lucide-react";
+import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
@@ -19,15 +20,31 @@ interface MyBooking {
   id: string; booking_code: string; status: string; created_at: string;
   customer_name: string | null; passenger_count: number; total_price: number;
   trip_id: string | null; bus_id: string | null; no_hotel: boolean; no_bus: boolean;
+  seat_numbers: string[] | null;
+  contact_phone: string | null; whatsapp_phone: string | null;
+  nationality: string | null; booking_source: string | null;
   trips: { name: string; departure_day: string; return_day: string } | null;
   buses: { name: string | null; bus_number: number } | null;
   packages: { name: string } | null;
+}
+
+function isPast(dateStr?: string | null) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr); d.setHours(23, 59, 59, 999);
+  return d.getTime() < Date.now();
+}
+
+function effectiveStatus(b: MyBooking): "cancelled" | "completed" | "active" {
+  if (b.status === "cancelled") return "cancelled";
+  if (isPast(b.trips?.departure_day)) return "completed";
+  return "active";
 }
 
 function MyBookingsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [uid, setUid] = useState<string>("");
+  const [details, setDetails] = useState<MyBooking | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -42,7 +59,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,trips(name,departure_day,return_day),buses(name,bus_number),packages(name)")
+        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,trips(name,departure_day,return_day),buses(name,bus_number),packages(name)")
         .eq("created_by", uid)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
@@ -51,11 +68,20 @@ function MyBookingsPage() {
     },
   });
 
-  async function cancelBooking(code: string) {
-    if (!confirm("هل تريد إلغاء هذا الحجز؟")) return;
-    const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("booking_code", code);
+  const sorted = useMemo(() => {
+    const order = { active: 0, completed: 1, cancelled: 2 } as const;
+    return [...bookings].sort((a, b) => {
+      const sa = effectiveStatus(a), sb = effectiveStatus(b);
+      if (order[sa] !== order[sb]) return order[sa] - order[sb];
+      return (b.trips?.departure_day || "").localeCompare(a.trips?.departure_day || "");
+    });
+  }, [bookings]);
+
+  async function deleteBooking(b: MyBooking) {
+    if (!confirm(`هل أنت متأكد من حذف الحجز ${b.booking_code}؟`)) return;
+    const { error } = await supabase.from("bookings").update({ deleted_at: new Date().toISOString() }).eq("id", b.id);
     if (error) return toast.error(error.message);
-    toast.success("تم إلغاء الحجز");
+    toast.success("تم حذف الحجز");
     qc.invalidateQueries({ queryKey: ["my-bookings", uid] });
   }
 
@@ -79,54 +105,59 @@ function MyBookingsPage() {
 
         {isLoading ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
-        ) : bookings.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="surface-card p-10 text-center">
             <Ticket className="h-14 w-14 mx-auto text-muted-foreground/40" />
-            <p className="mt-4 font-semibold">لا توجد حجوزات بعد</p>
-            <Link to="/booking"><Button className="mt-4 btn-primary-glow rounded-xl">ابدأ حجزك الأول</Button></Link>
+            <p className="mt-4 font-semibold text-lg">لا توجد لديك حجوزات بعد.</p>
+            <Link to="/booking"><Button className="mt-6 h-14 px-8 text-lg btn-primary-glow rounded-xl">ابدأ الحجز</Button></Link>
           </div>
         ) : (
           <div className="grid gap-4">
-            {bookings.map((b) => {
-              const statusColor =
-                b.status === "confirmed" ? "bg-success" :
-                b.status === "cancelled" ? "bg-destructive" :
-                b.status === "pending" ? "bg-warning" : "bg-muted-foreground";
-              const canEdit = b.status !== "cancelled";
+            {sorted.map((b) => {
+              const eff = effectiveStatus(b);
+              const canModify = eff === "active";
+              const cardStyle =
+                eff === "cancelled" ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900" :
+                eff === "completed" ? "bg-gray-50 border-gray-200 dark:bg-gray-900/40 dark:border-gray-800 opacity-90" :
+                "";
+              const badge =
+                eff === "cancelled" ? { cls: "bg-red-500 text-white", label: "ملغي" } :
+                eff === "completed" ? { cls: "bg-gray-500 text-white", label: "مكتمل" } :
+                { cls: "bg-green-600 text-white", label: "نشط" };
               return (
-                <div key={b.id} className="surface-card p-5">
+                <div key={b.id} className={`surface-card p-5 border-2 ${cardStyle}`}>
                   <div className="flex items-start justify-between flex-wrap gap-3">
-                    <div>
+                    <div className="flex-1 min-w-[240px]">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-primary">{b.booking_code}</span>
-                        <Badge className={`${statusColor} text-white`}>{b.status}</Badge>
+                        <span className="font-mono font-bold text-primary text-lg">{b.booking_code}</span>
+                        <Badge className={badge.cls}>{badge.label}</Badge>
                         {b.no_hotel && <Badge variant="outline">بدون فندق</Badge>}
                         {b.no_bus && <Badge variant="outline">بدون حافلة</Badge>}
                       </div>
-                      <p className="mt-1 font-semibold">{b.customer_name}</p>
-                      <div className="mt-2 text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                        {b.packages && <span>🏨 {b.packages.name}</span>}
-                        {b.trips && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {b.trips.name}</span>}
-                        {b.buses && <span>🚌 {b.buses.name || `حافلة ${b.buses.bus_number}`}</span>}
-                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {b.passenger_count}</span>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{new Date(b.created_at).toLocaleDateString("ar")}</b></span>
+                        {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{new Date(b.trips.departure_day).toLocaleDateString("ar")}</b></span>}
+                        {b.packages && <span className="flex items-center gap-2 text-muted-foreground"><Hotel className="h-4 w-4" /> الفندق: <b className="text-foreground">{b.packages.name}</b></span>}
+                        {b.buses && <span className="flex items-center gap-2 text-muted-foreground"><Bus className="h-4 w-4" /> الحافلة: <b className="text-foreground">{b.buses.name || `حافلة ${b.buses.bus_number}`}</b></span>}
+                        {b.seat_numbers && b.seat_numbers.length > 0 && <span className="flex items-center gap-2 text-muted-foreground col-span-full">🎫 المقاعد: <b className="text-foreground font-mono">{b.seat_numbers.join(", ")}</b></span>}
+                        <span className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /> عدد الأفراد: <b className="text-foreground">{b.passenger_count}</b></span>
                       </div>
                     </div>
                     <div className="text-left">
                       <p className="text-2xl font-extrabold text-primary">{sar(b.total_price)}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("ar")}</p>
                     </div>
                   </div>
                   <div className="mt-4 flex gap-2 flex-wrap">
-                    <Link to="/ticket/$code" params={{ code: b.booking_code }}>
-                      <Button size="sm" variant="outline" className="rounded-xl gap-1"><Eye className="h-3 w-3" /> عرض التذكرة</Button>
-                    </Link>
-                    {canEdit && (
+                    <Button size="sm" variant="outline" className="rounded-xl gap-1" onClick={() => setDetails(b)}>
+                      <Eye className="h-3 w-3" /> عرض التفاصيل
+                    </Button>
+                    {canModify && (
                       <>
                         <Button size="sm" variant="outline" className="rounded-xl gap-1" onClick={() => editBooking(b.booking_code)}>
-                          <Edit className="h-3 w-3" /> تعديل
+                          <Edit className="h-3 w-3" /> تعديل الحجز
                         </Button>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1 text-destructive hover:bg-destructive/10" onClick={() => cancelBooking(b.booking_code)}>
-                          <XCircle className="h-3 w-3" /> إلغاء
+                        <Button size="sm" variant="outline" className="rounded-xl gap-1 text-destructive hover:bg-destructive/10" onClick={() => deleteBooking(b)}>
+                          <XCircle className="h-3 w-3" /> حذف الحجز
                         </Button>
                       </>
                     )}
@@ -137,6 +168,45 @@ function MyBookingsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!details} onOpenChange={(o) => !o && setDetails(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>تفاصيل الحجز</DialogTitle></DialogHeader>
+          {details && (() => {
+            const eff = effectiveStatus(details);
+            const badge = eff === "cancelled" ? "ملغي" : eff === "completed" ? "مكتمل" : "نشط";
+            const rows: [string, React.ReactNode][] = [
+              ["رقم الحجز", <span className="font-mono">{details.booking_code}</span>],
+              ["تاريخ الحجز", new Date(details.created_at).toLocaleDateString("ar")],
+              ["تاريخ الرحلة", details.trips ? new Date(details.trips.departure_day).toLocaleDateString("ar") : "—"],
+              ["الفندق", details.packages?.name || (details.no_hotel ? "بدون فندق" : "—")],
+              ["الحافلة", details.buses ? (details.buses.name || `حافلة ${details.buses.bus_number}`) : (details.no_bus ? "بدون حافلة" : "—")],
+              ["المقاعد", details.seat_numbers?.join(", ") || "—"],
+              ["اسم العميل", details.customer_name || "—"],
+              ["رقم الجوال", details.contact_phone || "—"],
+              ["رقم الواتساب", details.whatsapp_phone || "—"],
+              ["الجنسية", details.nationality || "—"],
+              ["مصدر الحجز", details.booking_source || "—"],
+              ["حالة الحجز", badge],
+            ];
+            return (
+              <div className="space-y-2 text-sm">
+                {rows.map(([k, v]) => (
+                  <div key={k} className="flex justify-between border-b border-border/50 py-2">
+                    <span className="text-muted-foreground">{k}</span>
+                    <span className="font-semibold text-left">{v}</span>
+                  </div>
+                ))}
+                <div className="pt-3">
+                  <Link to="/ticket/$code" params={{ code: details.booking_code }}>
+                    <Button className="w-full rounded-xl btn-primary-glow">فتح التذكرة</Button>
+                  </Link>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </SiteLayout>
   );
 }
