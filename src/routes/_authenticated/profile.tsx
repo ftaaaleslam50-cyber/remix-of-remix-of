@@ -32,7 +32,7 @@ function ProfilePage() {
   const [uid, setUid] = useState<string>("");
   const [p, setP] = useState<ProfileRow>({
     id: "", full_name: "", mobile_phone: "", whatsapp_phone: "", national_id: "",
-    national_id_image_url: "", avatar_url: "", account_type: "customer",
+    national_id_image_url: "", avatar_url: "", nationality: "", account_type: "customer",
   });
   const [avatarSigned, setAvatarSigned] = useState<string>("");
   const [idSigned, setIdSigned] = useState<string>("");
