@@ -645,10 +645,12 @@ function StepCount({ value, onChange }: { value: number; onChange: (n: number) =
   );
 }
 
-function StepPackage({ packages, pricing, value, onChange, passengerCount, roomType }: {
+function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHotel, passengerCount, roomType }: {
   packages: Package[]; pricing: PricingCell[]; value: string | null; onChange: (id: string) => void;
+  onSelectNoHotel: () => void; noHotel: boolean;
   passengerCount: number; roomType: RoomType;
 }) {
+
   const [openPkg, setOpenPkg] = useState<Package | null>(null);
   return (
     <div>
