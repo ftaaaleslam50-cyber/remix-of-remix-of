@@ -941,11 +941,15 @@ function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: 
 
 
 type CustomerState = { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; nationality: string; same_whatsapp: boolean };
-function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
+function StepCustomer({ customer, setCustomer, idFile, setIdFile, accountType, repName, setRepName }: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
   idFile: File | null; setIdFile: (f: File | null) => void;
+  accountType: "customer" | "representative";
+  repName: string;
+  setRepName: React.Dispatch<React.SetStateAction<string>>;
 }) {
+
   return (
     <div>
       <StepHeader title="بيانات الحجز" desc="أدخل بيانات صاحب الحجز" />
