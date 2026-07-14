@@ -592,7 +592,7 @@ function BookingPage() {
         discount={discount}
         total={total}
       />
-    </SiteLayout>
+    </BookingFocusLayout>
   );
 }
 
