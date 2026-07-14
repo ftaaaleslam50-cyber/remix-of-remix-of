@@ -47,35 +47,18 @@ export const Route = createFileRoute("/booking")({
   component: BookingPage,
 });
 
-// Steps are dynamic — "نوع الغرفة" is removed when the transport-only package is chosen.
-const FULL_STEPS = [
-  "نوع الحجز",
-  "عدد الأفراد",
-  "الفندق",
-  "نوع الغرفة",
-  "الرحلة",
-  "المقاعد",
-  "البيانات",
-  "التأكيد",
-] as const;
-const TRANSPORT_STEPS = [
+// Booking steps. "الحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
+const BASE_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
   "الفندق",
   "الرحلة",
+  "الحافلة",
   "المقاعد",
   "البيانات",
   "التأكيد",
 ] as const;
 
-function isTransportPackage(pkg: { slug?: string; tier?: string; name?: string } | null | undefined): boolean {
-  if (!pkg) return false;
-  const s = (pkg.slug ?? "").toLowerCase();
-  const t = (pkg.tier ?? "").toLowerCase();
-  if (s.includes("transport") || s === "bus" || s.includes("مواصلات")) return true;
-  if (t === "transport" || t === "bus") return true;
-  return (pkg.name ?? "").includes("مواصلات فقط");
-}
 
 function BookingPage() {
   const navigate = useNavigate();
