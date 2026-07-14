@@ -1126,3 +1126,39 @@ function PriceBar(props: {
 function PriceCell({ label, value }: { label: string; value: string }) {
   return <div className="flex flex-col"><span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span><span className="font-bold">{value}</span></div>;
 }
+
+/**
+ * Booking Focus Mode — a minimal shell for the booking wizard.
+ * Hides navbar/footer/floating widgets. Keeps only the logo + hamburger menu.
+ */
+function BookingFocusLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
+        <div className="container-luxe h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <Logo size={40} withText />
+          </Link>
+          <Sheet>
+            <SheetTrigger asChild>
+              <button aria-label="القائمة" className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition">
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72">
+              <nav className="mt-8 flex flex-col gap-1">
+                {NAV_LINKS.map((l) => (
+                  <Link key={l.to} to={l.to} className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">{l.label}</Link>
+                ))}
+                <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">حجوزاتي</Link>
+                <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الملف الشخصي</Link>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+      <main className="flex-1">{children}</main>
+    </div>
+  );
+}
+
