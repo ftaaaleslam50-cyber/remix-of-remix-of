@@ -306,13 +306,14 @@ function BookingPage() {
       case "نوع الحجز": return !!bookingType;
       case "عدد الأفراد": return passengerCount > 0;
       case "الفندق": return noHotel || !!packageId;
-      case "نوع الغرفة": return !!roomType;
       case "الرحلة": return !!tripId;
+      case "الحافلة": return noBus || !!busId;
       case "المقاعد": return seats.length === passengerCount;
       case "البيانات":
         return (
           customer.customer_name.trim().length > 1 &&
           customer.id_number.trim().length > 3 &&
+          customer.nationality.trim().length > 1 &&
           /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
           /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
           (!!idFile || !!editingCode)
@@ -320,6 +321,7 @@ function BookingPage() {
       default: return true;
     }
   }
+
 
   async function uploadIdImage(): Promise<string | null> {
     if (!idFile) return null;
