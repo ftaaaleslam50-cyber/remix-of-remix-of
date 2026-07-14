@@ -189,6 +189,23 @@ function BookingPage() {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
   }, [customer.same_whatsapp, customer.contact_phone]);
 
+  // Auto-populate customer fields from signed-in user's profile
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id").eq("id", user.id).maybeSingle();
+      if (!prof) return;
+      setCustomer((c) => ({
+        ...c,
+        customer_name: c.customer_name || (prof.full_name ?? ""),
+        id_number: c.id_number || (prof.national_id ?? ""),
+        contact_phone: c.contact_phone || (prof.mobile_phone ?? ""),
+        whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
+      }));
+    })();
+  }, []);
+
   // Apply pending coupon from wheel
   useEffect(() => {
     const pending = typeof window !== "undefined" ? localStorage.getItem("pending_coupon") : null;
