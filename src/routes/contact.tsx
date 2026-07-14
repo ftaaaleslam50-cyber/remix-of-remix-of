@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Mail, MessageCircle, Phone, MapPin, Music2, Instagram, Camera } from "lucide-react";
+import { Mail, MessageCircle, Phone, MapPin, Music2, Instagram, Camera, Send, Facebook, Twitter, Youtube } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
