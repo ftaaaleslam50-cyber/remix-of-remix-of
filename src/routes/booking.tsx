@@ -809,7 +809,15 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
           selected={seats}
           reserved={reserved}
           maxSelectable={count}
-          onChange={onChange}
+          onChange={(next) => {
+            if (next.length > seats.length && seats.length >= count) {
+              toast.warning(
+                "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
+              );
+              return;
+            }
+            onChange(next);
+          }}
           blocked={bus?.blocked_seats ?? ["A2"]}
           layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
         />
@@ -817,6 +825,62 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
     </div>
   );
 }
+
+function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: {
+  buses: (Bus & { name?: string | null })[];
+  busReserved: Record<string, string[]>;
+  value: string | null;
+  noBus: boolean;
+  onChange: (id: string) => void;
+  onSelectNoBus: () => void;
+}) {
+  return (
+    <div>
+      <StepHeader title="اختر الحافلة" desc="اختر الحافلة التي تناسبك" />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {buses.map((b) => {
+          const active = !noBus && value === b.id;
+          const cap = b.capacity ?? 49;
+          const blocked = (b.blocked_seats ?? ["A2"]).length;
+          const used = (busReserved[b.id] ?? []).length;
+          const available = Math.max(0, cap - blocked - used);
+          const full = available <= 0;
+          return (
+            <button key={b.id} type="button" disabled={full} onClick={() => onChange(b.id)}
+              className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"} ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+              <div className="relative h-40 overflow-hidden bg-muted">
+                {b.image_url ? (
+                  <img src={b.image_url} alt={b.name ?? `حافلة ${b.bus_number}`} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-4xl">🚌</div>
+                )}
+                {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
+              </div>
+              <div className="p-4 space-y-1.5">
+                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{b.name || `الحافلة رقم ${b.bus_number}`}</h3>
+                {b.bus_type && <p className="text-xs font-semibold text-muted-foreground">النوع: {b.bus_type}</p>}
+                <div className="flex items-center justify-between text-sm pt-1">
+                  <span className="text-muted-foreground">إجمالي المقاعد: <span className="font-bold text-foreground">{cap}</span></span>
+                  <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>{full ? "مكتملة" : `${available} متاح`}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        <button type="button" onClick={onSelectNoBus}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[240px] ${noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}>
+          <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+            <X className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون حافلة</h3>
+          <p className="text-sm text-muted-foreground text-center">فندق فقط — لن يتم حجز مواصلات</p>
+          {noBus && <div className="inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
   customer: { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; same_whatsapp: boolean };
