@@ -262,6 +262,11 @@ function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTrans
       </TableCell>
       <TableCell><Input type="number" className="h-9 w-20" value={local.capacity} onChange={(e) => setLocal({ ...local, capacity: Number(e.target.value) })} /></TableCell>
       <TableCell><span className={free <= 0 ? "text-destructive font-bold" : "font-semibold"}>{used}/{local.capacity}</span><div className="text-[10px] text-muted-foreground">متبقٍ {free}</div></TableCell>
+      <TableCell><Input type="number" className="h-9 w-24" value={local.price_addition ?? 0} onChange={(e) => setLocal({ ...local, price_addition: Number(e.target.value) })} /></TableCell>
+      <TableCell>
+        <Input className="h-9 w-40" placeholder="URL صورة" value={local.image_url ?? ""} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} />
+        {local.image_url && <img src={local.image_url} alt="" className="mt-1 h-8 w-14 object-cover rounded" />}
+      </TableCell>
       <TableCell>
         <Select value={local.status} onValueChange={(v) => setLocal({ ...local, status: v as BusRow["status"] })}>
           <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
