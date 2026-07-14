@@ -189,7 +189,7 @@ function AdminBuses() {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={order} strategy={verticalListSortingStrategy}>
                   <TableBody>
-                    {orderedBuses.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">لا توجد حافلات</TableCell></TableRow>}
+                    {orderedBuses.length === 0 && <TableRow><TableCell colSpan={12} className="text-center py-10 text-muted-foreground">لا توجد حافلات</TableCell></TableRow>}
                     {orderedBuses.map((b) => {
                       const used = bookingCounts[b.id] ?? 0;
                       const cap = b.capacity ?? 49;
