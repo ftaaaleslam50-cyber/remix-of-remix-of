@@ -1,13 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, LayoutDashboard, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, LayoutDashboard, Plus, Trash2, Eye, EyeOff, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/admin-homepage")({
@@ -28,6 +29,12 @@ interface Settings {
   cta_title: string | null; cta_body: string | null; cta_button_label: string | null;
 }
 
+interface Section {
+  id: string; section_key: string; title: string | null; subtitle: string | null;
+  image_url: string | null; button_text: string | null; button_link: string | null;
+  bg_color: string | null; visible: boolean; display_order: number;
+}
+
 function AdminHomepage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -45,11 +52,13 @@ function AdminHomepage() {
   const { data: settings } = useQuery({
     queryKey: ["admin-homepage-settings"],
     enabled: ok === true,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle();
-      if (error) throw error;
-      return data as unknown as Settings | null;
-    },
+    queryFn: async () => (await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle()).data as unknown as Settings | null,
+  });
+
+  const { data: sections = [] } = useQuery({
+    queryKey: ["homepage-sections-admin"],
+    enabled: ok === true,
+    queryFn: async () => (await supabase.from("homepage_sections").select("*").order("display_order")).data as Section[] ?? [],
   });
 
   const [local, setLocal] = useState<Settings | null>(null);
@@ -70,6 +79,35 @@ function AdminHomepage() {
     qc.invalidateQueries({ queryKey: ["home-cms"] });
   }
 
+  async function saveSection(s: Section) {
+    const { error } = await supabase.from("homepage_sections").update({
+      title: s.title, subtitle: s.subtitle, image_url: s.image_url,
+      button_text: s.button_text, button_link: s.button_link, bg_color: s.bg_color,
+      visible: s.visible, display_order: s.display_order,
+    } as never).eq("id", s.id);
+    if (error) return toast.error(error.message);
+    toast.success("تم الحفظ");
+    qc.invalidateQueries({ queryKey: ["homepage-sections-admin"] });
+    qc.invalidateQueries({ queryKey: ["homepage-sections"] });
+  }
+  async function toggleVisible(s: Section) {
+    await supabase.from("homepage_sections").update({ visible: !s.visible } as never).eq("id", s.id);
+    qc.invalidateQueries({ queryKey: ["homepage-sections-admin"] });
+    qc.invalidateQueries({ queryKey: ["homepage-sections"] });
+  }
+  async function move(s: Section, dir: -1 | 1) {
+    const sorted = [...sections].sort((a, b) => a.display_order - b.display_order);
+    const idx = sorted.findIndex((x) => x.id === s.id);
+    const other = sorted[idx + dir];
+    if (!other) return;
+    await Promise.all([
+      supabase.from("homepage_sections").update({ display_order: other.display_order } as never).eq("id", s.id),
+      supabase.from("homepage_sections").update({ display_order: s.display_order } as never).eq("id", other.id),
+    ]);
+    qc.invalidateQueries({ queryKey: ["homepage-sections-admin"] });
+    qc.invalidateQueries({ queryKey: ["homepage-sections"] });
+  }
+
   if (ok === false) return <div className="p-8 text-center">ليس لديك صلاحية</div>;
   if (!local) return <div className="p-8 text-center">جاري التحميل...</div>;
 
@@ -83,14 +121,15 @@ function AdminHomepage() {
         <div className="container-luxe py-4 flex items-center justify-between">
           <h1 className="text-lg font-extrabold flex items-center gap-2"><LayoutDashboard className="h-5 w-5" /> إدارة الصفحة الرئيسية</h1>
           <div className="flex gap-2">
-            <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ الكل</Button>
+            <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ المحتوى</Button>
             <Link to="/dashboard"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><ArrowLeft className="h-4 w-4 ml-1" /> لوحة التحكم</Button></Link>
           </div>
         </div>
       </header>
       <main className="container-luxe py-8">
-        <Tabs defaultValue="hero">
+        <Tabs defaultValue="sections">
           <TabsList className="bg-white rounded-2xl p-1.5 flex flex-wrap h-auto">
+            <TabsTrigger value="sections" className="rounded-xl">الأقسام</TabsTrigger>
             <TabsTrigger value="hero" className="rounded-xl">الهيرو</TabsTrigger>
             <TabsTrigger value="about" className="rounded-xl">عن المؤسسة</TabsTrigger>
             <TabsTrigger value="features" className="rounded-xl">المميزات</TabsTrigger>
@@ -98,6 +137,13 @@ function AdminHomepage() {
             <TabsTrigger value="faq" className="rounded-xl">الأسئلة الشائعة</TabsTrigger>
             <TabsTrigger value="cta" className="rounded-xl">دعوة الحجز</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="sections" className="mt-4 space-y-3">
+            <p className="text-sm text-muted-foreground">أعِد ترتيب أقسام الصفحة الرئيسية، أخفِ ما لا تحتاجه، وحرِّر العناوين والألوان والأزرار.</p>
+            {sections.sort((a, b) => a.display_order - b.display_order).map((s) => (
+              <SectionCard key={s.id} section={s} onSave={saveSection} onToggle={() => toggleVisible(s)} onUp={() => move(s, -1)} onDown={() => move(s, 1)} />
+            ))}
+          </TabsContent>
 
           <TabsContent value="hero" className="mt-4 surface-card p-6 grid gap-3">
             <div><Label>العنوان الرئيسي</Label><Input value={local.hero_title} onChange={(e) => setLocal({ ...local, hero_title: e.target.value })} /></div>
@@ -151,6 +197,40 @@ function AdminHomepage() {
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+function SectionCard({ section, onSave, onToggle, onUp, onDown }: {
+  section: Section; onSave: (s: Section) => void; onToggle: () => void; onUp: () => void; onDown: () => void;
+}) {
+  const [local, setLocal] = useState(section);
+  useEffect(() => setLocal(section), [section]);
+  return (
+    <div className={`surface-card p-4 ${!local.visible ? "opacity-60" : ""}`} style={local.bg_color ? { borderRightColor: local.bg_color, borderRightWidth: 4 } : undefined}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="font-bold">{local.section_key}</div>
+          <div className="text-xs text-muted-foreground">ترتيب #{local.display_order}</div>
+        </div>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={onUp}><ArrowUp className="h-3 w-3" /></Button>
+          <Button size="sm" variant="outline" onClick={onDown}><ArrowDown className="h-3 w-3" /></Button>
+          <Button size="sm" variant="outline" onClick={onToggle}>{local.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}</Button>
+        </div>
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        <div><Label className="text-xs">العنوان</Label><Input value={local.title ?? ""} onChange={(e) => setLocal({ ...local, title: e.target.value })} /></div>
+        <div><Label className="text-xs">الوصف</Label><Input value={local.subtitle ?? ""} onChange={(e) => setLocal({ ...local, subtitle: e.target.value })} /></div>
+        <div><Label className="text-xs">رابط الصورة</Label><Input value={local.image_url ?? ""} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} /></div>
+        <div><Label className="text-xs">لون الخلفية</Label><Input placeholder="#0f2a44" value={local.bg_color ?? ""} onChange={(e) => setLocal({ ...local, bg_color: e.target.value })} /></div>
+        <div><Label className="text-xs">نص الزر</Label><Input value={local.button_text ?? ""} onChange={(e) => setLocal({ ...local, button_text: e.target.value })} /></div>
+        <div><Label className="text-xs">رابط الزر</Label><Input value={local.button_link ?? ""} onChange={(e) => setLocal({ ...local, button_link: e.target.value })} /></div>
+        <div className="flex items-center gap-2"><Switch checked={local.visible} onCheckedChange={(v) => setLocal({ ...local, visible: v })} /><span className="text-xs">ظاهر</span></div>
+      </div>
+      <div className="flex justify-end mt-3">
+        <Button size="sm" onClick={() => onSave(local)}><Save className="h-4 w-4 ml-1" /> حفظ</Button>
+      </div>
     </div>
   );
 }

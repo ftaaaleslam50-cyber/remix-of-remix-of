@@ -26,8 +26,10 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin-users'
 import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
 import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
+import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
 import { Route as AuthenticatedAdminExhibitionsRouteImport } from './routes/_authenticated/admin-exhibitions'
 import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
+import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
 import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
 
 const GalleryRoute = GalleryRouteImport.update({
@@ -116,6 +118,12 @@ const AuthenticatedAdminHomepageRoute =
     path: '/admin-homepage',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminGalleryRoute =
+  AuthenticatedAdminGalleryRouteImport.update({
+    id: '/admin-gallery',
+    path: '/admin-gallery',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminExhibitionsRoute =
   AuthenticatedAdminExhibitionsRouteImport.update({
     id: '/admin-exhibitions',
@@ -127,6 +135,12 @@ const AuthenticatedAdminBusesRoute = AuthenticatedAdminBusesRouteImport.update({
   path: '/admin-buses',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminBusLayoutsRoute =
+  AuthenticatedAdminBusLayoutsRouteImport.update({
+    id: '/admin-bus-layouts',
+    path: '/admin-bus-layouts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicBootstrapAdminRoute = ApiPublicBootstrapAdminRouteImport.update({
   id: '/api/public/bootstrap-admin',
   path: '/api/public/bootstrap-admin',
@@ -141,8 +155,10 @@ export interface FileRoutesByFullPath {
   '/draw': typeof DrawRoute
   '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
+  '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
+  '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
@@ -162,8 +178,10 @@ export interface FileRoutesByTo {
   '/draw': typeof DrawRoute
   '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
+  '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
+  '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
@@ -185,8 +203,10 @@ export interface FileRoutesById {
   '/draw': typeof DrawRoute
   '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
+  '/_authenticated/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/_authenticated/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/_authenticated/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
+  '/_authenticated/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/_authenticated/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/_authenticated/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/_authenticated/admin-users': typeof AuthenticatedAdminUsersRoute
@@ -208,8 +228,10 @@ export interface FileRouteTypes {
     | '/draw'
     | '/exhibitions'
     | '/gallery'
+    | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-exhibitions'
+    | '/admin-gallery'
     | '/admin-homepage'
     | '/admin-trips'
     | '/admin-users'
@@ -229,8 +251,10 @@ export interface FileRouteTypes {
     | '/draw'
     | '/exhibitions'
     | '/gallery'
+    | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-exhibitions'
+    | '/admin-gallery'
     | '/admin-homepage'
     | '/admin-trips'
     | '/admin-users'
@@ -251,8 +275,10 @@ export interface FileRouteTypes {
     | '/draw'
     | '/exhibitions'
     | '/gallery'
+    | '/_authenticated/admin-bus-layouts'
     | '/_authenticated/admin-buses'
     | '/_authenticated/admin-exhibitions'
+    | '/_authenticated/admin-gallery'
     | '/_authenticated/admin-homepage'
     | '/_authenticated/admin-trips'
     | '/_authenticated/admin-users'
@@ -399,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminHomepageRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-gallery': {
+      id: '/_authenticated/admin-gallery'
+      path: '/admin-gallery'
+      fullPath: '/admin-gallery'
+      preLoaderRoute: typeof AuthenticatedAdminGalleryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-exhibitions': {
       id: '/_authenticated/admin-exhibitions'
       path: '/admin-exhibitions'
@@ -413,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBusesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-bus-layouts': {
+      id: '/_authenticated/admin-bus-layouts'
+      path: '/admin-bus-layouts'
+      fullPath: '/admin-bus-layouts'
+      preLoaderRoute: typeof AuthenticatedAdminBusLayoutsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/bootstrap-admin': {
       id: '/api/public/bootstrap-admin'
       path: '/api/public/bootstrap-admin'
@@ -424,8 +464,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminBusLayoutsRoute: typeof AuthenticatedAdminBusLayoutsRoute
   AuthenticatedAdminBusesRoute: typeof AuthenticatedAdminBusesRoute
   AuthenticatedAdminExhibitionsRoute: typeof AuthenticatedAdminExhibitionsRoute
+  AuthenticatedAdminGalleryRoute: typeof AuthenticatedAdminGalleryRoute
   AuthenticatedAdminHomepageRoute: typeof AuthenticatedAdminHomepageRoute
   AuthenticatedAdminTripsRoute: typeof AuthenticatedAdminTripsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
@@ -437,8 +479,10 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminBusLayoutsRoute: AuthenticatedAdminBusLayoutsRoute,
   AuthenticatedAdminBusesRoute: AuthenticatedAdminBusesRoute,
   AuthenticatedAdminExhibitionsRoute: AuthenticatedAdminExhibitionsRoute,
+  AuthenticatedAdminGalleryRoute: AuthenticatedAdminGalleryRoute,
   AuthenticatedAdminHomepageRoute: AuthenticatedAdminHomepageRoute,
   AuthenticatedAdminTripsRoute: AuthenticatedAdminTripsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
