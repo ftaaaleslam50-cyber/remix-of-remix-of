@@ -37,6 +37,7 @@ interface BusRow {
   name: string | null; plate: string | null; model: string | null;
   status: "active" | "disabled" | "maintenance" | "stopped"; priority: number; is_active_booking: boolean;
   blocked_seats: string[] | null; layout: "A" | "B";
+  image_url: string | null; bus_type: string | null; details: string | null; price_addition: number;
 }
 interface TripRow { id: string; name: string; active: boolean; }
 
@@ -129,7 +130,9 @@ function AdminBuses() {
 
   async function save(b: BusRow) {
     const { error } = await supabase.from("buses").update({
-      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority, active: b.status === "active", layout: b.layout,
+      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority,
+      active: b.status === "active", layout: b.layout,
+      image_url: b.image_url, bus_type: b.bus_type, details: b.details, price_addition: Number(b.price_addition) || 0,
     }).eq("id", b.id);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
@@ -175,15 +178,18 @@ function AdminBuses() {
               <TableHeader><TableRow>
                 <TableHead className="w-6"></TableHead>
                 <TableHead>الاسم</TableHead><TableHead>اللوحة</TableHead><TableHead>الطراز</TableHead>
+                <TableHead>النوع</TableHead>
                 <TableHead>التخطيط</TableHead>
                 <TableHead>السعة</TableHead><TableHead>المحجوز</TableHead>
+                <TableHead>+سعر</TableHead>
+                <TableHead>صورة</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>الحجز النشط</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={order} strategy={verticalListSortingStrategy}>
                   <TableBody>
-                    {orderedBuses.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">لا توجد حافلات</TableCell></TableRow>}
+                    {orderedBuses.length === 0 && <TableRow><TableCell colSpan={12} className="text-center py-10 text-muted-foreground">لا توجد حافلات</TableCell></TableRow>}
                     {orderedBuses.map((b) => {
                       const used = bookingCounts[b.id] ?? 0;
                       const cap = b.capacity ?? 49;
@@ -241,6 +247,7 @@ function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTrans
       <TableCell><Input className="h-9 w-32" value={local.name ?? ""} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.plate ?? ""} onChange={(e) => setLocal({ ...local, plate: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.model ?? ""} onChange={(e) => setLocal({ ...local, model: e.target.value })} /></TableCell>
+      <TableCell><Input className="h-9 w-24" placeholder="VIP/عادية" value={local.bus_type ?? ""} onChange={(e) => setLocal({ ...local, bus_type: e.target.value })} /></TableCell>
       <TableCell>
         <Select value={local.layout ?? "A"} onValueChange={(v) => {
           const layout = v as "A" | "B";
@@ -255,6 +262,11 @@ function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTrans
       </TableCell>
       <TableCell><Input type="number" className="h-9 w-20" value={local.capacity} onChange={(e) => setLocal({ ...local, capacity: Number(e.target.value) })} /></TableCell>
       <TableCell><span className={free <= 0 ? "text-destructive font-bold" : "font-semibold"}>{used}/{local.capacity}</span><div className="text-[10px] text-muted-foreground">متبقٍ {free}</div></TableCell>
+      <TableCell><Input type="number" className="h-9 w-24" value={local.price_addition ?? 0} onChange={(e) => setLocal({ ...local, price_addition: Number(e.target.value) })} /></TableCell>
+      <TableCell>
+        <Input className="h-9 w-40" placeholder="URL صورة" value={local.image_url ?? ""} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} />
+        {local.image_url && <img src={local.image_url} alt="" className="mt-1 h-8 w-14 object-cover rounded" />}
+      </TableCell>
       <TableCell>
         <Select value={local.status} onValueChange={(v) => setLocal({ ...local, status: v as BusRow["status"] })}>
           <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>

@@ -51,7 +51,7 @@ export const Route = createFileRoute("/booking")({
 const FULL_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
-  "الباقة",
+  "الفندق",
   "نوع الغرفة",
   "الرحلة",
   "المقاعد",
@@ -61,7 +61,7 @@ const FULL_STEPS = [
 const TRANSPORT_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
-  "الباقة",
+  "الفندق",
   "الرحلة",
   "المقاعد",
   "البيانات",
@@ -105,6 +105,8 @@ function BookingPage() {
   const [idFile, setIdFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [noHotel, setNoHotel] = useState(false);
+  const [noBus, setNoBus] = useState(false);
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
@@ -187,6 +189,28 @@ function BookingPage() {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
   }, [customer.same_whatsapp, customer.contact_phone]);
 
+  // When "no hotel" is toggled, auto-select the first (transport) package so pricing works.
+  useEffect(() => {
+    if (noHotel && !packageId && packages.length > 0) setPackageId(packages[0].id);
+  }, [noHotel, packageId, packages]);
+
+  // Auto-populate customer fields from signed-in user's profile
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id").eq("id", user.id).maybeSingle();
+      if (!prof) return;
+      setCustomer((c) => ({
+        ...c,
+        customer_name: c.customer_name || (prof.full_name ?? ""),
+        id_number: c.id_number || (prof.national_id ?? ""),
+        contact_phone: c.contact_phone || (prof.mobile_phone ?? ""),
+        whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
+      }));
+    })();
+  }, []);
+
   // Apply pending coupon from wheel
   useEffect(() => {
     const pending = typeof window !== "undefined" ? localStorage.getItem("pending_coupon") : null;
@@ -231,8 +255,9 @@ function BookingPage() {
 
   const selectedPackage = packages.find((p) => p.id === packageId) ?? null;
   const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
-  const transportOnly = isTransportPackage(selectedPackage);
-  const STEPS: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
+  const transportOnly = isTransportPackage(selectedPackage) || noHotel;
+  const baseSteps: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
+  const STEPS: readonly string[] = noBus ? baseSteps.filter((s) => s !== "الرحلة" && s !== "المقاعد") : baseSteps;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
 
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
@@ -240,9 +265,10 @@ function BookingPage() {
     if (step > STEPS.length - 1) setStep(STEPS.length - 1);
   }, [STEPS.length, step]);
 
+  const busSurcharge = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
   const pricePerPerson = useMemo(
-    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing),
-    [selectedPackage, roomType, passengerCount, pricing]
+    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing) + busSurcharge,
+    [selectedPackage, roomType, passengerCount, pricing, busSurcharge]
   );
 
   const subtotal = pricePerPerson * passengerCount;
@@ -280,7 +306,7 @@ function BookingPage() {
     switch (stepName) {
       case "نوع الحجز": return !!bookingType;
       case "عدد الأفراد": return passengerCount > 0;
-      case "الباقة": return !!packageId;
+      case "الفندق": return noHotel || !!packageId;
       case "نوع الغرفة": return !!roomType;
       case "الرحلة": return !!tripId;
       case "المقاعد": return seats.length === passengerCount;
@@ -314,7 +340,8 @@ function BookingPage() {
   }
 
   async function submitBooking() {
-    if (!activeBus || !selectedTrip || !selectedPackage) return;
+    if (!selectedPackage) return;
+    if (!noBus && (!activeBus || !selectedTrip)) return;
     setSubmitting(true);
     try {
       const id_image_url = await uploadIdImage();
@@ -326,9 +353,11 @@ function BookingPage() {
         passenger_count: passengerCount,
         room_type: roomType,
         package_id: selectedPackage.id,
-        trip_id: tripId!,
-        bus_id: activeBus.id,
-        seat_numbers: seats,
+        trip_id: noBus ? null : tripId!,
+        bus_id: noBus ? null : activeBus!.id,
+        seat_numbers: noBus ? [] : seats,
+        no_hotel: noHotel,
+        no_bus: noBus,
         customer_name: customer.customer_name.trim(),
         id_number: customer.id_number.trim(),
         contact_phone: customer.contact_phone.trim(),
@@ -341,6 +370,7 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
       };
+
 
       let bookingId: string | null = null;
       if (editingCode) {
@@ -431,7 +461,20 @@ function BookingPage() {
             <motion.div key={stepName} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
-              {stepName === "الباقة" && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
+              {stepName === "الفندق" && (
+                <div>
+                  <div className="mb-4 flex flex-wrap gap-4 items-center rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                      <Checkbox checked={noHotel} onCheckedChange={(v) => setNoHotel(!!v)} /> بدون فندق (مواصلات فقط)
+                    </label>
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                      <Checkbox checked={noBus} onCheckedChange={(v) => setNoBus(!!v)} /> بدون حافلة (فندق فقط)
+                    </label>
+                  </div>
+                  {!noHotel && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
+                  
+                </div>
+              )}
               {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
               {stepName === "المقاعد" && (
@@ -828,7 +871,7 @@ function StepConfirm(props: {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["عدد الأفراد", String(props.passengerCount)],
-    ["الباقة", props.pkg?.name ?? "—"],
+    ["الفندق", props.pkg?.name ?? "—"],
     ...(!props.transportOnly ? [["نوع الغرفة", ROOM_LABEL[props.roomType]] as [string, string]] : []),
     ["الرحلة", props.trip?.name ?? "—"],
     ["رقم الباص", String(props.busNumber)],
@@ -895,7 +938,7 @@ function PriceBar(props: {
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
           <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
-          {props.packageName && <PriceCell label="الباقة" value={props.packageName} />}
+          {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
