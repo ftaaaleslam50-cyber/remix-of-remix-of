@@ -456,7 +456,20 @@ function BookingPage() {
             <motion.div key={stepName} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
-              {stepName === "الفندق" && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
+              {stepName === "الفندق" && (
+                <div>
+                  <div className="mb-4 flex flex-wrap gap-4 items-center rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                      <Checkbox checked={noHotel} onCheckedChange={(v) => setNoHotel(!!v)} /> بدون فندق (مواصلات فقط)
+                    </label>
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                      <Checkbox checked={noBus} onCheckedChange={(v) => setNoBus(!!v)} /> بدون حافلة (فندق فقط)
+                    </label>
+                  </div>
+                  {!noHotel && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
+                  {noHotel && packages.length > 0 && !packageId && setPackageId(packages[0].id)}
+                </div>
+              )}
               {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
               {stepName === "المقاعد" && (
