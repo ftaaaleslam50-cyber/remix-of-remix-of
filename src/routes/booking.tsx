@@ -306,7 +306,7 @@ function BookingPage() {
     switch (stepName) {
       case "نوع الحجز": return !!bookingType;
       case "عدد الأفراد": return passengerCount > 0;
-      case "الفندق": return !!packageId;
+      case "الفندق": return noHotel || !!packageId;
       case "نوع الغرفة": return !!roomType;
       case "الرحلة": return !!tripId;
       case "المقاعد": return seats.length === passengerCount;
