@@ -8,7 +8,7 @@ import { BRAND } from "@/lib/brand";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface Album { id: string; name: string; slug: string }
-interface Image { id: string; album_id: string; image_url: string; caption: string }
+interface Image { id: string; album_id: string; image_url: string; caption: string; media_type?: string; video_url?: string | null }
 
 export const Route = createFileRoute("/gallery")({
   head: () => ({
@@ -54,20 +54,28 @@ function GalleryPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {shown.map((img) => (
-            <button
-              key={img.id}
-              onClick={() => setOpen(img.image_url)}
-              className="group rounded-2xl overflow-hidden shadow-[var(--shadow-soft)] border border-border bg-muted aspect-[4/3] block"
-            >
-              <img
-                src={img.image_url}
-                alt={img.caption || "معرض"}
-                className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
-                loading="lazy"
-              />
-            </button>
-          ))}
+          {shown.map((img) => {
+            const isVideo = img.media_type === "video" && img.video_url;
+            return (
+              <button
+                key={img.id}
+                onClick={() => setOpen(isVideo ? (img.video_url as string) : img.image_url)}
+                className="group rounded-2xl overflow-hidden shadow-[var(--shadow-soft)] border border-border bg-muted aspect-[4/3] block relative"
+              >
+                {isVideo ? (
+                  <video src={img.video_url ?? undefined} className="h-full w-full object-cover" muted playsInline />
+                ) : (
+                  <img
+                    src={img.image_url}
+                    alt={img.caption || "معرض"}
+                    className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                )}
+                {isVideo && <span className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-3xl">▶</span>}
+              </button>
+            );
+          })}
           {shown.length === 0 && (
             <p className="col-span-full text-center text-muted-foreground py-10">لا توجد صور في هذا القسم بعد.</p>
           )}
@@ -76,7 +84,9 @@ function GalleryPage() {
         <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
           <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black">
             <button onClick={() => setOpen(null)} className="absolute top-2 left-2 z-10 h-9 w-9 rounded-full bg-white/90 flex items-center justify-center"><X /></button>
-            {open && <img src={open} alt="" className="w-full max-h-[85vh] object-contain" />}
+            {open && (open.match(/\.(mp4|webm|mov)(\?|$)/i)
+              ? <video src={open} controls autoPlay className="w-full max-h-[85vh]" />
+              : <img src={open} alt="" className="w-full max-h-[85vh] object-contain" />)}
           </DialogContent>
         </Dialog>
       </section>

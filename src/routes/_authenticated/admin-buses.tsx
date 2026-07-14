@@ -1,25 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bus, ArrowLeft, Plus, Save, Trash2, Star, GripVertical, ArrowRightLeft } from "lucide-react";
+import { Bus, ArrowLeft, Plus, Save, Trash2, Copy, ArrowRightLeft, Layout } from "lucide-react";
 import { toast } from "sonner";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,13 +16,24 @@ export const Route = createFileRoute("/_authenticated/admin-buses")({
 });
 
 interface BusRow {
-  id: string; trip_id: string; bus_number: number; capacity: number; active: boolean;
+  id: string; trip_id: string | null; bus_number: number; capacity: number; active: boolean;
   name: string | null; plate: string | null; model: string | null;
-  status: "active" | "disabled" | "maintenance" | "stopped"; priority: number; is_active_booking: boolean;
-  blocked_seats: string[] | null; layout: "A" | "B";
+  status: "active" | "maintenance" | "stopped";
+  blocked_seats: string[] | null; layout: "A" | "B" | null; layout_id: string | null;
   image_url: string | null; bus_type: string | null; details: string | null; price_addition: number;
 }
-interface TripRow { id: string; name: string; active: boolean; }
+interface LayoutRow { id: string; name: string; seat_count: number; }
+
+const STATUS_LABEL: Record<BusRow["status"], string> = {
+  active: "نشطة",
+  maintenance: "قيد الصيانة",
+  stopped: "خارج الخدمة",
+};
+const STATUS_COLOR: Record<BusRow["status"], string> = {
+  active: "bg-success",
+  maintenance: "bg-warning",
+  stopped: "bg-destructive",
+};
 
 function AdminBuses() {
   const navigate = useNavigate();
@@ -56,21 +50,21 @@ function AdminBuses() {
     })();
   }, [navigate]);
 
-  const { data: trips = [] } = useQuery({
-    queryKey: ["admin-trips"],
-    enabled: isAdmin === true,
-    queryFn: async () => {
-      const { data } = await supabase.from("trips").select("id,name,active").order("created_at");
-      return (data as TripRow[]) ?? [];
-    },
-  });
-
   const { data: buses = [] } = useQuery({
     queryKey: ["admin-buses-fleet"],
     enabled: isAdmin === true,
     queryFn: async () => {
-      const { data } = await supabase.from("buses").select("*").order("priority").order("bus_number");
+      const { data } = await supabase.from("buses").select("*").order("bus_number");
       return (data as unknown as BusRow[]) ?? [];
+    },
+  });
+
+  const { data: layouts = [] } = useQuery({
+    queryKey: ["bus-layouts"],
+    enabled: isAdmin === true,
+    queryFn: async () => {
+      const { data } = await supabase.from("bus_layouts").select("id,name,seat_count").order("name");
+      return (data as unknown as LayoutRow[]) ?? [];
     },
   });
 
@@ -88,62 +82,47 @@ function AdminBuses() {
     },
   });
 
-  const [order, setOrder] = useState<string[]>([]);
-  useEffect(() => { setOrder(buses.map((b) => b.id)); }, [buses]);
-  const orderedBuses = useMemo(() => {
-    const byId = new Map(buses.map((b) => [b.id, b]));
-    return order.map((id) => byId.get(id)).filter(Boolean) as BusRow[];
-  }, [order, buses]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  async function onDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const oldIdx = order.indexOf(String(active.id));
-    const newIdx = order.indexOf(String(over.id));
-    const next = arrayMove(order, oldIdx, newIdx);
-    setOrder(next);
-    // persist as priority = index (10-step gaps so hand edits still fit)
-    for (let i = 0; i < next.length; i++) {
-      await supabase.from("buses").update({ priority: (i + 1) * 10 }).eq("id", next[i]);
-    }
-    toast.success("تم تحديث الأولوية");
-    qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
-  }
-
   async function addBus() {
-    if (trips.length === 0) return toast.error("لا توجد رحلات — أنشئ رحلة أولاً");
-    const trip = trips[0];
-    const next = (buses.filter((b) => b.trip_id === trip.id).reduce((m, b) => Math.max(m, b.bus_number), 0)) + 1;
-    const maxPriority = buses.reduce((m, b) => Math.max(m, b.priority ?? 0), 0);
+    const next = buses.reduce((m, b) => Math.max(m, b.bus_number), 0) + 1;
     const { error } = await supabase.from("buses").insert({
-      trip_id: trip.id, bus_number: next, capacity: 49, name: `حافلة ${next}`, priority: maxPriority + 10, layout: "A",
-    });
+      bus_number: next, capacity: 49, name: `حافلة ${next}`, layout: "A", status: "active", active: true,
+    } as never);
     if (error) return toast.error(error.message);
     toast.success("تمت الإضافة");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
 
-  async function save(b: BusRow) {
-    const { error } = await supabase.from("buses").update({
-      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority,
-      active: b.status === "active", layout: b.layout,
-      image_url: b.image_url, bus_type: b.bus_type, details: b.details, price_addition: Number(b.price_addition) || 0,
-    }).eq("id", b.id);
+  async function duplicateBus(b: BusRow) {
+    const next = buses.reduce((m, x) => Math.max(m, x.bus_number), 0) + 1;
+    const { error } = await supabase.from("buses").insert({
+      bus_number: next,
+      name: (b.name ? `${b.name} (نسخة)` : `حافلة ${next}`),
+      plate: null,
+      model: b.model, bus_type: b.bus_type, details: b.details,
+      capacity: b.capacity, layout: b.layout, layout_id: b.layout_id,
+      image_url: b.image_url, price_addition: b.price_addition,
+      status: "active", active: true, trip_id: b.trip_id,
+    } as never);
     if (error) return toast.error(error.message);
-    toast.success("تم الحفظ");
+    toast.success("تم النسخ");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
 
-  async function setActiveBooking(id: string) {
-    await supabase.from("buses").update({ is_active_booking: false }).neq("id", id);
-    const { error } = await supabase.from("buses").update({ is_active_booking: true }).eq("id", id);
+  async function save(b: BusRow) {
+    const patch: Record<string, unknown> = {
+      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity,
+      status: b.status, active: b.status === "active", layout: b.layout, layout_id: b.layout_id,
+      image_url: b.image_url, bus_type: b.bus_type, details: b.details,
+      price_addition: Number(b.price_addition) || 0,
+    };
+    // Sync capacity from selected layout template
+    if (b.layout_id) {
+      const lay = layouts.find((l) => l.id === b.layout_id);
+      if (lay) patch.capacity = lay.seat_count || b.capacity;
+    }
+    const { error } = await supabase.from("buses").update(patch as never).eq("id", b.id);
     if (error) return toast.error(error.message);
-    toast.success("تم تعيينها كحافلة الحجز النشطة");
+    toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
 
@@ -161,55 +140,45 @@ function AdminBuses() {
       <header className="bg-[color:var(--color-navy)] text-white">
         <div className="container-luxe py-4 flex items-center justify-between">
           <h1 className="text-lg font-extrabold flex items-center gap-2"><Bus className="h-5 w-5" /> إدارة الأسطول</h1>
-          <Link to="/dashboard"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><ArrowLeft className="h-4 w-4 ml-1" /> لوحة التحكم</Button></Link>
+          <div className="flex gap-2">
+            <Link to="/admin-bus-layouts"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> تخطيطات الحافلات</Button></Link>
+            <Link to="/dashboard"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><ArrowLeft className="h-4 w-4 ml-1" /> لوحة التحكم</Button></Link>
+          </div>
         </div>
       </header>
       <main className="container-luxe py-8">
         <div className="surface-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-extrabold">الحافلات ({buses.length})</h2>
-              <p className="text-xs text-muted-foreground mt-1">اسحب <GripVertical className="inline h-3 w-3" /> لإعادة ترتيب الأولوية. الأولى في الترتيب تُستخدم أولاً في الحجز.</p>
-            </div>
+            <h2 className="text-lg font-extrabold">الحافلات ({buses.length})</h2>
             <Button onClick={addBus} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة حافلة</Button>
           </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
-                <TableHead className="w-6"></TableHead>
                 <TableHead>الاسم</TableHead><TableHead>اللوحة</TableHead><TableHead>الطراز</TableHead>
                 <TableHead>النوع</TableHead>
-                <TableHead>التخطيط</TableHead>
+                <TableHead>القالب</TableHead>
                 <TableHead>السعة</TableHead><TableHead>المحجوز</TableHead>
                 <TableHead>+سعر</TableHead>
                 <TableHead>صورة</TableHead>
                 <TableHead>الحالة</TableHead>
-                <TableHead>الحجز النشط</TableHead><TableHead></TableHead>
+                <TableHead></TableHead>
               </TableRow></TableHeader>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={order} strategy={verticalListSortingStrategy}>
-                  <TableBody>
-                    {orderedBuses.length === 0 && <TableRow><TableCell colSpan={12} className="text-center py-10 text-muted-foreground">لا توجد حافلات</TableCell></TableRow>}
-                    {orderedBuses.map((b) => {
-                      const used = bookingCounts[b.id] ?? 0;
-                      const cap = b.capacity ?? 49;
-                      const free = cap - ((b.blocked_seats ?? ["A2"]).length) - used;
-                      return (
-                        <SortableBusRow
-                          key={b.id}
-                          bus={b}
-                          used={used}
-                          free={free}
-                          onSave={save}
-                          onDelete={() => del(b.id)}
-                          onActivate={() => setActiveBooking(b.id)}
-                          onTransfer={() => setTransferFrom(b)}
-                        />
-                      );
-                    })}
-                  </TableBody>
-                </SortableContext>
-              </DndContext>
+              <TableBody>
+                {buses.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-10 text-muted-foreground">لا توجد حافلات</TableCell></TableRow>}
+                {buses.map((b) => (
+                  <BusEditRow
+                    key={b.id}
+                    bus={b}
+                    used={bookingCounts[b.id] ?? 0}
+                    layouts={layouts}
+                    onSave={save}
+                    onDelete={() => del(b.id)}
+                    onDuplicate={() => duplicateBus(b)}
+                    onTransfer={() => setTransferFrom(b)}
+                  />
+                ))}
+              </TableBody>
             </Table>
           </div>
         </div>
@@ -217,7 +186,7 @@ function AdminBuses() {
 
       <TransferDialog
         from={transferFrom}
-        buses={buses.filter((b) => b.id !== transferFrom?.id && b.trip_id === transferFrom?.trip_id)}
+        buses={buses.filter((b) => b.id !== transferFrom?.id)}
         onClose={() => setTransferFrom(null)}
         onDone={() => {
           setTransferFrom(null);
@@ -228,35 +197,32 @@ function AdminBuses() {
   );
 }
 
-function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTransfer }: {
-  bus: BusRow; used: number; free: number;
-  onSave: (b: BusRow) => void; onDelete: () => void; onActivate: () => void; onTransfer: () => void;
+function BusEditRow({ bus, used, layouts, onSave, onDelete, onDuplicate, onTransfer }: {
+  bus: BusRow; used: number; layouts: LayoutRow[];
+  onSave: (b: BusRow) => void; onDelete: () => void; onDuplicate: () => void; onTransfer: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bus.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
   const [local, setLocal] = useState(bus);
   useEffect(() => setLocal(bus), [bus]);
-  const statusBadge = { active: "bg-success", disabled: "bg-muted-foreground", maintenance: "bg-warning", stopped: "bg-destructive" }[local.status];
+  const free = local.capacity - used;
   return (
-    <TableRow ref={setNodeRef} style={style}>
-      <TableCell>
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none" aria-label="سحب">
-          <GripVertical className="h-4 w-4" />
-        </button>
-      </TableCell>
+    <TableRow>
       <TableCell><Input className="h-9 w-32" value={local.name ?? ""} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.plate ?? ""} onChange={(e) => setLocal({ ...local, plate: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.model ?? ""} onChange={(e) => setLocal({ ...local, model: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-24" placeholder="VIP/عادية" value={local.bus_type ?? ""} onChange={(e) => setLocal({ ...local, bus_type: e.target.value })} /></TableCell>
       <TableCell>
-        <Select value={local.layout ?? "A"} onValueChange={(v) => {
-          const layout = v as "A" | "B";
-          setLocal({ ...local, layout, capacity: layout === "B" ? 53 : 49 });
-        }}>
-          <SelectTrigger className="h-9 w-24"><SelectValue /></SelectTrigger>
+        <Select
+          value={local.layout_id ?? "__none"}
+          onValueChange={(v) => {
+            const id = v === "__none" ? null : v;
+            const lay = layouts.find((l) => l.id === id);
+            setLocal({ ...local, layout_id: id, capacity: lay?.seat_count ?? local.capacity });
+          }}
+        >
+          <SelectTrigger className="h-9 w-36"><SelectValue placeholder="—" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="A">A · 49</SelectItem>
-            <SelectItem value="B">B · 53 (+F1–F4)</SelectItem>
+            <SelectItem value="__none">— بدون قالب —</SelectItem>
+            {layouts.map((l) => <SelectItem key={l.id} value={l.id}>{l.name} ({l.seat_count})</SelectItem>)}
           </SelectContent>
         </Select>
       </TableCell>
@@ -269,21 +235,20 @@ function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTrans
       </TableCell>
       <TableCell>
         <Select value={local.status} onValueChange={(v) => setLocal({ ...local, status: v as BusRow["status"] })}>
-          <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="active">نشطة</SelectItem>
-            <SelectItem value="disabled">معطّلة</SelectItem>
-            <SelectItem value="maintenance">صيانة</SelectItem>
-            <SelectItem value="stopped">موقوفة</SelectItem>
+            <SelectItem value="maintenance">قيد الصيانة</SelectItem>
+            <SelectItem value="stopped">خارج الخدمة</SelectItem>
           </SelectContent>
         </Select>
-        <Badge className={`${statusBadge} text-white mt-1`}>{local.status}</Badge>
+        <Badge className={`${STATUS_COLOR[local.status]} text-white mt-1`}>{STATUS_LABEL[local.status]}</Badge>
       </TableCell>
-      <TableCell>{bus.is_active_booking ? <Badge className="bg-primary">✓ نشطة</Badge> : <Button size="sm" variant="outline" onClick={onActivate}><Star className="h-3 w-3 ml-1" /> تعيين</Button>}</TableCell>
       <TableCell className="flex gap-1">
-        <Button size="sm" onClick={() => onSave(local)}><Save className="h-3 w-3" /></Button>
+        <Button size="sm" onClick={() => onSave(local)} title="حفظ"><Save className="h-3 w-3" /></Button>
+        <Button size="sm" variant="outline" onClick={onDuplicate} title="نسخ"><Copy className="h-3 w-3" /></Button>
         <Button size="sm" variant="outline" onClick={onTransfer} title="نقل الحجوزات"><ArrowRightLeft className="h-3 w-3" /></Button>
-        <Button size="sm" variant="outline" onClick={onDelete}><Trash2 className="h-3 w-3" /></Button>
+        <Button size="sm" variant="outline" onClick={onDelete} title="حذف"><Trash2 className="h-3 w-3" /></Button>
       </TableCell>
     </TableRow>
   );
@@ -316,14 +281,13 @@ function TransferDialog({ from, buses, onClose, onDone }: {
       <DialogContent>
         <DialogHeader><DialogTitle>نقل الحجوزات من {from?.name || `حافلة ${from?.bus_number}`}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">اختر الحافلة الهدف لنفس الرحلة. سيتم نقل جميع الحجوزات النشطة.</p>
+          <p className="text-sm text-muted-foreground">اختر الحافلة الهدف. سيتم نقل جميع الحجوزات النشطة.</p>
           <Select value={targetId} onValueChange={setTargetId}>
             <SelectTrigger><SelectValue placeholder="اختر حافلة الهدف" /></SelectTrigger>
             <SelectContent>
               {buses.map((b) => <SelectItem key={b.id} value={b.id}>{b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}</SelectItem>)}
             </SelectContent>
           </Select>
-          {buses.length === 0 && <p className="text-xs text-destructive">لا توجد حافلات أخرى لنفس الرحلة.</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>إلغاء</Button>

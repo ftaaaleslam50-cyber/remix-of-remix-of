@@ -2,7 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
-import { CalendarCheck, DollarSign, Bus, LogOut, Users, Package as PackageIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Store, Layout } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { CalendarCheck, DollarSign, Bus, LogOut, Users, Hotel as HotelIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Store, Layout, Images, FileText, Filter } from "lucide-react";
 import { NotificationBell } from "@/components/site/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +114,7 @@ function Dashboard() {
       "الهوية": b.id_number,
       "الجوال": b.contact_phone,
       "واتساب": b.whatsapp_phone,
-      "الباقة": b.packages?.name ?? "-",
+      "الفندق": b.packages?.name ?? "-",
       "الغرفة": b.room_type,
       "الرحلة": b.trips?.name ?? "-",
       "الباص": b.buses?.bus_number ?? "-",
@@ -140,8 +142,10 @@ function Dashboard() {
             {isAdmin && <Link to="/notifications"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">الإشعارات</Button></Link>}
             {isAdmin && <Link to="/audit"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">السجل</Button></Link>}
             {isAdmin && <Link to="/admin-buses"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Bus className="h-4 w-4 ml-1" /> الأسطول</Button></Link>}
+            {isAdmin && <Link to="/admin-bus-layouts"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> تخطيطات الحافلات</Button></Link>}
             {isAdmin && <Link to="/admin-trips"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><CalendarClock className="h-4 w-4 ml-1" /> الرحلات</Button></Link>}
             {isAdmin && <Link to="/admin-exhibitions"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Store className="h-4 w-4 ml-1" /> المعارض</Button></Link>}
+            {isAdmin && <Link to="/admin-gallery"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> المعرض</Button></Link>}
             {isAdmin && <Link to="/admin-homepage"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> الرئيسية</Button></Link>}
             {isAdmin && <Link to="/admin-users"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Users className="h-4 w-4 ml-1" /> المستخدمون</Button></Link>}
             <Link to="/" className="text-sm text-white/80 hover:text-white">الموقع</Link>
@@ -176,7 +180,8 @@ function Dashboard() {
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
             <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> الحجوزات</TabsTrigger>
-            <TabsTrigger value="packages" className="rounded-xl"><PackageIcon className="h-4 w-4 ml-1" /> الباقات</TabsTrigger>
+            <TabsTrigger value="by-bus" className="rounded-xl"><Filter className="h-4 w-4 ml-1" /> حسب الحافلة</TabsTrigger>
+            <TabsTrigger value="packages" className="rounded-xl"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</TabsTrigger>
             <TabsTrigger value="pricing" className="rounded-xl"><DollarSign className="h-4 w-4 ml-1" /> الأسعار</TabsTrigger>
             <TabsTrigger value="wheel" className="rounded-xl"><Sparkles className="h-4 w-4 ml-1" /> السحب</TabsTrigger>
             <TabsTrigger value="coupons" className="rounded-xl"><Ticket className="h-4 w-4 ml-1" /> الكوبونات</TabsTrigger>
@@ -236,6 +241,7 @@ function Dashboard() {
           </TabsContent>
 
 
+          <TabsContent value="by-bus" className="mt-4"><ByBusTab /></TabsContent>
           <TabsContent value="packages" className="mt-4"><PackagesTab /></TabsContent>
           <TabsContent value="pricing" className="mt-4"><PricingTab /></TabsContent>
           <TabsContent value="wheel" className="mt-4"><WheelTab /></TabsContent>
@@ -256,10 +262,10 @@ function StatCard({ icon: Icon, label, value }: { icon: typeof CalendarCheck; la
   );
 }
 
-// ================== PACKAGES ==================
+// ================== HOTELS (was Packages) ==================
 interface PackageRow {
   id: string; slug: string; name: string; description: string; image_url: string;
-  tier: string; base_price: number; active: boolean; display_order: number;
+  tier: string; base_price: number; active: boolean; display_order: number; stars: number | null;
 }
 function PackagesTab() {
   const qc = useQueryClient();
@@ -275,6 +281,7 @@ function PackagesTab() {
     const { error } = await supabase.from("packages" as never).update({
       name: p.name, description: p.description, image_url: p.image_url,
       tier: p.tier, active: p.active, display_order: p.display_order,
+      stars: p.stars,
     } as never).eq("id", p.id);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
@@ -283,17 +290,17 @@ function PackagesTab() {
   }
 
   async function addPackage() {
-    const slug = prompt("معرّف الباقة (لاتيني):");
+    const slug = prompt("معرّف الفندق (لاتيني):");
     if (!slug) return;
     const { error } = await supabase.from("packages" as never).insert({
-      slug, name: "باقة جديدة", description: "", base_price: 0, tier: "standard", display_order: 99,
+      slug, name: "فندق جديد", description: "", base_price: 0, tier: "standard", display_order: 99,
     } as never);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["admin-packages"] });
   }
 
   async function del(id: string) {
-    if (!confirm("حذف الباقة؟")) return;
+    if (!confirm("حذف الفندق؟")) return;
     await supabase.from("packages" as never).delete().eq("id", id);
     qc.invalidateQueries({ queryKey: ["admin-packages"] });
   }
@@ -301,8 +308,8 @@ function PackagesTab() {
   return (
     <div className="surface-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-extrabold">إدارة الباقات</h2>
-        <Button onClick={addPackage} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة باقة</Button>
+        <h2 className="text-lg font-extrabold">إدارة الفنادق</h2>
+        <Button onClick={addPackage} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة فندق</Button>
       </div>
       <div className="space-y-4">
         {packages.map((p) => <PackageEditor key={p.id} pkg={p} onSave={save} onDelete={() => del(p.id)} />)}
@@ -319,18 +326,133 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
       <div><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
       <div className="md:col-span-2"><Label className="text-xs">الوصف</Label><Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} /></div>
       <div className="md:col-span-2"><Label className="text-xs">صورة (URL)</Label><Input value={local.image_url} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} /></div>
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <Label className="text-xs">مفعّل</Label>
-          <div className="mt-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /></div>
+      <div>
+        <Label className="text-xs">تصنيف النجوم (اختياري)</Label>
+        <div className="flex gap-1 mt-2 items-center">
+          <button type="button" onClick={() => setLocal({ ...local, stars: null })} className="text-[10px] text-muted-foreground underline">لا يوجد</button>
+          {[1,2,3,4,5].map((n) => (
+            <button key={n} type="button" onClick={() => setLocal({ ...local, stars: n })} className={`text-lg ${(local.stars ?? 0) >= n ? "text-amber-400" : "text-muted-foreground/40"}`}>★</button>
+          ))}
         </div>
-        <Button size="sm" onClick={() => onSave(local)} className="rounded-full"><Save className="h-4 w-4" /></Button>
-        <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
       </div>
-      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الأسعار تُدار من تبويب <strong>مصفوفة الأسعار</strong> (لا سعر داخل الباقة).</p>
+      <div className="flex items-center gap-2 md:col-span-6">
+        <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّل</span></div>
+        <div className="ms-auto flex gap-1">
+          <Button size="sm" onClick={() => onSave(local)} className="rounded-full"><Save className="h-4 w-4" /></Button>
+          <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الأسعار تُدار من تبويب <strong>مصفوفة الأسعار</strong> (لا سعر داخل الفندق).</p>
     </div>
   );
 }
+
+// ================== BOOKINGS BY BUS ==================
+interface BusOption { id: string; name: string | null; bus_number: number; capacity: number; }
+interface BusBooking {
+  id: string; booking_code: string; customer_name: string; contact_phone: string;
+  passenger_count: number; seat_numbers: string[]; total_price: number; status: string;
+}
+function ByBusTab() {
+  const [busId, setBusId] = useState<string>("");
+  const { data: buses = [] } = useQuery({
+    queryKey: ["by-bus-buses"],
+    queryFn: async () => (await supabase.from("buses").select("id,name,bus_number,capacity").order("bus_number")).data as BusOption[] ?? [],
+  });
+  const { data: bookings = [] } = useQuery({
+    queryKey: ["by-bus-bookings", busId],
+    enabled: !!busId,
+    queryFn: async () => (await supabase.from("bookings")
+      .select("id,booking_code,customer_name,contact_phone,passenger_count,seat_numbers,total_price,status")
+      .eq("bus_id", busId).neq("status","cancelled")).data as BusBooking[] ?? [],
+  });
+
+  const bus = buses.find((b) => b.id === busId);
+  const occupied = bookings.reduce((s, b) => s + (b.seat_numbers?.length ?? 0), 0);
+  const capacity = bus?.capacity ?? 0;
+  const free = Math.max(0, capacity - occupied);
+  const pct = capacity > 0 ? Math.round((occupied / capacity) * 100) : 0;
+
+  function exportExcel() {
+    if (!bus) return;
+    const rows = bookings.map((b) => ({
+      "رقم الحجز": b.booking_code, "الاسم": b.customer_name, "الجوال": b.contact_phone,
+      "الأفراد": b.passenger_count, "المقاعد": b.seat_numbers.join(", "),
+      "الإجمالي": Number(b.total_price), "الحالة": b.status,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Passengers");
+    XLSX.writeFile(wb, `bus-${bus.name || bus.bus_number}-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+  function exportPDF() {
+    if (!bus) return;
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text(`Bus: ${bus.name || `#${bus.bus_number}`} — ${occupied}/${capacity} (${pct}%)`, 14, 16);
+    autoTable(doc, {
+      startY: 22,
+      head: [["Code","Name","Phone","Pax","Seats","Total","Status"]],
+      body: bookings.map((b) => [b.booking_code, b.customer_name, b.contact_phone, String(b.passenger_count), b.seat_numbers.join(", "), String(b.total_price), b.status]),
+      styles: { fontSize: 9 },
+    });
+    doc.save(`bus-${bus.name || bus.bus_number}.pdf`);
+  }
+
+  return (
+    <div className="surface-card p-6 space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="text-lg font-extrabold">حجوزات حسب الحافلة</h2>
+        <select value={busId} onChange={(e) => setBusId(e.target.value)} className="h-10 rounded-md border px-3 text-sm">
+          <option value="">اختر حافلة...</option>
+          {buses.map((b) => <option key={b.id} value={b.id}>{b.name || `حافلة ${b.bus_number}`}</option>)}
+        </select>
+        {bus && (
+          <div className="ms-auto flex gap-2">
+            <Button variant="outline" onClick={exportPDF} className="rounded-full"><FileText className="h-4 w-4 ml-1" /> PDF</Button>
+            <Button onClick={exportExcel} className="rounded-full"><Download className="h-4 w-4 ml-1" /> Excel</Button>
+          </div>
+        )}
+      </div>
+
+      {bus && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard icon={Bus} label="الحافلة" value={bus.name || `#${bus.bus_number}`} />
+          <StatCard icon={Users} label="المحجوز" value={`${occupied}/${capacity}`} />
+          <StatCard icon={CalendarCheck} label="المتاح" value={String(free)} />
+          <StatCard icon={DollarSign} label="نسبة الإشغال" value={`${pct}%`} />
+        </div>
+      )}
+
+      {bus && (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>رقم الحجز</TableHead><TableHead>الاسم</TableHead><TableHead>الجوال</TableHead>
+              <TableHead>الأفراد</TableHead><TableHead>المقاعد</TableHead><TableHead>الإجمالي</TableHead><TableHead>الحالة</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {bookings.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">لا توجد حجوزات لهذه الحافلة.</TableCell></TableRow>}
+              {bookings.map((b) => (
+                <TableRow key={b.id}>
+                  <TableCell className="font-bold" dir="ltr">{b.booking_code}</TableCell>
+                  <TableCell>{b.customer_name}</TableCell>
+                  <TableCell dir="ltr">{b.contact_phone}</TableCell>
+                  <TableCell>{b.passenger_count}</TableCell>
+                  <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
+                  <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
+                  <TableCell><Badge>{b.status}</Badge></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 
 // ================== PRICING MATRIX ==================
 interface PricingRow { id: string; package_id: string; room_type: string; passenger_count: number; price: number; active: boolean; }

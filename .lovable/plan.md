@@ -1,51 +1,74 @@
-# V5 — Production Update — Progress & Roadmap
+# Master Patch V5.5 — Admin Dashboard Overhaul
 
-## ✅ COMPLETED (this turn)
-- **DB Schema V5** (migration applied):
-  - `profiles` table: full_name, mobile_phone, whatsapp_phone, national_id, national_id_image_url, avatar_url, account_type (customer/representative), active, last_login_at
-  - Auto-create profile on signup via `handle_new_user()` trigger
-  - `buses` fleet fields: name, plate, model, status (active/disabled/maintenance/stopped), priority, is_active_booking (unique partial index)
-  - `bookings`: deleted_at (soft delete), created_by, created_by_name, updated_by, rep_name, rep_phone, rep_whatsapp
-  - `notifications` table (realtime enabled)
-  - `audit_log` table (actor, action, entity, ip, user_agent)
-- **Storage bucket `avatars`** (private) with per-user RLS on storage.objects
-- **Auth**: auto-confirm enabled (no email verification, per spec)
+This is a large, cross-cutting change touching schema, admin routes, booking flow, and gallery. I'll ship it in one migration + coordinated code changes. Below is the scope and how each section maps to files.
 
-## 🚧 IN PROGRESS / NEXT TURNS
+## 1. Hotels rename (Packages → Hotels)
+- User-facing strings only (no table rename to avoid breaking existing data). The `packages` table stays; the UI everywhere reads "Hotel/Hotels".
+- Add `stars` (int 1–5, nullable) to `packages` for optional Hotel Rating.
+- Update: `admin-homepage.tsx` labels, booking wizard step titles (already "Hotel"), any "Package" strings in admin/dashboard/reports.
+- Add rating star selector in Hotel edit UI; display stars on the booking Hotel step cards.
 
-### Turn 2 — Auth + Profiles UI
-- Rewrite `src/routes/auth.tsx`: signup with mobile + whatsapp + password (synthetic email `<mobile>@zohrat.local`). Login accepts mobile OR admin username (`Abo3taa2` → `abo3taa2@zohrat.local`).
-- Create `src/routes/profile.tsx` (protected): edit full_name, mobile, whatsapp, national_id, upload avatar + ID image (private bucket signed URLs).
-- Navbar: show avatar + "الملف الشخصي" / "خروج" when logged in.
-- Booking auto-fill: when logged in, pre-fill customer info; if representative, pre-fill rep_name/rep_phone/rep_whatsapp.
+## 2. Fleet simplification
+- Drop UI for: favorite/priority/active-booking bus.
+- Bus status enum kept as `active | maintenance | stopped` (rename "stopped" label to "Out of Service", drop "disabled").
+- Remove the drag-priority column and the "Active booking" column from `admin-buses.tsx`.
+- Add "Duplicate" action that inserts a new bus copying name/model/type/capacity/layout/details/image/price_addition (bus_number auto-increments, plate cleared).
 
-### Turn 3 — Bus Fleet Management (Dashboard)
-- New "الحافلات" tab in dashboard:
-  - Table: name, plate, model, capacity, status, priority, active-booking indicator
-  - Add / Edit / Delete / Disable / Maintenance actions
-  - Drag-to-reorder priority (dnd-kit)
-  - "Set as Active for Booking" button (enforces single active via unique index)
-  - "Transfer all bookings to..." dialog (bulk update bus_id + reassign seat_numbers)
-- Booking flow: assigned bus is auto-selected (active_booking → fallback next priority when full). Customer sees "🚌 حافلتك: [name] – [X] مقاعد متبقية".
-- Ticket page: show bus name, number, plate.
+## 3. Bus Layouts module (new)
+- New table `bus_layouts` (id, name, seat_count, layout_json, created_at/updated_at) with admin-only RLS + public SELECT so booking page can read them.
+- `layout_json` is a free-form grid: array of cells `{row, col, kind: 'seat'|'empty'|'driver'|'door'|'restroom', label?}`. Seat count auto-computed from `kind==='seat'` entries.
+- New admin route `/_authenticated/admin-bus-layouts.tsx` with a grid editor (click cell → cycle kind, edit label). No true drag-and-drop needed for MVP; grid click-to-place is the practical implementation and matches the requirement's intent.
+- Add `layout_id` (uuid, nullable) to `buses`. Fleet row gets a "Layout Template" select. `capacity` becomes derived (kept as column, auto-set from layout on save).
+- `BusSeatMap` extended: if bus has a `layout_id`, render from the template JSON; otherwise fall back to the existing A/B built-in layouts.
 
-### Turn 4 — Dashboard extras
-- **Users tab**: list all profiles, search, filter by account_type, activate/deactivate, delete, change type, view booking history, reset password (admin API via server fn).
-- **Bookings tab**: soft-delete (button "أرشفة")، view archived, restore, permanent delete.
-- **Widgets**: bookings today/week/month, occupancy % per bus, revenue trend.
-- Remove ZIP download from ticket page. Keep PDF. Add "تنزيل صورة الهوية" button in bookings table.
+## 4. Trips ↔ Buses assignment
+- New join table `trip_buses (trip_id, bus_id)` with grants + RLS.
+- `admin-trips.tsx` gains an "Available Buses" multi-select per trip with live occupancy `used/capacity` per bus (computed from `bookings.bus_id` + `seat_numbers`).
+- Booking wizard's Bus step filters buses to those in the selected trip via `trip_buses`.
+- Existing `buses.trip_id` stays for backward-compat but is no longer the primary source.
 
-### Turn 5 — Notifications + Audit Log + Backup
-- **Notification center**: bell icon with unread badge, dropdown with realtime subscription to `notifications`, sound on new, mark read/archive/search/filter, dedicated page.
-- On booking create/edit/delete/user signup → insert notification (server fn with service role).
-- **Audit log tab**: table with search/filter by admin, action, entity, date range. Log actor_id, ip (via client), user_agent on every admin write.
-- **Backup system**: server route `/api/public/admin/backup` (admin-only via bearer): pg_dump-style JSON export of all tables. UI to create/download/restore. Cron: daily backup, keep last 30 (store in `backups` bucket).
+## 5. Gallery Management
+- Add `videos` support: extend `gallery_images` with `media_type` ('image'|'video') + `video_url` (nullable). Public `gallery.tsx` renders videos with `<video>`.
+- Create admin route `/_authenticated/admin-gallery.tsx` with tabs Albums / Images / Videos (CRUD). Confirm no events/meetings/interviews content anywhere — none exists today.
 
-## 📋 Deferred / To Confirm
-- The "default admin Abo3taa2/Abo3taa2" credential is created as `abo3taa2@zohrat.local` in Supabase Auth then granted `admin` role via user_roles. Will do in Turn 2 via a one-time insert.
-- "Rep account only affects booking workflow, no admin permissions" — confirmed via `profiles.account_type` (no impact on user_roles).
-- Contact standard: mobile_phone and whatsapp_phone are already separate columns throughout.
+## 6. Homepage Builder
+- Add `homepage_sections` table: `key`, `title`, `subtitle`, `image_url`, `button_text`, `button_link`, `bg_color`, `visible`, `display_order`.
+- Seed with existing sections (hero, features, hotels, trips, gallery, contact).
+- Extend `admin-homepage.tsx` with a sortable list (dnd-kit) for reorder + show/hide + inline edit.
+- `index.tsx` reads sections and renders in configured order, honoring visibility and overriding titles/CTA/colors. Fixed section components remain; only content is data-driven.
 
-## ⚠️ Known Pre-existing Security Warnings (not blockers)
-- `generate_booking_code()` SECURITY DEFINER exposed publicly — pre-existing pattern, needed for booking flow.
-- Audit insert policy allows any authenticated user to insert with their own actor_id — intentional (users log their own actions).
+## 7. Bookings by Bus
+- Add "Filter by Bus" select + "By Bus" tab to bookings admin. When a bus is selected show a card: name, total, occupied, available, %; and action buttons:
+  - View Seat Map (open dialog with `BusSeatMap` in read-only + occupied seats highlighted)
+  - View Passenger List (dialog table)
+  - Export PDF (client-side via `jspdf` + `jspdf-autotable`)
+  - Export Excel (via `xlsx`)
+
+## Migration summary
+Single migration adds: `packages.stars`, `buses.layout_id`, `bus_layouts` table, `trip_buses` table, `gallery_images.media_type`+`video_url`, `homepage_sections` table + seed. All with GRANTs and RLS (admins write, public reads where needed).
+
+## Files to add/edit
+Add:
+- `src/routes/_authenticated/admin-bus-layouts.tsx`
+- `src/routes/_authenticated/admin-gallery.tsx`
+- `src/components/booking/LayoutSeatMap.tsx` (renders from layout_json)
+- `supabase/migrations/*.sql`
+
+Edit:
+- `src/routes/_authenticated/admin-buses.tsx` (status simplification, duplicate, layout picker, remove priority/active)
+- `src/routes/_authenticated/admin-trips.tsx` (available-buses multi-select + occupancy)
+- `src/routes/_authenticated/admin-homepage.tsx` (sortable section manager + "Hotel" wording)
+- `src/routes/_authenticated/dashboard.tsx` (nav: Hotels, Bus Layouts; wording)
+- `src/routes/_authenticated/my-bookings.tsx` and any admin bookings list (add bus filter + export)
+- `src/routes/booking.tsx` (trip→buses via trip_buses; render layout template if present; Hotel step shows stars)
+- `src/routes/index.tsx` (data-driven sections)
+- `src/routes/gallery.tsx` (video rendering)
+- `src/components/booking/BusSeatMap.tsx` (layout_json path)
+- `src/lib/booking/types.ts` (types for new fields)
+
+## Notes / trade-offs
+- I keep the `packages` table name to avoid a risky rename (existing bookings reference it). All UI copy switches to "Hotel".
+- Bus layout editor uses click-to-cycle + label edit rather than pixel-level drag-drop; this stays reliable on mobile and covers all listed elements (seats, empty, driver, doors, restroom, numbering).
+- PDF/Excel exports add `jspdf`, `jspdf-autotable`, `xlsx` dependencies.
+
+Ready to implement — this is a large batch, ~2 migrations + ~10 file edits + 3 new files. Confirm and I'll ship it.
