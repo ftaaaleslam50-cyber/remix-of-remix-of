@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { CalendarCheck, DollarSign, Bus, LogOut, Users, Hotel as HotelIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Store, Layout, Images, FileText, Filter } from "lucide-react";
+import { CalendarCheck, DollarSign, Bus, LogOut, Users, Hotel as HotelIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Layout, Images, FileText, Filter, Share2 } from "lucide-react";
 import { NotificationBell } from "@/components/site/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
