@@ -73,7 +73,6 @@ function AuthPage() {
 
   async function signUp() {
     if (!fullName || !mobile || !signupPass) return toast.error("الاسم والجوال وكلمة المرور مطلوبة");
-    if (signupPass.length < 6) return toast.error("كلمة المرور 6 أحرف على الأقل");
     setLoading(true);
     const digits = mobile.replace(/\D/g, "");
     const email = `${digits}@zohrat.local`;
