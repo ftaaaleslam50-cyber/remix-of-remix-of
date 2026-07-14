@@ -304,6 +304,33 @@ export type Database = {
           },
         ]
       }
+      bus_layouts: {
+        Row: {
+          created_at: string
+          id: string
+          layout_json: Json
+          name: string
+          seat_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          layout_json?: Json
+          name: string
+          seat_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          layout_json?: Json
+          name?: string
+          seat_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       buses: {
         Row: {
           active: boolean
@@ -317,6 +344,7 @@ export type Database = {
           image_url: string | null
           is_active_booking: boolean
           layout: string
+          layout_id: string | null
           model: string | null
           name: string | null
           plate: string | null
@@ -338,6 +366,7 @@ export type Database = {
           image_url?: string | null
           is_active_booking?: boolean
           layout?: string
+          layout_id?: string | null
           model?: string | null
           name?: string | null
           plate?: string | null
@@ -359,6 +388,7 @@ export type Database = {
           image_url?: string | null
           is_active_booking?: boolean
           layout?: string
+          layout_id?: string | null
           model?: string | null
           name?: string | null
           plate?: string | null
@@ -369,6 +399,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "buses_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "bus_layouts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "buses_trip_id_fkey"
             columns: ["trip_id"]
@@ -544,6 +581,8 @@ export type Database = {
           display_order: number
           id: string
           image_url: string
+          media_type: string
+          video_url: string | null
         }
         Insert: {
           album_id: string
@@ -552,6 +591,8 @@ export type Database = {
           display_order?: number
           id?: string
           image_url: string
+          media_type?: string
+          video_url?: string | null
         }
         Update: {
           album_id?: string
@@ -560,6 +601,8 @@ export type Database = {
           display_order?: number
           id?: string
           image_url?: string
+          media_type?: string
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -570,6 +613,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      homepage_sections: {
+        Row: {
+          bg_color: string | null
+          button_link: string | null
+          button_text: string | null
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string | null
+          section_key: string
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          bg_color?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          section_key: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          bg_color?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          section_key?: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
       }
       hotels: {
         Row: {
@@ -676,6 +764,7 @@ export type Database = {
           includes: Json | null
           name: string
           slug: string
+          stars: number | null
           tier: string
           updated_at: string | null
         }
@@ -690,6 +779,7 @@ export type Database = {
           includes?: Json | null
           name: string
           slug: string
+          stars?: number | null
           tier?: string
           updated_at?: string | null
         }
@@ -704,6 +794,7 @@ export type Database = {
           includes?: Json | null
           name?: string
           slug?: string
+          stars?: number | null
           tier?: string
           updated_at?: string | null
         }
@@ -800,6 +891,39 @@ export type Database = {
           whatsapp_phone?: string | null
         }
         Relationships: []
+      }
+      trip_buses: {
+        Row: {
+          bus_id: string
+          created_at: string
+          trip_id: string
+        }
+        Insert: {
+          bus_id: string
+          created_at?: string
+          trip_id: string
+        }
+        Update: {
+          bus_id?: string
+          created_at?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_buses_bus_id_fkey"
+            columns: ["bus_id"]
+            isOneToOne: false
+            referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_buses_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trips: {
         Row: {
