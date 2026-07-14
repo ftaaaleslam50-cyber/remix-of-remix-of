@@ -130,7 +130,9 @@ function AdminBuses() {
 
   async function save(b: BusRow) {
     const { error } = await supabase.from("buses").update({
-      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority, active: b.status === "active", layout: b.layout,
+      name: b.name, plate: b.plate, model: b.model, capacity: b.capacity, status: b.status, priority: b.priority,
+      active: b.status === "active", layout: b.layout,
+      image_url: b.image_url, bus_type: b.bus_type, details: b.details, price_addition: Number(b.price_addition) || 0,
     }).eq("id", b.id);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
