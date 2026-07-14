@@ -22,6 +22,7 @@ interface ProfileRow {
   national_id: string | null;
   national_id_image_url: string | null;
   avatar_url: string | null;
+  nationality: string | null;
   account_type: "customer" | "representative";
 }
 
@@ -31,7 +32,7 @@ function ProfilePage() {
   const [uid, setUid] = useState<string>("");
   const [p, setP] = useState<ProfileRow>({
     id: "", full_name: "", mobile_phone: "", whatsapp_phone: "", national_id: "",
-    national_id_image_url: "", avatar_url: "", account_type: "customer",
+    national_id_image_url: "", avatar_url: "", nationality: "", account_type: "customer",
   });
   const [avatarSigned, setAvatarSigned] = useState<string>("");
   const [idSigned, setIdSigned] = useState<string>("");
@@ -80,6 +81,7 @@ function ProfilePage() {
       national_id: p.national_id,
       national_id_image_url: p.national_id_image_url,
       avatar_url: p.avatar_url,
+      nationality: p.nationality,
       account_type: p.account_type,
     }, { onConflict: "id" });
     setSaving(false);
@@ -120,6 +122,7 @@ function ProfilePage() {
             <Field label="رقم الجوال" value={p.mobile_phone ?? ""} onChange={(v) => setP({ ...p, mobile_phone: v })} dir="ltr" />
             <Field label="رقم الواتساب" value={p.whatsapp_phone ?? ""} onChange={(v) => setP({ ...p, whatsapp_phone: v })} dir="ltr" />
             <Field label="رقم الهوية" value={p.national_id ?? ""} onChange={(v) => setP({ ...p, national_id: v })} dir="ltr" />
+            <Field label="الجنسية" value={p.nationality ?? ""} onChange={(v) => setP({ ...p, nationality: v })} />
           </div>
 
           <div>

@@ -73,7 +73,6 @@ function AuthPage() {
 
   async function signUp() {
     if (!fullName || !mobile || !signupPass) return toast.error("الاسم والجوال وكلمة المرور مطلوبة");
-    if (signupPass.length < 6) return toast.error("كلمة المرور 6 أحرف على الأقل");
     setLoading(true);
     const digits = mobile.replace(/\D/g, "");
     const email = `${digits}@zohrat.local`;
@@ -194,6 +193,7 @@ function AuthPage() {
                     onChange={(e) => setSignupPass(e.target.value)}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">قوة كلمة المرور ليست مطلوبة.</p>
               </div>
               <Button onClick={signUp} disabled={loading} className="w-full h-12 rounded-xl btn-primary-glow font-bold">
                 {loading && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
