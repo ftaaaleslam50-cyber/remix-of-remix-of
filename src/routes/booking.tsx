@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -47,35 +49,18 @@ export const Route = createFileRoute("/booking")({
   component: BookingPage,
 });
 
-// Steps are dynamic — "نوع الغرفة" is removed when the transport-only package is chosen.
-const FULL_STEPS = [
-  "نوع الحجز",
-  "عدد الأفراد",
-  "الفندق",
-  "نوع الغرفة",
-  "الرحلة",
-  "المقاعد",
-  "البيانات",
-  "التأكيد",
-] as const;
-const TRANSPORT_STEPS = [
+// Booking steps. "الحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
+const BASE_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
   "الفندق",
   "الرحلة",
+  "الحافلة",
   "المقاعد",
   "البيانات",
   "التأكيد",
 ] as const;
 
-function isTransportPackage(pkg: { slug?: string; tier?: string; name?: string } | null | undefined): boolean {
-  if (!pkg) return false;
-  const s = (pkg.slug ?? "").toLowerCase();
-  const t = (pkg.tier ?? "").toLowerCase();
-  if (s.includes("transport") || s === "bus" || s.includes("مواصلات")) return true;
-  if (t === "transport" || t === "bus") return true;
-  return (pkg.name ?? "").includes("مواصلات فقط");
-}
 
 function BookingPage() {
   const navigate = useNavigate();
@@ -100,6 +85,7 @@ function BookingPage() {
     id_number: "",
     contact_phone: "",
     whatsapp_phone: "",
+    nationality: "",
     same_whatsapp: true,
   });
   const [idFile, setIdFile] = useState<File | null>(null);
@@ -107,6 +93,10 @@ function BookingPage() {
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [noHotel, setNoHotel] = useState(false);
   const [noBus, setNoBus] = useState(false);
+  const [busId, setBusId] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<"customer" | "representative">("customer");
+  const [repName, setRepName] = useState<string>("");
+
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
@@ -168,8 +158,13 @@ function BookingPage() {
     },
   });
 
-  // Auto-assign: first bus with enough free seats, respecting priority ordering.
+  // User-selected bus (from Bus step). Fallback to first bus with room.
   const activeBus = useMemo(() => {
+    if (noBus) return null;
+    if (busId) {
+      const found = buses.find((b) => b.id === busId);
+      if (found) return found;
+    }
     for (const b of buses) {
       const cap = b.capacity ?? 49;
       const blocked = (b.blocked_seats ?? ["A2"]).length;
@@ -178,10 +173,11 @@ function BookingPage() {
       if (free >= passengerCount) return b;
     }
     return buses[0] ?? null;
-  }, [buses, busReserved, passengerCount]);
+  }, [buses, busReserved, passengerCount, busId, noBus]);
 
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
   const remainingSeats = activeBus ? (activeBus.capacity ?? 49) - ((activeBus.blocked_seats ?? ["A2"]).length) - bookedSeats.length : 0;
+
 
   useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
   useEffect(() => { if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount)); }, [passengerCount]);
@@ -199,17 +195,22 @@ function BookingPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id").eq("id", user.id).maybeSingle();
+      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id,nationality,account_type").eq("id", user.id).maybeSingle();
       if (!prof) return;
+      const acct = ((prof as { account_type?: string }).account_type === "representative" ? "representative" : "customer") as "customer" | "representative";
+      setAccountType(acct);
+      if (acct === "representative") setRepName((prof.full_name ?? "").trim());
       setCustomer((c) => ({
         ...c,
         customer_name: c.customer_name || (prof.full_name ?? ""),
         id_number: c.id_number || (prof.national_id ?? ""),
         contact_phone: c.contact_phone || (prof.mobile_phone ?? ""),
         whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
+        nationality: c.nationality || ((prof as { nationality?: string | null }).nationality ?? ""),
       }));
     })();
   }, []);
+
 
   // Apply pending coupon from wheel
   useEffect(() => {
@@ -255,10 +256,10 @@ function BookingPage() {
 
   const selectedPackage = packages.find((p) => p.id === packageId) ?? null;
   const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
-  const transportOnly = isTransportPackage(selectedPackage) || noHotel;
-  const baseSteps: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
-  const STEPS: readonly string[] = noBus ? baseSteps.filter((s) => s !== "الرحلة" && s !== "المقاعد") : baseSteps;
+  const transportOnly = noHotel;
+  const STEPS: readonly string[] = noBus ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
+
 
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
   useEffect(() => {
@@ -307,13 +308,14 @@ function BookingPage() {
       case "نوع الحجز": return !!bookingType;
       case "عدد الأفراد": return passengerCount > 0;
       case "الفندق": return noHotel || !!packageId;
-      case "نوع الغرفة": return !!roomType;
       case "الرحلة": return !!tripId;
+      case "الحافلة": return noBus || !!busId;
       case "المقاعد": return seats.length === passengerCount;
       case "البيانات":
         return (
           customer.customer_name.trim().length > 1 &&
           customer.id_number.trim().length > 3 &&
+          customer.nationality.trim().length > 1 &&
           /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
           /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
           (!!idFile || !!editingCode)
@@ -321,6 +323,7 @@ function BookingPage() {
       default: return true;
     }
   }
+
 
   async function uploadIdImage(): Promise<string | null> {
     if (!idFile) return null;
@@ -340,26 +343,31 @@ function BookingPage() {
   }
 
   async function submitBooking() {
-    if (!selectedPackage) return;
+    if (!noHotel && !selectedPackage) return;
     if (!noBus && (!activeBus || !selectedTrip)) return;
     setSubmitting(true);
     try {
       const id_image_url = await uploadIdImage();
       const code = editingCode ?? generateBookingCode();
 
+      const source =
+        accountType === "representative" && repName ? repName : "Website";
+
       const payload = {
         booking_code: code,
         booking_type: bookingType!,
         passenger_count: passengerCount,
         room_type: roomType,
-        package_id: selectedPackage.id,
-        trip_id: noBus ? null : tripId!,
+        package_id: noHotel ? null : selectedPackage!.id,
+        trip_id: tripId,
         bus_id: noBus ? null : activeBus!.id,
         seat_numbers: noBus ? [] : seats,
         no_hotel: noHotel,
         no_bus: noBus,
         customer_name: customer.customer_name.trim(),
         id_number: customer.id_number.trim(),
+        nationality: customer.nationality.trim() || null,
+        booking_source: source,
         contact_phone: customer.contact_phone.trim(),
         whatsapp_phone: customer.whatsapp_phone.trim(),
         // Only overwrite id_image_url when a new file was uploaded (edit mode may keep the old one).
@@ -370,6 +378,7 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
       };
+
 
 
       let bookingId: string | null = null;
@@ -462,21 +471,28 @@ function BookingPage() {
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
               {stepName === "الفندق" && (
-                <div>
-                  <div className="mb-4 flex flex-wrap gap-4 items-center rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-4">
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                      <Checkbox checked={noHotel} onCheckedChange={(v) => setNoHotel(!!v)} /> بدون فندق (مواصلات فقط)
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                      <Checkbox checked={noBus} onCheckedChange={(v) => setNoBus(!!v)} /> بدون حافلة (فندق فقط)
-                    </label>
-                  </div>
-                  {!noHotel && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
-                  
-                </div>
+                <StepPackage
+                  packages={packages}
+                  pricing={pricing}
+                  value={noHotel ? null : packageId}
+                  noHotel={noHotel}
+                  onChange={(id) => { setNoHotel(false); setPackageId(id); }}
+                  onSelectNoHotel={() => { setNoHotel(true); setPackageId(null); }}
+                  passengerCount={passengerCount}
+                  roomType={roomType}
+                />
               )}
-              {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
+              {stepName === "الحافلة" && (
+                <StepBus
+                  buses={buses}
+                  busReserved={busReserved}
+                  value={busId}
+                  noBus={noBus}
+                  onChange={(id) => { setNoBus(false); setBusId(id); }}
+                  onSelectNoBus={() => { setNoBus(true); setBusId(null); setSeats([]); }}
+                />
+              )}
               {stepName === "المقاعد" && (
                 <StepSeats
                   count={passengerCount}
@@ -496,12 +512,17 @@ function BookingPage() {
                 />
               )}
               {stepName === "البيانات" && <StepCustomer customer={customer} setCustomer={setCustomer} idFile={idFile} setIdFile={setIdFile} />}
+
               {stepName === "التأكيد" && (
                 <StepConfirm
                   bookingType={bookingType}
                   passengerCount={passengerCount}
                   roomType={roomType}
                   transportOnly={transportOnly}
+                  noBus={noBus}
+                  noHotel={noHotel}
+                  bookingSource={accountType === "representative" && repName ? repName : "Website"}
+
                   pkg={selectedPackage}
                   trip={selectedTrip}
                   seats={seats}
@@ -630,10 +651,12 @@ function StepCount({ value, onChange }: { value: number; onChange: (n: number) =
   );
 }
 
-function StepPackage({ packages, pricing, value, onChange, passengerCount, roomType }: {
+function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHotel, passengerCount, roomType }: {
   packages: Package[]; pricing: PricingCell[]; value: string | null; onChange: (id: string) => void;
+  onSelectNoHotel: () => void; noHotel: boolean;
   passengerCount: number; roomType: RoomType;
 }) {
+
   const [openPkg, setOpenPkg] = useState<Package | null>(null);
   return (
     <div>
@@ -667,7 +690,17 @@ function StepPackage({ packages, pricing, value, onChange, passengerCount, roomT
             </div>
           );
         })}
+        <button type="button" onClick={onSelectNoHotel}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[280px] ${noHotel ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}>
+          <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noHotel ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+            <X className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون فندق</h3>
+          <p className="text-sm text-muted-foreground text-center">مواصلات فقط — لن يتم حجز فندق</p>
+          {noHotel && <div className="inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+        </button>
       </div>
+
 
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
@@ -782,7 +815,15 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
           selected={seats}
           reserved={reserved}
           maxSelectable={count}
-          onChange={onChange}
+          onChange={(next) => {
+            if (next.length > seats.length && seats.length >= count) {
+              toast.warning(
+                "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
+              );
+              return;
+            }
+            onChange(next);
+          }}
           blocked={bus?.blocked_seats ?? ["A2"]}
           layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
         />
@@ -791,9 +832,67 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
   );
 }
 
+function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: {
+  buses: (Bus & { name?: string | null })[];
+  busReserved: Record<string, string[]>;
+  value: string | null;
+  noBus: boolean;
+  onChange: (id: string) => void;
+  onSelectNoBus: () => void;
+}) {
+  return (
+    <div>
+      <StepHeader title="اختر الحافلة" desc="اختر الحافلة التي تناسبك" />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {buses.map((b) => {
+          const active = !noBus && value === b.id;
+          const cap = b.capacity ?? 49;
+          const blocked = (b.blocked_seats ?? ["A2"]).length;
+          const used = (busReserved[b.id] ?? []).length;
+          const available = Math.max(0, cap - blocked - used);
+          const full = available <= 0;
+          return (
+            <button key={b.id} type="button" disabled={full} onClick={() => onChange(b.id)}
+              className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"} ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+              <div className="relative h-40 overflow-hidden bg-muted">
+                {b.image_url ? (
+                  <img src={b.image_url} alt={b.name ?? `حافلة ${b.bus_number}`} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-4xl">🚌</div>
+                )}
+                {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
+              </div>
+              <div className="p-4 space-y-1.5">
+                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{b.name || `الحافلة رقم ${b.bus_number}`}</h3>
+                {b.bus_type && <p className="text-xs font-semibold text-muted-foreground">النوع: {b.bus_type}</p>}
+                <div className="flex items-center justify-between text-sm pt-1">
+                  <span className="text-muted-foreground">إجمالي المقاعد: <span className="font-bold text-foreground">{cap}</span></span>
+                  <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>{full ? "مكتملة" : `${available} متاح`}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+        <button type="button" onClick={onSelectNoBus}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[240px] ${noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}>
+          <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+            <X className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون حافلة</h3>
+          <p className="text-sm text-muted-foreground text-center">فندق فقط — لن يتم حجز مواصلات</p>
+          {noBus && <div className="inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+type CustomerState = { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; nationality: string; same_whatsapp: boolean };
 function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
-  customer: { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; same_whatsapp: boolean };
-  setCustomer: (c: typeof customer) => void; idFile: File | null; setIdFile: (f: File | null) => void;
+  customer: CustomerState;
+  setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
+  idFile: File | null; setIdFile: (f: File | null) => void;
 }) {
   return (
     <div>
@@ -808,6 +907,10 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
           <Input className="mt-2 h-12 rounded-xl" value={customer.id_number} onChange={(e) => setCustomer({ ...customer, id_number: e.target.value })} placeholder="1XXXXXXXXX" />
         </div>
         <div>
+          <Label className="font-semibold">الجنسية</Label>
+          <Input className="mt-2 h-12 rounded-xl" value={customer.nationality} onChange={(e) => setCustomer({ ...customer, nationality: e.target.value })} placeholder="السعودية" />
+        </div>
+        <div>
           <Label className="font-semibold">رقم جوال الاتصال</Label>
           <Input dir="ltr" className="mt-2 h-12 rounded-xl text-right" value={customer.contact_phone} onChange={(e) => setCustomer({ ...customer, contact_phone: e.target.value })} placeholder="05XXXXXXXX" />
         </div>
@@ -820,6 +923,7 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
           </label>
         </div>
       </div>
+
 
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">رفع صورة الهوية</Label>
@@ -860,9 +964,10 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
 
 function StepConfirm(props: {
   bookingType: BookingType | null; passengerCount: number; roomType: RoomType;
-  transportOnly: boolean;
+  transportOnly: boolean; noBus: boolean; noHotel: boolean;
   pkg: Package | null; trip: Trip | null; seats: string[];
-  customer: { customer_name: string; id_number: string; contact_phone: string };
+  customer: { customer_name: string; id_number: string; contact_phone: string; nationality: string };
+  bookingSource: string;
   pricePerPerson: number; subtotal: number; discount: number; total: number; busNumber: number;
   couponInput: string; setCouponInput: (v: string) => void;
   appliedCoupon: { code: string; prize_type: "percent" | "fixed"; prize_value: number; label?: string | null } | null;
@@ -871,15 +976,17 @@ function StepConfirm(props: {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["عدد الأفراد", String(props.passengerCount)],
-    ["الفندق", props.pkg?.name ?? "—"],
-    ...(!props.transportOnly ? [["نوع الغرفة", ROOM_LABEL[props.roomType]] as [string, string]] : []),
+    ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
     ["الرحلة", props.trip?.name ?? "—"],
-    ["رقم الباص", String(props.busNumber)],
-    ["المقاعد", props.seats.join(", ")],
+    ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
+    ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],
     ["رقم الهوية", props.customer.id_number],
+    ["الجنسية", props.customer.nationality || "—"],
     ["رقم التواصل", props.customer.contact_phone],
+    ["مصدر الحجز", props.bookingSource],
   ];
+
   return (
     <div>
       <StepHeader title="مراجعة الحجز" desc="تأكد من البيانات قبل التأكيد" />

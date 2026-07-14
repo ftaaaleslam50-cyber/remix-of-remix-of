@@ -167,6 +167,7 @@ export type Database = {
       bookings: {
         Row: {
           booking_code: string
+          booking_source: string | null
           booking_type: string
           bus_id: string | null
           contact_phone: string
@@ -181,6 +182,7 @@ export type Database = {
           id: string
           id_image_url: string | null
           id_number: string
+          nationality: string | null
           no_bus: boolean
           no_hotel: boolean
           package_id: string | null
@@ -201,6 +203,7 @@ export type Database = {
         }
         Insert: {
           booking_code: string
+          booking_source?: string | null
           booking_type: string
           bus_id?: string | null
           contact_phone: string
@@ -215,6 +218,7 @@ export type Database = {
           id?: string
           id_image_url?: string | null
           id_number: string
+          nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
           package_id?: string | null
@@ -235,6 +239,7 @@ export type Database = {
         }
         Update: {
           booking_code?: string
+          booking_source?: string | null
           booking_type?: string
           bus_id?: string | null
           contact_phone?: string
@@ -249,6 +254,7 @@ export type Database = {
           id?: string
           id_image_url?: string | null
           id_number?: string
+          nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
           package_id?: string | null
@@ -759,6 +765,7 @@ export type Database = {
           mobile_phone: string | null
           national_id: string | null
           national_id_image_url: string | null
+          nationality: string | null
           updated_at: string
           whatsapp_phone: string | null
         }
@@ -773,6 +780,7 @@ export type Database = {
           mobile_phone?: string | null
           national_id?: string | null
           national_id_image_url?: string | null
+          nationality?: string | null
           updated_at?: string
           whatsapp_phone?: string | null
         }
@@ -787,6 +795,7 @@ export type Database = {
           mobile_phone?: string | null
           national_id?: string | null
           national_id_image_url?: string | null
+          nationality?: string | null
           updated_at?: string
           whatsapp_phone?: string | null
         }
