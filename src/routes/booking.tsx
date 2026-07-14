@@ -25,7 +25,11 @@ import {
   MousePointerClick,
 } from "lucide-react";
 
-import { SiteLayout } from "@/components/site/SiteLayout";
+import { Link } from "@tanstack/react-router";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import { Logo } from "@/components/site/Logo";
+import { NAV_LINKS } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,11 +37,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { BusSeatMap, pickRandomSeats } from "@/components/booking/BusSeatMap";
+import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
+
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -175,8 +181,20 @@ function BookingPage() {
     return buses[0] ?? null;
   }, [buses, busReserved, passengerCount, busId, noBus]);
 
+  // Fetch the assigned bus_layouts row for the active bus (if any).
+  const activeLayoutId = (activeBus as { layout_id?: string | null } | null)?.layout_id ?? null;
+  const { data: activeLayout = null } = useQuery({
+    queryKey: ["bus_layout", activeLayoutId],
+    enabled: !!activeLayoutId,
+    queryFn: async () => {
+      const { data } = await supabase.from("bus_layouts").select("layout_json,seat_count").eq("id", activeLayoutId!).maybeSingle();
+      return (data as { layout_json: LayoutJson; seat_count: number } | null) ?? null;
+    },
+  });
+
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
   const remainingSeats = activeBus ? (activeBus.capacity ?? 49) - ((activeBus.blocked_seats ?? ["A2"]).length) - bookedSeats.length : 0;
+
 
 
   useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
@@ -453,14 +471,15 @@ function BookingPage() {
   }
 
   return (
-    <SiteLayout>
+    <BookingFocusLayout>
       <section className="relative">
         <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-navy)" }} />
-        <div className="container-luxe py-14 text-white">
-          <h1 className="text-3xl md:text-5xl font-extrabold">احجز رحلتك للعمرة</h1>
-          <p className="mt-3 text-white/75 max-w-2xl">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
+        <div className="container-luxe py-8 md:py-10 text-white">
+          <h1 className="text-2xl md:text-4xl font-extrabold">احجز رحلتك للعمرة</h1>
+          <p className="mt-2 text-white/75 max-w-2xl text-sm md:text-base">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
         </div>
       </section>
+
 
       <section className="container-luxe -mt-8 relative z-10 pb-40">
         <Stepper steps={STEPS} step={step} />
@@ -500,18 +519,32 @@ function BookingPage() {
                   reserved={bookedSeats}
                   onChange={setSeats}
                   bus={activeBus}
+                  layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
                   mode={seatMode}
                   onModeChange={(m) => {
                     setSeatMode(m);
                     if (m === "random") {
-                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
+                      const auto = activeLayout?.layout_json
+                        ? pickRandomLayoutSeats(passengerCount, activeLayout.layout_json, bookedSeats)
+                        : pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
                       setSeats(auto);
                     }
                   }}
                 />
               )}
-              {stepName === "البيانات" && <StepCustomer customer={customer} setCustomer={setCustomer} idFile={idFile} setIdFile={setIdFile} />}
+              {stepName === "البيانات" && (
+                <StepCustomer
+                  customer={customer}
+                  setCustomer={setCustomer}
+                  idFile={idFile}
+                  setIdFile={setIdFile}
+                  accountType={accountType}
+                  repName={repName}
+                  setRepName={setRepName}
+                />
+              )}
+
 
               {stepName === "التأكيد" && (
                 <StepConfirm
@@ -573,7 +606,7 @@ function BookingPage() {
         discount={discount}
         total={total}
       />
-    </SiteLayout>
+    </BookingFocusLayout>
   );
 }
 
@@ -674,9 +707,16 @@ function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHo
                 ) : (
                   <div className="h-full flex items-center justify-center text-white/60"><PackageIcon className="h-14 w-14" /></div>
                 )}
-                {p.tier && p.tier !== "basic" && p.tier !== "economy" && (
+                {typeof p.stars === "number" && p.stars > 0 ? (
+                  <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-0.5">
+                    {Array.from({ length: p.stars }).map((_, i) => (
+                      <Star key={i} className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                    ))}
+                  </div>
+                ) : p.tier && p.tier !== "basic" && p.tier !== "economy" && (
                   <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
                     {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+
                   </div>
                 )}
                 {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
@@ -776,8 +816,9 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
   );
 }
 
-function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode, onModeChange }: {
+function StepSeats({ count, seats, reserved, onChange, bus, layout, remainingSeats, mode, onModeChange }: {
   count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: (Bus & { name?: string | null }) | null;
+  layout: LayoutJson | null;
   remainingSeats: number;
   mode: "manual" | "random"; onModeChange: (m: "manual" | "random") => void;
 }) {
@@ -811,26 +852,37 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
         </div>
       </div>
       <div className="max-w-md mx-auto">
-        <BusSeatMap
-          selected={seats}
-          reserved={reserved}
-          maxSelectable={count}
-          onChange={(next) => {
-            if (next.length > seats.length && seats.length >= count) {
-              toast.warning(
-                "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
-              );
-              return;
-            }
-            onChange(next);
-          }}
-          blocked={bus?.blocked_seats ?? ["A2"]}
-          layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
-        />
+        {layout ? (
+          <LayoutSeatMap
+            layout={layout}
+            selected={seats}
+            reserved={reserved}
+            maxSelectable={count}
+            onChange={onChange}
+          />
+        ) : (
+          <BusSeatMap
+            selected={seats}
+            reserved={reserved}
+            maxSelectable={count}
+            onChange={(next) => {
+              if (next.length > seats.length && seats.length >= count) {
+                toast.warning(
+                  "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
+                );
+                return;
+              }
+              onChange(next);
+            }}
+            blocked={bus?.blocked_seats ?? ["A2"]}
+            layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
+          />
+        )}
       </div>
     </div>
   );
 }
+
 
 function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: {
   buses: (Bus & { name?: string | null })[];
@@ -889,11 +941,15 @@ function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: 
 
 
 type CustomerState = { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; nationality: string; same_whatsapp: boolean };
-function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
+function StepCustomer({ customer, setCustomer, idFile, setIdFile, accountType, repName, setRepName }: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
   idFile: File | null; setIdFile: (f: File | null) => void;
+  accountType: "customer" | "representative";
+  repName: string;
+  setRepName: React.Dispatch<React.SetStateAction<string>>;
 }) {
+
   return (
     <div>
       <StepHeader title="بيانات الحجز" desc="أدخل بيانات صاحب الحجز" />
@@ -925,12 +981,21 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
       </div>
 
 
+      {accountType === "representative" && (
+        <div className="mt-6 max-w-3xl">
+          <Label className="font-semibold">مصدر الحجز (اسم المندوب)</Label>
+          <Input className="mt-2 h-12 rounded-xl" value={repName} onChange={(e) => setRepName(e.target.value)} placeholder="اسم المندوب" />
+          <p className="text-xs text-muted-foreground mt-1">يظهر هذا الاسم في تقارير الإدارة كمصدر للحجز.</p>
+        </div>
+      )}
+
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">رفع صورة الهوية</Label>
         <IdUploader file={idFile} onChange={setIdFile} />
       </div>
     </div>
   );
+
 }
 
 function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File | null) => void }) {
@@ -1061,3 +1126,39 @@ function PriceBar(props: {
 function PriceCell({ label, value }: { label: string; value: string }) {
   return <div className="flex flex-col"><span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span><span className="font-bold">{value}</span></div>;
 }
+
+/**
+ * Booking Focus Mode — a minimal shell for the booking wizard.
+ * Hides navbar/footer/floating widgets. Keeps only the logo + hamburger menu.
+ */
+function BookingFocusLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
+        <div className="container-luxe h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <Logo size={40} withText />
+          </Link>
+          <Sheet>
+            <SheetTrigger asChild>
+              <button aria-label="القائمة" className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition">
+                <Menu className="h-5 w-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72">
+              <nav className="mt-8 flex flex-col gap-1">
+                {NAV_LINKS.map((l) => (
+                  <Link key={l.to} to={l.to} className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">{l.label}</Link>
+                ))}
+                <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">حجوزاتي</Link>
+                <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الملف الشخصي</Link>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+      <main className="flex-1">{children}</main>
+    </div>
+  );
+}
+

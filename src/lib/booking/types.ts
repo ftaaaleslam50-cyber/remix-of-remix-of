@@ -29,7 +29,9 @@ export interface Package {
   base_price: number;
   active: boolean;
   display_order: number;
+  stars?: number | null;
 }
+
 
 export interface PricingCell {
   id: string;

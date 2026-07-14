@@ -180,6 +180,34 @@ function LayoutEditor({ layout, onClose, onSaved }: { layout: LayoutRow | null; 
     if (!layout) return;
     if (autoNumber) autoNumberSeats();
     const json: LayoutJson = { rows, cols, cells: Array.from(cells.values()) };
+
+    // Layout safety: warn if this layout is assigned to buses whose bookings reference
+    // seat labels that no longer exist in the new layout.
+    const newSeatLabels = new Set(
+      Array.from(cells.values()).filter((c) => c.kind === "seat").map((c, i) => c.label || String(i + 1))
+    );
+    const { data: busesUsing } = await supabase.from("buses").select("id").eq("layout_id", layout.id);
+    const busIds = (busesUsing ?? []).map((b: { id: string }) => b.id);
+    if (busIds.length > 0) {
+      const { data: bookings } = await supabase
+        .from("bookings")
+        .select("booking_code,seat_numbers,bus_id")
+        .in("bus_id", busIds)
+        .neq("status", "cancelled");
+      const lost: { code: string; missing: string[] }[] = [];
+      for (const b of (bookings ?? []) as { booking_code: string; seat_numbers: string[] | null }[]) {
+        const missing = (b.seat_numbers ?? []).filter((s) => !newSeatLabels.has(s));
+        if (missing.length > 0) lost.push({ code: b.booking_code, missing });
+      }
+      if (lost.length > 0) {
+        const summary = lost.slice(0, 5).map((l) => `${l.code}: ${l.missing.join(", ")}`).join("\n");
+        const ok = confirm(
+          `⚠️ تحذير: هذا التحديث سيؤثر على ${lost.length} حجز — بعض المقاعد المحجوزة لن تكون موجودة في القالب الجديد:\n\n${summary}${lost.length > 5 ? "\n..." : ""}\n\nهل تريد المتابعة على أي حال؟`
+        );
+        if (!ok) return;
+      }
+    }
+
     const { error } = await supabase.from("bus_layouts").update({
       name, seat_count: seatCount, layout_json: json as never,
     } as never).eq("id", layout.id);
@@ -187,6 +215,7 @@ function LayoutEditor({ layout, onClose, onSaved }: { layout: LayoutRow | null; 
     toast.success("تم الحفظ");
     onSaved();
   }
+
 
   return (
     <Dialog open={!!layout} onOpenChange={(o) => !o && onClose()}>
