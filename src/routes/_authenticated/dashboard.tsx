@@ -180,6 +180,7 @@ function Dashboard() {
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
             <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> الحجوزات</TabsTrigger>
+            <TabsTrigger value="by-bus" className="rounded-xl"><Filter className="h-4 w-4 ml-1" /> حسب الحافلة</TabsTrigger>
             <TabsTrigger value="packages" className="rounded-xl"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</TabsTrigger>
             <TabsTrigger value="pricing" className="rounded-xl"><DollarSign className="h-4 w-4 ml-1" /> الأسعار</TabsTrigger>
             <TabsTrigger value="wheel" className="rounded-xl"><Sparkles className="h-4 w-4 ml-1" /> السحب</TabsTrigger>
