@@ -24,15 +24,20 @@ function ContactPage() {
     queryFn: async () => (await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle()).data as AppSettings | null,
   });
 
+  const s2 = s as (AppSettings & { telegram_url?: string; facebook_url?: string; twitter_url?: string; youtube_url?: string }) | null;
   const cards = [
     { icon: MessageCircle, label: "واتساب", value: s?.whatsapp ?? "", href: `https://wa.me/${(s?.whatsapp ?? "").replace(/\D/g, "")}`, color: "bg-[#25D366]" },
     { icon: Phone, label: "هاتف", value: s?.phone ?? "", href: `tel:${s?.phone ?? ""}`, color: "bg-[color:var(--color-navy)]" },
     { icon: Mail, label: "البريد الإلكتروني", value: s?.email ?? BRAND.email, href: `mailto:${s?.email ?? BRAND.email}`, color: "bg-primary" },
+    { icon: Send, label: "تيليغرام", value: "Telegram", href: s2?.telegram_url || "#", color: "bg-[#0088cc]" },
+    { icon: Facebook, label: "فيسبوك", value: "Facebook", href: s2?.facebook_url || "#", color: "bg-[#1877F2]" },
+    { icon: Twitter, label: "X (تويتر)", value: "X", href: s2?.twitter_url || "#", color: "bg-black" },
+    { icon: Youtube, label: "يوتيوب", value: "YouTube", href: s2?.youtube_url || "#", color: "bg-[#FF0000]" },
     { icon: Music2, label: "تيك توك", value: "TikTok", href: s?.tiktok_url || "#", color: "bg-black" },
     { icon: Instagram, label: "إنستغرام", value: "Instagram", href: s?.instagram_url || "#", color: "bg-gradient-to-tr from-pink-500 to-orange-400" },
     { icon: Camera, label: "سناب شات", value: "Snapchat", href: s?.snapchat_url || "#", color: "bg-yellow-400 text-black" },
     { icon: MapPin, label: "خرائط جوجل", value: "Maps", href: s?.maps_url || "#", color: "bg-emerald-600" },
-  ];
+  ].filter((c) => c.href && c.href !== "#");
 
   return (
     <SiteLayout>
