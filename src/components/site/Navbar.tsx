@@ -87,6 +87,7 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild><Link to="/profile" className="cursor-pointer"><UserIcon className="h-4 w-4 ml-2" /> الملف الشخصي</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/my-bookings" className="cursor-pointer">🎫 حجوزاتي</Link></DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild><Link to="/dashboard" className="cursor-pointer"><LayoutDashboard className="h-4 w-4 ml-2" /> لوحة التحكم</Link></DropdownMenuItem>
                 )}
