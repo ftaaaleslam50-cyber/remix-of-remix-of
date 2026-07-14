@@ -1040,6 +1040,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      redeem_coupon: {
+        Args: { _booking_id: string; _code: string }
+        Returns: boolean
+      }
+      validate_coupon: {
+        Args: { _code: string }
+        Returns: {
+          active: boolean
+          code: string
+          expiry_date: string
+          label: string
+          max_uses: number
+          prize_type: string
+          prize_value: number
+          usage_count: number
+          used: boolean
+        }[]
+      }
     }
     Enums: {
       account_type: "customer" | "representative"

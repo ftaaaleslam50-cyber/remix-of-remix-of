@@ -301,12 +301,13 @@ function BookingPage() {
   async function applyCoupon() {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
-    const { data } = await supabase.from("coupons" as never).select("*").eq("code", code).maybeSingle();
-    const c = data as unknown as {
+    const { data } = await supabase.rpc("validate_coupon" as never, { _code: code } as never);
+    const rows = (data as unknown as Array<{
       code: string; prize_type: "percent" | "fixed"; prize_value: number;
       used: boolean; expiry_date: string; label?: string | null;
       active?: boolean; max_uses?: number | null; usage_count?: number;
-    } | null;
+    }> | null) ?? [];
+    const c = rows[0] ?? null;
     if (!c) { toast.error("الكود غير موجود"); setAppliedCoupon(null); return; }
     if (c.active === false) { toast.error("الكود معطّل"); setAppliedCoupon(null); return; }
     if (new Date(c.expiry_date) < new Date()) { toast.error("الكود منتهي الصلاحية"); setAppliedCoupon(null); return; }
@@ -420,22 +421,12 @@ function BookingPage() {
         bookingId = (inserted as { id: string } | null)?.id ?? null;
       }
 
-      // Increment coupon usage; mark used when limit reached or single-use.
+      // Increment coupon usage via secure RPC (validates + increments atomically)
       if (appliedCoupon && bookingId && !editingCode) {
-        const { data: cur } = await supabase.from("coupons" as never)
-          .select("usage_count,max_uses")
-          .eq("code", appliedCoupon.code)
-          .maybeSingle();
-        const c = cur as unknown as { usage_count: number; max_uses: number | null } | null;
-        const nextCount = (c?.usage_count ?? 0) + 1;
-        const nowUsed = c?.max_uses == null ? true : nextCount >= c.max_uses;
-        await supabase.from("coupons" as never)
-          .update({
-            usage_count: nextCount,
-            used: nowUsed,
-            used_in_booking_id: bookingId,
-          } as never)
-          .eq("code", appliedCoupon.code);
+        await supabase.rpc("redeem_coupon" as never, {
+          _code: appliedCoupon.code,
+          _booking_id: bookingId,
+        } as never);
       }
 
       const cache = {
