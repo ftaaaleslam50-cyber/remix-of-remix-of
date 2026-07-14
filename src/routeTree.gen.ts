@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as GalleryRouteImport } from './routes/gallery'
-import { Route as ExhibitionsRouteImport } from './routes/exhibitions'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BookingRouteImport } from './routes/booking'
@@ -19,7 +18,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TicketCodeRouteImport } from './routes/ticket.$code'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
-import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedMyBookingsRouteImport } from './routes/_authenticated/my-bookings'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
@@ -27,19 +25,12 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
 import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
 import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
-import { Route as AuthenticatedAdminExhibitionsRouteImport } from './routes/_authenticated/admin-exhibitions'
 import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
-import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
 import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
 
 const GalleryRoute = GalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExhibitionsRoute = ExhibitionsRouteImport.update({
-  id: '/exhibitions',
-  path: '/exhibitions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DrawRoute = DrawRouteImport.update({
@@ -81,12 +72,6 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedNotificationsRoute =
-  AuthenticatedNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedMyBookingsRoute = AuthenticatedMyBookingsRouteImport.update({
   id: '/my-bookings',
   path: '/my-bookings',
@@ -124,23 +109,11 @@ const AuthenticatedAdminGalleryRoute =
     path: '/admin-gallery',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminExhibitionsRoute =
-  AuthenticatedAdminExhibitionsRouteImport.update({
-    id: '/admin-exhibitions',
-    path: '/admin-exhibitions',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedAdminBusesRoute = AuthenticatedAdminBusesRouteImport.update({
   id: '/admin-buses',
   path: '/admin-buses',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminBusLayoutsRoute =
-  AuthenticatedAdminBusLayoutsRouteImport.update({
-    id: '/admin-bus-layouts',
-    path: '/admin-bus-layouts',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const ApiPublicBootstrapAdminRoute = ApiPublicBootstrapAdminRouteImport.update({
   id: '/api/public/bootstrap-admin',
   path: '/api/public/bootstrap-admin',
@@ -153,11 +126,8 @@ export interface FileRoutesByFullPath {
   '/booking': typeof BookingRoute
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
-  '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
-  '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
-  '/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
@@ -165,7 +135,6 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/my-bookings': typeof AuthenticatedMyBookingsRoute
-  '/notifications': typeof AuthenticatedNotificationsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
@@ -176,11 +145,8 @@ export interface FileRoutesByTo {
   '/booking': typeof BookingRoute
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
-  '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
-  '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
-  '/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
@@ -188,7 +154,6 @@ export interface FileRoutesByTo {
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/my-bookings': typeof AuthenticatedMyBookingsRoute
-  '/notifications': typeof AuthenticatedNotificationsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
@@ -201,11 +166,8 @@ export interface FileRoutesById {
   '/booking': typeof BookingRoute
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
-  '/exhibitions': typeof ExhibitionsRoute
   '/gallery': typeof GalleryRoute
-  '/_authenticated/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/_authenticated/admin-buses': typeof AuthenticatedAdminBusesRoute
-  '/_authenticated/admin-exhibitions': typeof AuthenticatedAdminExhibitionsRoute
   '/_authenticated/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/_authenticated/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/_authenticated/admin-trips': typeof AuthenticatedAdminTripsRoute
@@ -213,7 +175,6 @@ export interface FileRoutesById {
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/my-bookings': typeof AuthenticatedMyBookingsRoute
-  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
@@ -226,11 +187,8 @@ export interface FileRouteTypes {
     | '/booking'
     | '/contact'
     | '/draw'
-    | '/exhibitions'
     | '/gallery'
-    | '/admin-bus-layouts'
     | '/admin-buses'
-    | '/admin-exhibitions'
     | '/admin-gallery'
     | '/admin-homepage'
     | '/admin-trips'
@@ -238,7 +196,6 @@ export interface FileRouteTypes {
     | '/audit'
     | '/dashboard'
     | '/my-bookings'
-    | '/notifications'
     | '/profile'
     | '/ticket/$code'
     | '/api/public/bootstrap-admin'
@@ -249,11 +206,8 @@ export interface FileRouteTypes {
     | '/booking'
     | '/contact'
     | '/draw'
-    | '/exhibitions'
     | '/gallery'
-    | '/admin-bus-layouts'
     | '/admin-buses'
-    | '/admin-exhibitions'
     | '/admin-gallery'
     | '/admin-homepage'
     | '/admin-trips'
@@ -261,7 +215,6 @@ export interface FileRouteTypes {
     | '/audit'
     | '/dashboard'
     | '/my-bookings'
-    | '/notifications'
     | '/profile'
     | '/ticket/$code'
     | '/api/public/bootstrap-admin'
@@ -273,11 +226,8 @@ export interface FileRouteTypes {
     | '/booking'
     | '/contact'
     | '/draw'
-    | '/exhibitions'
     | '/gallery'
-    | '/_authenticated/admin-bus-layouts'
     | '/_authenticated/admin-buses'
-    | '/_authenticated/admin-exhibitions'
     | '/_authenticated/admin-gallery'
     | '/_authenticated/admin-homepage'
     | '/_authenticated/admin-trips'
@@ -285,7 +235,6 @@ export interface FileRouteTypes {
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
     | '/_authenticated/my-bookings'
-    | '/_authenticated/notifications'
     | '/_authenticated/profile'
     | '/ticket/$code'
     | '/api/public/bootstrap-admin'
@@ -298,7 +247,6 @@ export interface RootRouteChildren {
   BookingRoute: typeof BookingRoute
   ContactRoute: typeof ContactRoute
   DrawRoute: typeof DrawRoute
-  ExhibitionsRoute: typeof ExhibitionsRoute
   GalleryRoute: typeof GalleryRoute
   TicketCodeRoute: typeof TicketCodeRoute
   ApiPublicBootstrapAdminRoute: typeof ApiPublicBootstrapAdminRoute
@@ -311,13 +259,6 @@ declare module '@tanstack/react-router' {
       path: '/gallery'
       fullPath: '/gallery'
       preLoaderRoute: typeof GalleryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/exhibitions': {
-      id: '/exhibitions'
-      path: '/exhibitions'
-      fullPath: '/exhibitions'
-      preLoaderRoute: typeof ExhibitionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/draw': {
@@ -376,13 +317,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/notifications': {
-      id: '/_authenticated/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/my-bookings': {
       id: '/_authenticated/my-bookings'
       path: '/my-bookings'
@@ -432,25 +366,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminGalleryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin-exhibitions': {
-      id: '/_authenticated/admin-exhibitions'
-      path: '/admin-exhibitions'
-      fullPath: '/admin-exhibitions'
-      preLoaderRoute: typeof AuthenticatedAdminExhibitionsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/admin-buses': {
       id: '/_authenticated/admin-buses'
       path: '/admin-buses'
       fullPath: '/admin-buses'
       preLoaderRoute: typeof AuthenticatedAdminBusesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-bus-layouts': {
-      id: '/_authenticated/admin-bus-layouts'
-      path: '/admin-bus-layouts'
-      fullPath: '/admin-bus-layouts'
-      preLoaderRoute: typeof AuthenticatedAdminBusLayoutsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/bootstrap-admin': {
@@ -464,9 +384,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAdminBusLayoutsRoute: typeof AuthenticatedAdminBusLayoutsRoute
   AuthenticatedAdminBusesRoute: typeof AuthenticatedAdminBusesRoute
-  AuthenticatedAdminExhibitionsRoute: typeof AuthenticatedAdminExhibitionsRoute
   AuthenticatedAdminGalleryRoute: typeof AuthenticatedAdminGalleryRoute
   AuthenticatedAdminHomepageRoute: typeof AuthenticatedAdminHomepageRoute
   AuthenticatedAdminTripsRoute: typeof AuthenticatedAdminTripsRoute
@@ -474,14 +392,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMyBookingsRoute: typeof AuthenticatedMyBookingsRoute
-  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAdminBusLayoutsRoute: AuthenticatedAdminBusLayoutsRoute,
   AuthenticatedAdminBusesRoute: AuthenticatedAdminBusesRoute,
-  AuthenticatedAdminExhibitionsRoute: AuthenticatedAdminExhibitionsRoute,
   AuthenticatedAdminGalleryRoute: AuthenticatedAdminGalleryRoute,
   AuthenticatedAdminHomepageRoute: AuthenticatedAdminHomepageRoute,
   AuthenticatedAdminTripsRoute: AuthenticatedAdminTripsRoute,
@@ -489,7 +404,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMyBookingsRoute: AuthenticatedMyBookingsRoute,
-  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }
 
@@ -503,7 +417,6 @@ const rootRouteChildren: RootRouteChildren = {
   BookingRoute: BookingRoute,
   ContactRoute: ContactRoute,
   DrawRoute: DrawRoute,
-  ExhibitionsRoute: ExhibitionsRoute,
   GalleryRoute: GalleryRoute,
   TicketCodeRoute: TicketCodeRoute,
   ApiPublicBootstrapAdminRoute: ApiPublicBootstrapAdminRoute,
