@@ -250,8 +250,9 @@ function BookingPage() {
 
   const selectedPackage = packages.find((p) => p.id === packageId) ?? null;
   const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
-  const transportOnly = isTransportPackage(selectedPackage);
-  const STEPS: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
+  const transportOnly = isTransportPackage(selectedPackage) || noHotel;
+  const baseSteps: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
+  const STEPS: readonly string[] = noBus ? baseSteps.filter((s) => s !== "الرحلة" && s !== "المقاعد") : baseSteps;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
 
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
@@ -259,9 +260,10 @@ function BookingPage() {
     if (step > STEPS.length - 1) setStep(STEPS.length - 1);
   }, [STEPS.length, step]);
 
+  const busSurcharge = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
   const pricePerPerson = useMemo(
-    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing),
-    [selectedPackage, roomType, passengerCount, pricing]
+    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing) + busSurcharge,
+    [selectedPackage, roomType, passengerCount, pricing, busSurcharge]
   );
 
   const subtotal = pricePerPerson * passengerCount;
