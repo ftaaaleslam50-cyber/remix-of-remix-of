@@ -182,6 +182,7 @@ function Dashboard() {
             <TabsTrigger value="pricing" className="rounded-xl"><DollarSign className="h-4 w-4 ml-1" /> الأسعار</TabsTrigger>
             <TabsTrigger value="wheel" className="rounded-xl"><Sparkles className="h-4 w-4 ml-1" /> السحب</TabsTrigger>
             <TabsTrigger value="coupons" className="rounded-xl"><Ticket className="h-4 w-4 ml-1" /> الكوبونات</TabsTrigger>
+            <TabsTrigger value="social" className="rounded-xl"><Share2 className="h-4 w-4 ml-1" /> التواصل</TabsTrigger>
             <TabsTrigger value="settings" className="rounded-xl">الإعدادات</TabsTrigger>
           </TabsList>
 
