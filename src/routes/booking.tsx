@@ -83,6 +83,7 @@ function BookingPage() {
     id_number: "",
     contact_phone: "",
     whatsapp_phone: "",
+    nationality: "",
     same_whatsapp: true,
   });
   const [idFile, setIdFile] = useState<File | null>(null);
@@ -90,6 +91,10 @@ function BookingPage() {
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [noHotel, setNoHotel] = useState(false);
   const [noBus, setNoBus] = useState(false);
+  const [busId, setBusId] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<"customer" | "representative">("customer");
+  const [repName, setRepName] = useState<string>("");
+
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
