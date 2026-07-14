@@ -11,7 +11,6 @@ export const BRAND = {
 export const NAV_LINKS = [
   { to: "/", label: "الرئيسية" },
   { to: "/booking", label: "الحجز" },
-  { to: "/exhibitions", label: "المعارض" },
   { to: "/draw", label: "السحب" },
   { to: "/gallery", label: "المعرض" },
   { to: "/contact", label: "تواصل معنا" },

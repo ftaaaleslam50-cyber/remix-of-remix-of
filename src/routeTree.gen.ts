@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
 import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
 import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
+import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
 import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
 
 const GalleryRoute = GalleryRouteImport.update({
@@ -114,6 +115,12 @@ const AuthenticatedAdminBusesRoute = AuthenticatedAdminBusesRouteImport.update({
   path: '/admin-buses',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminBusLayoutsRoute =
+  AuthenticatedAdminBusLayoutsRouteImport.update({
+    id: '/admin-bus-layouts',
+    path: '/admin-bus-layouts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicBootstrapAdminRoute = ApiPublicBootstrapAdminRouteImport.update({
   id: '/api/public/bootstrap-admin',
   path: '/api/public/bootstrap-admin',
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
@@ -167,6 +176,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/_authenticated/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/_authenticated/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/_authenticated/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/_authenticated/admin-homepage': typeof AuthenticatedAdminHomepageRoute
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/draw'
     | '/gallery'
+    | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-gallery'
     | '/admin-homepage'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/draw'
     | '/gallery'
+    | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-gallery'
     | '/admin-homepage'
@@ -227,6 +239,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/draw'
     | '/gallery'
+    | '/_authenticated/admin-bus-layouts'
     | '/_authenticated/admin-buses'
     | '/_authenticated/admin-gallery'
     | '/_authenticated/admin-homepage'
@@ -373,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBusesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-bus-layouts': {
+      id: '/_authenticated/admin-bus-layouts'
+      path: '/admin-bus-layouts'
+      fullPath: '/admin-bus-layouts'
+      preLoaderRoute: typeof AuthenticatedAdminBusLayoutsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/bootstrap-admin': {
       id: '/api/public/bootstrap-admin'
       path: '/api/public/bootstrap-admin'
@@ -384,6 +404,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminBusLayoutsRoute: typeof AuthenticatedAdminBusLayoutsRoute
   AuthenticatedAdminBusesRoute: typeof AuthenticatedAdminBusesRoute
   AuthenticatedAdminGalleryRoute: typeof AuthenticatedAdminGalleryRoute
   AuthenticatedAdminHomepageRoute: typeof AuthenticatedAdminHomepageRoute
@@ -396,6 +417,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminBusLayoutsRoute: AuthenticatedAdminBusLayoutsRoute,
   AuthenticatedAdminBusesRoute: AuthenticatedAdminBusesRoute,
   AuthenticatedAdminGalleryRoute: AuthenticatedAdminGalleryRoute,
   AuthenticatedAdminHomepageRoute: AuthenticatedAdminHomepageRoute,
