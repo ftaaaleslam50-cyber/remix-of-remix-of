@@ -37,6 +37,7 @@ interface BusRow {
   name: string | null; plate: string | null; model: string | null;
   status: "active" | "disabled" | "maintenance" | "stopped"; priority: number; is_active_booking: boolean;
   blocked_seats: string[] | null; layout: "A" | "B";
+  image_url: string | null; bus_type: string | null; details: string | null; price_addition: number;
 }
 interface TripRow { id: string; name: string; active: boolean; }
 
