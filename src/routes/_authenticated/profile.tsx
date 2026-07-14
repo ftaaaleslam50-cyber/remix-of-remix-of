@@ -122,6 +122,7 @@ function ProfilePage() {
             <Field label="رقم الجوال" value={p.mobile_phone ?? ""} onChange={(v) => setP({ ...p, mobile_phone: v })} dir="ltr" />
             <Field label="رقم الواتساب" value={p.whatsapp_phone ?? ""} onChange={(v) => setP({ ...p, whatsapp_phone: v })} dir="ltr" />
             <Field label="رقم الهوية" value={p.national_id ?? ""} onChange={(v) => setP({ ...p, national_id: v })} dir="ltr" />
+            <Field label="الجنسية" value={p.nationality ?? ""} onChange={(v) => setP({ ...p, nationality: v })} />
           </div>
 
           <div>
