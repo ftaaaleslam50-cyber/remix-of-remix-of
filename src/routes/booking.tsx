@@ -25,7 +25,11 @@ import {
   MousePointerClick,
 } from "lucide-react";
 
-import { SiteLayout } from "@/components/site/SiteLayout";
+import { Link } from "@tanstack/react-router";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import { Logo } from "@/components/site/Logo";
+import { NAV_LINKS } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,11 +37,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { BusSeatMap, pickRandomSeats } from "@/components/booking/BusSeatMap";
+import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
+
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
