@@ -421,22 +421,12 @@ function BookingPage() {
         bookingId = (inserted as { id: string } | null)?.id ?? null;
       }
 
-      // Increment coupon usage; mark used when limit reached or single-use.
+      // Increment coupon usage via secure RPC (validates + increments atomically)
       if (appliedCoupon && bookingId && !editingCode) {
-        const { data: cur } = await supabase.from("coupons" as never)
-          .select("usage_count,max_uses")
-          .eq("code", appliedCoupon.code)
-          .maybeSingle();
-        const c = cur as unknown as { usage_count: number; max_uses: number | null } | null;
-        const nextCount = (c?.usage_count ?? 0) + 1;
-        const nowUsed = c?.max_uses == null ? true : nextCount >= c.max_uses;
-        await supabase.from("coupons" as never)
-          .update({
-            usage_count: nextCount,
-            used: nowUsed,
-            used_in_booking_id: bookingId,
-          } as never)
-          .eq("code", appliedCoupon.code);
+        await supabase.rpc("redeem_coupon" as never, {
+          _code: appliedCoupon.code,
+          _booking_id: bookingId,
+        } as never);
       }
 
       const cache = {
