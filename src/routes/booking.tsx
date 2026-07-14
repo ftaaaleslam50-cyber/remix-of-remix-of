@@ -471,14 +471,15 @@ function BookingPage() {
   }
 
   return (
-    <SiteLayout>
+    <BookingFocusLayout>
       <section className="relative">
         <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-navy)" }} />
-        <div className="container-luxe py-14 text-white">
-          <h1 className="text-3xl md:text-5xl font-extrabold">احجز رحلتك للعمرة</h1>
-          <p className="mt-3 text-white/75 max-w-2xl">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
+        <div className="container-luxe py-8 md:py-10 text-white">
+          <h1 className="text-2xl md:text-4xl font-extrabold">احجز رحلتك للعمرة</h1>
+          <p className="mt-2 text-white/75 max-w-2xl text-sm md:text-base">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
         </div>
       </section>
+
 
       <section className="container-luxe -mt-8 relative z-10 pb-40">
         <Stepper steps={STEPS} step={step} />
