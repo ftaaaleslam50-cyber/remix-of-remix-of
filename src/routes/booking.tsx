@@ -51,7 +51,7 @@ export const Route = createFileRoute("/booking")({
 const FULL_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
-  "الباقة",
+  "الفندق",
   "نوع الغرفة",
   "الرحلة",
   "المقاعد",
@@ -61,7 +61,7 @@ const FULL_STEPS = [
 const TRANSPORT_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
-  "الباقة",
+  "الفندق",
   "الرحلة",
   "المقاعد",
   "البيانات",
@@ -301,7 +301,7 @@ function BookingPage() {
     switch (stepName) {
       case "نوع الحجز": return !!bookingType;
       case "عدد الأفراد": return passengerCount > 0;
-      case "الباقة": return !!packageId;
+      case "الفندق": return !!packageId;
       case "نوع الغرفة": return !!roomType;
       case "الرحلة": return !!tripId;
       case "المقاعد": return seats.length === passengerCount;
@@ -456,7 +456,7 @@ function BookingPage() {
             <motion.div key={stepName} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
-              {stepName === "الباقة" && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
+              {stepName === "الفندق" && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
               {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
               {stepName === "المقاعد" && (
@@ -853,7 +853,7 @@ function StepConfirm(props: {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["عدد الأفراد", String(props.passengerCount)],
-    ["الباقة", props.pkg?.name ?? "—"],
+    ["الفندق", props.pkg?.name ?? "—"],
     ...(!props.transportOnly ? [["نوع الغرفة", ROOM_LABEL[props.roomType]] as [string, string]] : []),
     ["الرحلة", props.trip?.name ?? "—"],
     ["رقم الباص", String(props.busNumber)],
@@ -920,7 +920,7 @@ function PriceBar(props: {
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
           <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
-          {props.packageName && <PriceCell label="الباقة" value={props.packageName} />}
+          {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
