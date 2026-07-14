@@ -882,9 +882,11 @@ function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: 
 }
 
 
+type CustomerState = { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; nationality: string; same_whatsapp: boolean };
 function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
-  customer: { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; same_whatsapp: boolean };
-  setCustomer: (c: typeof customer) => void; idFile: File | null; setIdFile: (f: File | null) => void;
+  customer: CustomerState;
+  setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
+  idFile: File | null; setIdFile: (f: File | null) => void;
 }) {
   return (
     <div>
@@ -899,6 +901,10 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
           <Input className="mt-2 h-12 rounded-xl" value={customer.id_number} onChange={(e) => setCustomer({ ...customer, id_number: e.target.value })} placeholder="1XXXXXXXXX" />
         </div>
         <div>
+          <Label className="font-semibold">الجنسية</Label>
+          <Input className="mt-2 h-12 rounded-xl" value={customer.nationality} onChange={(e) => setCustomer({ ...customer, nationality: e.target.value })} placeholder="السعودية" />
+        </div>
+        <div>
           <Label className="font-semibold">رقم جوال الاتصال</Label>
           <Input dir="ltr" className="mt-2 h-12 rounded-xl text-right" value={customer.contact_phone} onChange={(e) => setCustomer({ ...customer, contact_phone: e.target.value })} placeholder="05XXXXXXXX" />
         </div>
@@ -911,6 +917,7 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile }: {
           </label>
         </div>
       </div>
+
 
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">رفع صورة الهوية</Label>
