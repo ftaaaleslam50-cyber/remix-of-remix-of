@@ -114,7 +114,7 @@ function Dashboard() {
       "الهوية": b.id_number,
       "الجوال": b.contact_phone,
       "واتساب": b.whatsapp_phone,
-      "الباقة": b.packages?.name ?? "-",
+      "الفندق": b.packages?.name ?? "-",
       "الغرفة": b.room_type,
       "الرحلة": b.trips?.name ?? "-",
       "الباص": b.buses?.bus_number ?? "-",
@@ -180,7 +180,7 @@ function Dashboard() {
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
             <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> الحجوزات</TabsTrigger>
-            <TabsTrigger value="packages" className="rounded-xl"><PackageIcon className="h-4 w-4 ml-1" /> الباقات</TabsTrigger>
+            <TabsTrigger value="packages" className="rounded-xl"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</TabsTrigger>
             <TabsTrigger value="pricing" className="rounded-xl"><DollarSign className="h-4 w-4 ml-1" /> الأسعار</TabsTrigger>
             <TabsTrigger value="wheel" className="rounded-xl"><Sparkles className="h-4 w-4 ml-1" /> السحب</TabsTrigger>
             <TabsTrigger value="coupons" className="rounded-xl"><Ticket className="h-4 w-4 ml-1" /> الكوبونات</TabsTrigger>
@@ -287,7 +287,7 @@ function PackagesTab() {
   }
 
   async function addPackage() {
-    const slug = prompt("معرّف الباقة (لاتيني):");
+    const slug = prompt("معرّف الفندق (لاتيني):");
     if (!slug) return;
     const { error } = await supabase.from("packages" as never).insert({
       slug, name: "باقة جديدة", description: "", base_price: 0, tier: "standard", display_order: 99,
@@ -297,7 +297,7 @@ function PackagesTab() {
   }
 
   async function del(id: string) {
-    if (!confirm("حذف الباقة؟")) return;
+    if (!confirm("حذف الفندق؟")) return;
     await supabase.from("packages" as never).delete().eq("id", id);
     qc.invalidateQueries({ queryKey: ["admin-packages"] });
   }
@@ -305,8 +305,8 @@ function PackagesTab() {
   return (
     <div className="surface-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-extrabold">إدارة الباقات</h2>
-        <Button onClick={addPackage} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة باقة</Button>
+        <h2 className="text-lg font-extrabold">إدارة الفنادق</h2>
+        <Button onClick={addPackage} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة فندق</Button>
       </div>
       <div className="space-y-4">
         {packages.map((p) => <PackageEditor key={p.id} pkg={p} onSave={save} onDelete={() => del(p.id)} />)}
@@ -331,7 +331,7 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
         <Button size="sm" onClick={() => onSave(local)} className="rounded-full"><Save className="h-4 w-4" /></Button>
         <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
       </div>
-      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الأسعار تُدار من تبويب <strong>مصفوفة الأسعار</strong> (لا سعر داخل الباقة).</p>
+      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الأسعار تُدار من تبويب <strong>مصفوفة الأسعار</strong> (لا سعر داخل الفندق).</p>
     </div>
   );
 }
