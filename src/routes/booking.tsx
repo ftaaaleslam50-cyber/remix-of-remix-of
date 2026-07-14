@@ -707,9 +707,16 @@ function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHo
                 ) : (
                   <div className="h-full flex items-center justify-center text-white/60"><PackageIcon className="h-14 w-14" /></div>
                 )}
-                {p.tier && p.tier !== "basic" && p.tier !== "economy" && (
+                {typeof p.stars === "number" && p.stars > 0 ? (
+                  <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-0.5">
+                    {Array.from({ length: p.stars }).map((_, i) => (
+                      <Star key={i} className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                    ))}
+                  </div>
+                ) : p.tier && p.tier !== "basic" && p.tier !== "economy" && (
                   <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
                     {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+
                   </div>
                 )}
                 {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
