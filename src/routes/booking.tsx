@@ -476,17 +476,17 @@ function BookingPage() {
     <BookingFocusLayout>
       <section className="relative">
         <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-navy)" }} />
-        <div className="container-luxe py-8 md:py-10 text-white">
-          <h1 className="text-2xl md:text-4xl font-extrabold">احجز رحلتك للعمرة</h1>
-          <p className="mt-2 text-white/75 max-w-2xl text-sm md:text-base">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
+        <div className="container-luxe py-4 md:py-10 text-white">
+          <h1 className="text-lg md:text-4xl font-extrabold">احجز رحلتك للعمرة</h1>
+          <p className="mt-1 md:mt-2 text-white/75 max-w-2xl text-xs md:text-base hidden sm:block">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
         </div>
       </section>
 
 
-      <section className="container-luxe -mt-8 relative z-10 pb-40">
+      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-32 md:pb-40">
         <Stepper steps={STEPS} step={step} />
 
-        <div className="surface-card p-6 md:p-10 mt-6 min-h-[400px]">
+        <div className="surface-card p-3 md:p-10 mt-3 md:mt-6 min-h-[300px] md:min-h-[400px]">
           <AnimatePresence mode="wait">
             <motion.div key={stepName} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
@@ -577,18 +577,18 @@ function BookingPage() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-10 flex items-center justify-between">
-            <Button variant="outline" size="lg" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-full">
+          <div className="mt-4 md:mt-10 flex items-center justify-between gap-2">
+            <Button variant="outline" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-full md:h-11 md:px-6">
               <ChevronRight className="h-4 w-4 ml-1" />
               السابق
             </Button>
             {step < STEPS.length - 1 ? (
-              <Button size="lg" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full" disabled={!canProceed()} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+              <Button size="sm" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6" disabled={!canProceed()} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
                 التالي
                 <ChevronLeft className="h-4 w-4 mr-1" />
               </Button>
             ) : (
-              <Button size="lg" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full" disabled={submitting} onClick={submitBooking}>
+              <Button size="sm" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6" disabled={submitting} onClick={submitBooking}>
                 {submitting && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
                 تأكيد الحجز
                 <Check className="h-4 w-4 mr-2" />
