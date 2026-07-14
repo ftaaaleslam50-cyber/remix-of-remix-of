@@ -139,12 +139,9 @@ function Dashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="hidden md:inline text-sm text-white/70">{email}</span>
             {isAdmin && <NotificationBell />}
-            {isAdmin && <Link to="/notifications"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">الإشعارات</Button></Link>}
             {isAdmin && <Link to="/audit"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">السجل</Button></Link>}
             {isAdmin && <Link to="/admin-buses"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Bus className="h-4 w-4 ml-1" /> الأسطول</Button></Link>}
-            {isAdmin && <Link to="/admin-bus-layouts"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> تخطيطات الحافلات</Button></Link>}
             {isAdmin && <Link to="/admin-trips"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><CalendarClock className="h-4 w-4 ml-1" /> الرحلات</Button></Link>}
-            {isAdmin && <Link to="/admin-exhibitions"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Store className="h-4 w-4 ml-1" /> المعارض</Button></Link>}
             {isAdmin && <Link to="/admin-gallery"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> المعرض</Button></Link>}
             {isAdmin && <Link to="/admin-homepage"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> الرئيسية</Button></Link>}
             {isAdmin && <Link to="/admin-users"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Users className="h-4 w-4 ml-1" /> المستخدمون</Button></Link>}
