@@ -341,26 +341,31 @@ function BookingPage() {
   }
 
   async function submitBooking() {
-    if (!selectedPackage) return;
+    if (!noHotel && !selectedPackage) return;
     if (!noBus && (!activeBus || !selectedTrip)) return;
     setSubmitting(true);
     try {
       const id_image_url = await uploadIdImage();
       const code = editingCode ?? generateBookingCode();
 
+      const source =
+        accountType === "representative" && repName ? repName : "Website";
+
       const payload = {
         booking_code: code,
         booking_type: bookingType!,
         passenger_count: passengerCount,
         room_type: roomType,
-        package_id: selectedPackage.id,
-        trip_id: noBus ? null : tripId!,
+        package_id: noHotel ? null : selectedPackage!.id,
+        trip_id: tripId,
         bus_id: noBus ? null : activeBus!.id,
         seat_numbers: noBus ? [] : seats,
         no_hotel: noHotel,
         no_bus: noBus,
         customer_name: customer.customer_name.trim(),
         id_number: customer.id_number.trim(),
+        nationality: customer.nationality.trim() || null,
+        booking_source: source,
         contact_phone: customer.contact_phone.trim(),
         whatsapp_phone: customer.whatsapp_phone.trim(),
         // Only overwrite id_image_url when a new file was uploaded (edit mode may keep the old one).
@@ -371,6 +376,7 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
       };
+
 
 
       let bookingId: string | null = null;
