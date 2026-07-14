@@ -189,6 +189,11 @@ function BookingPage() {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
   }, [customer.same_whatsapp, customer.contact_phone]);
 
+  // When "no hotel" is toggled, auto-select the first (transport) package so pricing works.
+  useEffect(() => {
+    if (noHotel && !packageId && packages.length > 0) setPackageId(packages[0].id);
+  }, [noHotel, packageId, packages]);
+
   // Auto-populate customer fields from signed-in user's profile
   useEffect(() => {
     (async () => {
