@@ -301,12 +301,13 @@ function BookingPage() {
   async function applyCoupon() {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
-    const { data } = await supabase.from("coupons" as never).select("*").eq("code", code).maybeSingle();
-    const c = data as unknown as {
+    const { data } = await supabase.rpc("validate_coupon" as never, { _code: code } as never);
+    const rows = (data as unknown as Array<{
       code: string; prize_type: "percent" | "fixed"; prize_value: number;
       used: boolean; expiry_date: string; label?: string | null;
       active?: boolean; max_uses?: number | null; usage_count?: number;
-    } | null;
+    }> | null) ?? [];
+    const c = rows[0] ?? null;
     if (!c) { toast.error("الكود غير موجود"); setAppliedCoupon(null); return; }
     if (c.active === false) { toast.error("الكود معطّل"); setAppliedCoupon(null); return; }
     if (new Date(c.expiry_date) < new Date()) { toast.error("الكود منتهي الصلاحية"); setAppliedCoupon(null); return; }
