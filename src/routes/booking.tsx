@@ -519,18 +519,32 @@ function BookingPage() {
                   reserved={bookedSeats}
                   onChange={setSeats}
                   bus={activeBus}
+                  layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
                   mode={seatMode}
                   onModeChange={(m) => {
                     setSeatMode(m);
                     if (m === "random") {
-                      const auto = pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
+                      const auto = activeLayout?.layout_json
+                        ? pickRandomLayoutSeats(passengerCount, activeLayout.layout_json, bookedSeats)
+                        : pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
                       setSeats(auto);
                     }
                   }}
                 />
               )}
-              {stepName === "البيانات" && <StepCustomer customer={customer} setCustomer={setCustomer} idFile={idFile} setIdFile={setIdFile} />}
+              {stepName === "البيانات" && (
+                <StepCustomer
+                  customer={customer}
+                  setCustomer={setCustomer}
+                  idFile={idFile}
+                  setIdFile={setIdFile}
+                  accountType={accountType}
+                  repName={repName}
+                  setRepName={setRepName}
+                />
+              )}
+
 
               {stepName === "التأكيد" && (
                 <StepConfirm
