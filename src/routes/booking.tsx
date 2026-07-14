@@ -156,8 +156,13 @@ function BookingPage() {
     },
   });
 
-  // Auto-assign: first bus with enough free seats, respecting priority ordering.
+  // User-selected bus (from Bus step). Fallback to first bus with room.
   const activeBus = useMemo(() => {
+    if (noBus) return null;
+    if (busId) {
+      const found = buses.find((b) => b.id === busId);
+      if (found) return found;
+    }
     for (const b of buses) {
       const cap = b.capacity ?? 49;
       const blocked = (b.blocked_seats ?? ["A2"]).length;
@@ -166,10 +171,11 @@ function BookingPage() {
       if (free >= passengerCount) return b;
     }
     return buses[0] ?? null;
-  }, [buses, busReserved, passengerCount]);
+  }, [buses, busReserved, passengerCount, busId, noBus]);
 
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
   const remainingSeats = activeBus ? (activeBus.capacity ?? 49) - ((activeBus.blocked_seats ?? ["A2"]).length) - bookedSeats.length : 0;
+
 
   useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
   useEffect(() => { if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount)); }, [passengerCount]);
