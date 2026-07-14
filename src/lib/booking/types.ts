@@ -69,6 +69,14 @@ export interface Bus {
   capacity: number;
   active: boolean;
   blocked_seats: string[];
+  name?: string | null;
+  plate?: string | null;
+  model?: string | null;
+  image_url?: string | null;
+  bus_type?: string | null;
+  details?: string | null;
+  price_addition?: number | null;
+  layout?: "A" | "B";
 }
 
 export interface AppSettings {
