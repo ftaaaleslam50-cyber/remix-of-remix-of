@@ -335,7 +335,8 @@ function BookingPage() {
   }
 
   async function submitBooking() {
-    if (!activeBus || !selectedTrip || !selectedPackage) return;
+    if (!selectedPackage) return;
+    if (!noBus && (!activeBus || !selectedTrip)) return;
     setSubmitting(true);
     try {
       const id_image_url = await uploadIdImage();
@@ -347,9 +348,11 @@ function BookingPage() {
         passenger_count: passengerCount,
         room_type: roomType,
         package_id: selectedPackage.id,
-        trip_id: tripId!,
-        bus_id: activeBus.id,
-        seat_numbers: seats,
+        trip_id: noBus ? null : tripId!,
+        bus_id: noBus ? null : activeBus!.id,
+        seat_numbers: noBus ? [] : seats,
+        no_hotel: noHotel,
+        no_bus: noBus,
         customer_name: customer.customer_name.trim(),
         id_number: customer.id_number.trim(),
         contact_phone: customer.contact_phone.trim(),
@@ -362,6 +365,7 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
       };
+
 
       let bookingId: string | null = null;
       if (editingCode) {
