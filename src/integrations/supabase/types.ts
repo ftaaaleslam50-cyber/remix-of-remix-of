@@ -168,7 +168,7 @@ export type Database = {
         Row: {
           booking_code: string
           booking_type: string
-          bus_id: string
+          bus_id: string | null
           contact_phone: string
           coupon_code: string | null
           created_at: string
@@ -181,6 +181,8 @@ export type Database = {
           id: string
           id_image_url: string | null
           id_number: string
+          no_bus: boolean
+          no_hotel: boolean
           package_id: string | null
           passenger_count: number
           pdf_url: string | null
@@ -200,7 +202,7 @@ export type Database = {
         Insert: {
           booking_code: string
           booking_type: string
-          bus_id: string
+          bus_id?: string | null
           contact_phone: string
           coupon_code?: string | null
           created_at?: string
@@ -213,6 +215,8 @@ export type Database = {
           id?: string
           id_image_url?: string | null
           id_number: string
+          no_bus?: boolean
+          no_hotel?: boolean
           package_id?: string | null
           passenger_count: number
           pdf_url?: string | null
@@ -232,7 +236,7 @@ export type Database = {
         Update: {
           booking_code?: string
           booking_type?: string
-          bus_id?: string
+          bus_id?: string | null
           contact_phone?: string
           coupon_code?: string | null
           created_at?: string
@@ -245,6 +249,8 @@ export type Database = {
           id?: string
           id_image_url?: string | null
           id_number?: string
+          no_bus?: boolean
+          no_hotel?: boolean
           package_id?: string | null
           passenger_count?: number
           pdf_url?: string | null
@@ -297,14 +303,18 @@ export type Database = {
           active: boolean
           blocked_seats: string[]
           bus_number: number
+          bus_type: string | null
           capacity: number
           created_at: string
+          details: string | null
           id: string
+          image_url: string | null
           is_active_booking: boolean
           layout: string
           model: string | null
           name: string | null
           plate: string | null
+          price_addition: number
           priority: number
           status: Database["public"]["Enums"]["bus_status"]
           trip_id: string
@@ -314,14 +324,18 @@ export type Database = {
           active?: boolean
           blocked_seats?: string[]
           bus_number: number
+          bus_type?: string | null
           capacity?: number
           created_at?: string
+          details?: string | null
           id?: string
+          image_url?: string | null
           is_active_booking?: boolean
           layout?: string
           model?: string | null
           name?: string | null
           plate?: string | null
+          price_addition?: number
           priority?: number
           status?: Database["public"]["Enums"]["bus_status"]
           trip_id: string
@@ -331,14 +345,18 @@ export type Database = {
           active?: boolean
           blocked_seats?: string[]
           bus_number?: number
+          bus_type?: string | null
           capacity?: number
           created_at?: string
+          details?: string | null
           id?: string
+          image_url?: string | null
           is_active_booking?: boolean
           layout?: string
           model?: string | null
           name?: string | null
           plate?: string | null
+          price_addition?: number
           priority?: number
           status?: Database["public"]["Enums"]["bus_status"]
           trip_id?: string
