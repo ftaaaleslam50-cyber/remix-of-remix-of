@@ -254,10 +254,10 @@ function BookingPage() {
 
   const selectedPackage = packages.find((p) => p.id === packageId) ?? null;
   const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
-  const transportOnly = isTransportPackage(selectedPackage) || noHotel;
-  const baseSteps: readonly string[] = transportOnly ? TRANSPORT_STEPS : FULL_STEPS;
-  const STEPS: readonly string[] = noBus ? baseSteps.filter((s) => s !== "الرحلة" && s !== "المقاعد") : baseSteps;
+  const transportOnly = noHotel;
+  const STEPS: readonly string[] = noBus ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
+
 
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
   useEffect(() => {
