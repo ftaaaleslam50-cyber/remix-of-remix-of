@@ -684,7 +684,17 @@ function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHo
             </div>
           );
         })}
+        <button type="button" onClick={onSelectNoHotel}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[280px] ${noHotel ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}>
+          <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noHotel ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+            <X className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون فندق</h3>
+          <p className="text-sm text-muted-foreground text-center">مواصلات فقط — لن يتم حجز فندق</p>
+          {noHotel && <div className="inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+        </button>
       </div>
+
 
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
