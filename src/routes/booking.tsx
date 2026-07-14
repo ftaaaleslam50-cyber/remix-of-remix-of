@@ -960,9 +960,10 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
 
 function StepConfirm(props: {
   bookingType: BookingType | null; passengerCount: number; roomType: RoomType;
-  transportOnly: boolean;
+  transportOnly: boolean; noBus: boolean; noHotel: boolean;
   pkg: Package | null; trip: Trip | null; seats: string[];
-  customer: { customer_name: string; id_number: string; contact_phone: string };
+  customer: { customer_name: string; id_number: string; contact_phone: string; nationality: string };
+  bookingSource: string;
   pricePerPerson: number; subtotal: number; discount: number; total: number; busNumber: number;
   couponInput: string; setCouponInput: (v: string) => void;
   appliedCoupon: { code: string; prize_type: "percent" | "fixed"; prize_value: number; label?: string | null } | null;
@@ -971,15 +972,17 @@ function StepConfirm(props: {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["عدد الأفراد", String(props.passengerCount)],
-    ["الفندق", props.pkg?.name ?? "—"],
-    ...(!props.transportOnly ? [["نوع الغرفة", ROOM_LABEL[props.roomType]] as [string, string]] : []),
+    ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
     ["الرحلة", props.trip?.name ?? "—"],
-    ["رقم الباص", String(props.busNumber)],
-    ["المقاعد", props.seats.join(", ")],
+    ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
+    ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],
     ["رقم الهوية", props.customer.id_number],
+    ["الجنسية", props.customer.nationality || "—"],
     ["رقم التواصل", props.customer.contact_phone],
+    ["مصدر الحجز", props.bookingSource],
   ];
+
   return (
     <div>
       <StepHeader title="مراجعة الحجز" desc="تأكد من البيانات قبل التأكيد" />
