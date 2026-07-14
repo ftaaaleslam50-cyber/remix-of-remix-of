@@ -577,18 +577,18 @@ function BookingPage() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-10 flex items-center justify-between">
-            <Button variant="outline" size="lg" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-full">
+          <div className="mt-4 md:mt-10 flex items-center justify-between gap-2">
+            <Button variant="outline" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-full md:h-11 md:px-6">
               <ChevronRight className="h-4 w-4 ml-1" />
               السابق
             </Button>
             {step < STEPS.length - 1 ? (
-              <Button size="lg" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full" disabled={!canProceed()} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+              <Button size="sm" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6" disabled={!canProceed()} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
                 التالي
                 <ChevronLeft className="h-4 w-4 mr-1" />
               </Button>
             ) : (
-              <Button size="lg" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full" disabled={submitting} onClick={submitBooking}>
+              <Button size="sm" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6" disabled={submitting} onClick={submitBooking}>
                 {submitting && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
                 تأكيد الحجز
                 <Check className="h-4 w-4 mr-2" />
