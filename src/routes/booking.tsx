@@ -981,12 +981,21 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile, accountType, r
       </div>
 
 
+      {accountType === "representative" && (
+        <div className="mt-6 max-w-3xl">
+          <Label className="font-semibold">مصدر الحجز (اسم المندوب)</Label>
+          <Input className="mt-2 h-12 rounded-xl" value={repName} onChange={(e) => setRepName(e.target.value)} placeholder="اسم المندوب" />
+          <p className="text-xs text-muted-foreground mt-1">يظهر هذا الاسم في تقارير الإدارة كمصدر للحجز.</p>
+        </div>
+      )}
+
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">رفع صورة الهوية</Label>
         <IdUploader file={idFile} onChange={setIdFile} />
       </div>
     </div>
   );
+
 }
 
 function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File | null) => void }) {
