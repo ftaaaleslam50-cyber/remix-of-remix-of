@@ -105,6 +105,8 @@ function BookingPage() {
   const [idFile, setIdFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [noHotel, setNoHotel] = useState(false);
+  const [noBus, setNoBus] = useState(false);
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
