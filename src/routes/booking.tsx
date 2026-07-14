@@ -469,21 +469,28 @@ function BookingPage() {
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
               {stepName === "الفندق" && (
-                <div>
-                  <div className="mb-4 flex flex-wrap gap-4 items-center rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-4">
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                      <Checkbox checked={noHotel} onCheckedChange={(v) => setNoHotel(!!v)} /> بدون فندق (مواصلات فقط)
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                      <Checkbox checked={noBus} onCheckedChange={(v) => setNoBus(!!v)} /> بدون حافلة (فندق فقط)
-                    </label>
-                  </div>
-                  {!noHotel && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
-                  
-                </div>
+                <StepPackage
+                  packages={packages}
+                  pricing={pricing}
+                  value={noHotel ? null : packageId}
+                  noHotel={noHotel}
+                  onChange={(id) => { setNoHotel(false); setPackageId(id); }}
+                  onSelectNoHotel={() => { setNoHotel(true); setPackageId(null); }}
+                  passengerCount={passengerCount}
+                  roomType={roomType}
+                />
               )}
-              {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
+              {stepName === "الحافلة" && (
+                <StepBus
+                  buses={buses}
+                  busReserved={busReserved}
+                  value={busId}
+                  noBus={noBus}
+                  onChange={(id) => { setNoBus(false); setBusId(id); }}
+                  onSelectNoBus={() => { setNoBus(true); setBusId(null); setSeats([]); }}
+                />
+              )}
               {stepName === "المقاعد" && (
                 <StepSeats
                   count={passengerCount}
@@ -503,6 +510,7 @@ function BookingPage() {
                 />
               )}
               {stepName === "البيانات" && <StepCustomer customer={customer} setCustomer={setCustomer} idFile={idFile} setIdFile={setIdFile} />}
+
               {stepName === "التأكيد" && (
                 <StepConfirm
                   bookingType={bookingType}
