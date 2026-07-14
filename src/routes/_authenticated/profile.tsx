@@ -22,6 +22,7 @@ interface ProfileRow {
   national_id: string | null;
   national_id_image_url: string | null;
   avatar_url: string | null;
+  nationality: string | null;
   account_type: "customer" | "representative";
 }
 
