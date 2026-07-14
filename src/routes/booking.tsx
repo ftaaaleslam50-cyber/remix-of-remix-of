@@ -519,6 +519,10 @@ function BookingPage() {
                   passengerCount={passengerCount}
                   roomType={roomType}
                   transportOnly={transportOnly}
+                  noBus={noBus}
+                  noHotel={noHotel}
+                  bookingSource={accountType === "representative" && repName ? repName : "Website"}
+
                   pkg={selectedPackage}
                   trip={selectedTrip}
                   seats={seats}
