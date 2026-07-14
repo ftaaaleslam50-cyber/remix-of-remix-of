@@ -178,8 +178,11 @@ function AdminBuses() {
               <TableHeader><TableRow>
                 <TableHead className="w-6"></TableHead>
                 <TableHead>الاسم</TableHead><TableHead>اللوحة</TableHead><TableHead>الطراز</TableHead>
+                <TableHead>النوع</TableHead>
                 <TableHead>التخطيط</TableHead>
                 <TableHead>السعة</TableHead><TableHead>المحجوز</TableHead>
+                <TableHead>+سعر</TableHead>
+                <TableHead>صورة</TableHead>
                 <TableHead>الحالة</TableHead>
                 <TableHead>الحجز النشط</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
