@@ -193,6 +193,7 @@ function AuthPage() {
                     onChange={(e) => setSignupPass(e.target.value)}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">قوة كلمة المرور ليست مطلوبة.</p>
               </div>
               <Button onClick={signUp} disabled={loading} className="w-full h-12 rounded-xl btn-primary-glow font-bold">
                 {loading && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
