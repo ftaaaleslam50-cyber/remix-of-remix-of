@@ -193,17 +193,22 @@ function BookingPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id").eq("id", user.id).maybeSingle();
+      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id,nationality,account_type").eq("id", user.id).maybeSingle();
       if (!prof) return;
+      const acct = ((prof as { account_type?: string }).account_type === "representative" ? "representative" : "customer") as "customer" | "representative";
+      setAccountType(acct);
+      if (acct === "representative") setRepName((prof.full_name ?? "").trim());
       setCustomer((c) => ({
         ...c,
         customer_name: c.customer_name || (prof.full_name ?? ""),
         id_number: c.id_number || (prof.national_id ?? ""),
         contact_phone: c.contact_phone || (prof.mobile_phone ?? ""),
         whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
+        nationality: c.nationality || ((prof as { nationality?: string | null }).nationality ?? ""),
       }));
     })();
   }, []);
+
 
   // Apply pending coupon from wheel
   useEffect(() => {
