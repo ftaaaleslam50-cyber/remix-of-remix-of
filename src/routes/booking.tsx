@@ -463,7 +463,9 @@ function BookingPage() {
       setEditingCode(null);
       navigate({ to: "/ticket/$code", params: { code } });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "حدث خطأ";
+      console.error("[booking submit]", e);
+      const anyE = e as { message?: string; error?: string; details?: string; hint?: string } | null;
+      const msg = anyE?.message || anyE?.error || anyE?.details || anyE?.hint || (typeof e === "string" ? e : "حدث خطأ");
       toast.error("تعذر إتمام الحجز: " + msg);
     } finally {
       setSubmitting(false);
