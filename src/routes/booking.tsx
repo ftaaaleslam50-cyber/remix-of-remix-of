@@ -467,7 +467,7 @@ function BookingPage() {
                     </label>
                   </div>
                   {!noHotel && <StepPackage packages={packages} pricing={pricing} value={packageId} onChange={setPackageId} passengerCount={passengerCount} roomType={roomType} />}
-                  {noHotel && packages.length > 0 && !packageId && setPackageId(packages[0].id)}
+                  
                 </div>
               )}
               {stepName === "نوع الغرفة" && <StepRoom value={roomType} onChange={setRoomType} forced={bookingType === "individual"} />}
