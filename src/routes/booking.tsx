@@ -816,8 +816,9 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
   );
 }
 
-function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode, onModeChange }: {
+function StepSeats({ count, seats, reserved, onChange, bus, layout, remainingSeats, mode, onModeChange }: {
   count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: (Bus & { name?: string | null }) | null;
+  layout: LayoutJson | null;
   remainingSeats: number;
   mode: "manual" | "random"; onModeChange: (m: "manual" | "random") => void;
 }) {
@@ -851,26 +852,37 @@ function StepSeats({ count, seats, reserved, onChange, bus, remainingSeats, mode
         </div>
       </div>
       <div className="max-w-md mx-auto">
-        <BusSeatMap
-          selected={seats}
-          reserved={reserved}
-          maxSelectable={count}
-          onChange={(next) => {
-            if (next.length > seats.length && seats.length >= count) {
-              toast.warning(
-                "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
-              );
-              return;
-            }
-            onChange(next);
-          }}
-          blocked={bus?.blocked_seats ?? ["A2"]}
-          layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
-        />
+        {layout ? (
+          <LayoutSeatMap
+            layout={layout}
+            selected={seats}
+            reserved={reserved}
+            maxSelectable={count}
+            onChange={onChange}
+          />
+        ) : (
+          <BusSeatMap
+            selected={seats}
+            reserved={reserved}
+            maxSelectable={count}
+            onChange={(next) => {
+              if (next.length > seats.length && seats.length >= count) {
+                toast.warning(
+                  "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
+                );
+                return;
+              }
+              onChange(next);
+            }}
+            blocked={bus?.blocked_seats ?? ["A2"]}
+            layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
+          />
+        )}
       </div>
     </div>
   );
 }
+
 
 function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: {
   buses: (Bus & { name?: string | null })[];
