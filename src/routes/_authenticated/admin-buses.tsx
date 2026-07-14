@@ -247,6 +247,7 @@ function SortableBusRow({ bus, used, free, onSave, onDelete, onActivate, onTrans
       <TableCell><Input className="h-9 w-32" value={local.name ?? ""} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.plate ?? ""} onChange={(e) => setLocal({ ...local, plate: e.target.value })} /></TableCell>
       <TableCell><Input className="h-9 w-28" value={local.model ?? ""} onChange={(e) => setLocal({ ...local, model: e.target.value })} /></TableCell>
+      <TableCell><Input className="h-9 w-24" placeholder="VIP/عادية" value={local.bus_type ?? ""} onChange={(e) => setLocal({ ...local, bus_type: e.target.value })} /></TableCell>
       <TableCell>
         <Select value={local.layout ?? "A"} onValueChange={(v) => {
           const layout = v as "A" | "B";
