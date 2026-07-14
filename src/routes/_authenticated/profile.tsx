@@ -81,6 +81,7 @@ function ProfilePage() {
       national_id: p.national_id,
       national_id_image_url: p.national_id_image_url,
       avatar_url: p.avatar_url,
+      nationality: p.nationality,
       account_type: p.account_type,
     }, { onConflict: "id" });
     setSaving(false);
