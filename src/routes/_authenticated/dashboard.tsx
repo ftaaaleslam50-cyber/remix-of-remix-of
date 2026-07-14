@@ -244,6 +244,7 @@ function Dashboard() {
           <TabsContent value="pricing" className="mt-4"><PricingTab /></TabsContent>
           <TabsContent value="wheel" className="mt-4"><WheelTab /></TabsContent>
           <TabsContent value="coupons" className="mt-4"><CouponsTab /></TabsContent>
+          <TabsContent value="social" className="mt-4"><SocialTab /></TabsContent>
           <TabsContent value="settings" className="mt-4"><SettingsTab /></TabsContent>
         </Tabs>
       </main>
