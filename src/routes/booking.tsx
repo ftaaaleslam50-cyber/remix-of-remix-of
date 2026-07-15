@@ -636,6 +636,7 @@ function BookingPage() {
                   accountType={accountType}
                   repName={repName}
                   setRepName={setRepName}
+                  existingIdImageUrl={profileIdImageSignedUrl}
                 />
               )}
 
