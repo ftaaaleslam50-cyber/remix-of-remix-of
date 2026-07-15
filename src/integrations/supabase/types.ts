@@ -432,6 +432,7 @@ export type Database = {
           active: boolean
           code: string
           created_at: string | null
+          device_id: string | null
           expiry_date: string
           id: string
           ip: string | null
@@ -445,11 +446,13 @@ export type Database = {
           usage_count: number
           used: boolean
           used_in_booking_id: string | null
+          user_id: string | null
         }
         Insert: {
           active?: boolean
           code: string
           created_at?: string | null
+          device_id?: string | null
           expiry_date: string
           id?: string
           ip?: string | null
@@ -463,11 +466,13 @@ export type Database = {
           usage_count?: number
           used?: boolean
           used_in_booking_id?: string | null
+          user_id?: string | null
         }
         Update: {
           active?: boolean
           code?: string
           created_at?: string | null
+          device_id?: string | null
           expiry_date?: string
           id?: string
           ip?: string | null
@@ -481,6 +486,7 @@ export type Database = {
           usage_count?: number
           used?: boolean
           used_in_booking_id?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1022,27 +1028,33 @@ export type Database = {
       wheel_spins: {
         Row: {
           coupon_id: string | null
+          device_id: string | null
           id: string
           ip: string | null
           phone: string
           segment_id: string | null
           spun_at: string
+          user_id: string | null
         }
         Insert: {
           coupon_id?: string | null
+          device_id?: string | null
           id?: string
           ip?: string | null
           phone: string
           segment_id?: string | null
           spun_at?: string
+          user_id?: string | null
         }
         Update: {
           coupon_id?: string | null
+          device_id?: string | null
           id?: string
           ip?: string | null
           phone?: string
           segment_id?: string | null
           spun_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1068,6 +1080,15 @@ export type Database = {
         Returns: boolean
       }
       mobile_exists: { Args: { _mobile: string }; Returns: boolean }
+      perform_spin: {
+        Args: {
+          _device_id: string
+          _ip: string
+          _phone: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       redeem_coupon: {
         Args: { _booking_code: string; _code: string }
         Returns: boolean
