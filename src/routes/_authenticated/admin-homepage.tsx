@@ -27,6 +27,7 @@ interface Settings {
   testimonials: Testimonial[] | null;
   faq: FaqItem[] | null;
   cta_title: string | null; cta_body: string | null; cta_button_label: string | null;
+  whatsapp: string | null;
 }
 
 interface Section {
