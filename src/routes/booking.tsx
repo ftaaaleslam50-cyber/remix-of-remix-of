@@ -1325,7 +1325,16 @@ function StepCustomer({
       )}
 
       <div className="mt-6 max-w-3xl">
-        <Label className="font-semibold">رفع صورة الهوية</Label>
+        <Label className="font-semibold">صورة الهوية</Label>
+        {existingIdImageUrl && !idFile && (
+          <div className="mt-2 rounded-2xl border-2 border-border p-3 flex items-center gap-3 bg-muted/30">
+            <img src={existingIdImageUrl} alt="صورة الهوية من الملف الشخصي" className="h-16 w-24 object-cover rounded-lg border" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold">تم استخدام صورة الهوية من ملفك الشخصي</p>
+              <p className="text-xs text-muted-foreground">يمكنك رفع صورة أخرى لاستبدالها.</p>
+            </div>
+          </div>
+        )}
         <IdUploader file={idFile} onChange={setIdFile} />
       </div>
     </div>
