@@ -405,7 +405,7 @@ function BookingPage() {
           customer.nationality.trim().length > 1 &&
           /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
           /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
-          (!!idFile || !!editingCode)
+          (!!idFile || !!editingCode || !!profileIdImagePath)
         );
       default:
         return true;
