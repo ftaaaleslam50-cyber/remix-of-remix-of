@@ -13,14 +13,19 @@ export function WelcomeGuide() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUid(user.id);
-      if (typeof window !== "undefined" && !localStorage.getItem(KEY_PREFIX + user.id)) {
+    function check(userId: string) {
+      setUid(userId);
+      if (typeof window !== "undefined" && !localStorage.getItem(KEY_PREFIX + userId)) {
         setOpen(true);
       }
-    })();
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) check(user.id);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) check(session.user.id);
+    });
+    return () => { sub.subscription.unsubscribe(); };
   }, []);
 
   function finish() {
