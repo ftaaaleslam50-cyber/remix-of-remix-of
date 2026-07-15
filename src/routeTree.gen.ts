@@ -29,6 +29,8 @@ import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
 import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
 import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
+import { Route as AuthenticatedAdminBookingsRouteImport } from './routes/_authenticated/admin-bookings'
+import { Route as AuthenticatedAdminAssetsRouteImport } from './routes/_authenticated/admin-assets'
 import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
 
 const PackagesRoute = PackagesRouteImport.update({
@@ -134,6 +136,18 @@ const AuthenticatedAdminBusLayoutsRoute =
     path: '/admin-bus-layouts',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminBookingsRoute =
+  AuthenticatedAdminBookingsRouteImport.update({
+    id: '/admin-bookings',
+    path: '/admin-bookings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminAssetsRoute =
+  AuthenticatedAdminAssetsRouteImport.update({
+    id: '/admin-assets',
+    path: '/admin-assets',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicBootstrapAdminRoute = ApiPublicBootstrapAdminRouteImport.update({
   id: '/api/public/bootstrap-admin',
   path: '/api/public/bootstrap-admin',
@@ -148,6 +162,8 @@ export interface FileRoutesByFullPath {
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
   '/packages': typeof PackagesRoute
+  '/admin-assets': typeof AuthenticatedAdminAssetsRoute
+  '/admin-bookings': typeof AuthenticatedAdminBookingsRoute
   '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
@@ -170,6 +186,8 @@ export interface FileRoutesByTo {
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
   '/packages': typeof PackagesRoute
+  '/admin-assets': typeof AuthenticatedAdminAssetsRoute
+  '/admin-bookings': typeof AuthenticatedAdminBookingsRoute
   '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
@@ -194,6 +212,8 @@ export interface FileRoutesById {
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
   '/packages': typeof PackagesRoute
+  '/_authenticated/admin-assets': typeof AuthenticatedAdminAssetsRoute
+  '/_authenticated/admin-bookings': typeof AuthenticatedAdminBookingsRoute
   '/_authenticated/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/_authenticated/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/_authenticated/admin-gallery': typeof AuthenticatedAdminGalleryRoute
@@ -218,6 +238,8 @@ export interface FileRouteTypes {
     | '/draw'
     | '/gallery'
     | '/packages'
+    | '/admin-assets'
+    | '/admin-bookings'
     | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-gallery'
@@ -240,6 +262,8 @@ export interface FileRouteTypes {
     | '/draw'
     | '/gallery'
     | '/packages'
+    | '/admin-assets'
+    | '/admin-bookings'
     | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-gallery'
@@ -263,6 +287,8 @@ export interface FileRouteTypes {
     | '/draw'
     | '/gallery'
     | '/packages'
+    | '/_authenticated/admin-assets'
+    | '/_authenticated/admin-bookings'
     | '/_authenticated/admin-bus-layouts'
     | '/_authenticated/admin-buses'
     | '/_authenticated/admin-gallery'
@@ -433,6 +459,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBusLayoutsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-bookings': {
+      id: '/_authenticated/admin-bookings'
+      path: '/admin-bookings'
+      fullPath: '/admin-bookings'
+      preLoaderRoute: typeof AuthenticatedAdminBookingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-assets': {
+      id: '/_authenticated/admin-assets'
+      path: '/admin-assets'
+      fullPath: '/admin-assets'
+      preLoaderRoute: typeof AuthenticatedAdminAssetsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/bootstrap-admin': {
       id: '/api/public/bootstrap-admin'
       path: '/api/public/bootstrap-admin'
@@ -444,6 +484,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminAssetsRoute: typeof AuthenticatedAdminAssetsRoute
+  AuthenticatedAdminBookingsRoute: typeof AuthenticatedAdminBookingsRoute
   AuthenticatedAdminBusLayoutsRoute: typeof AuthenticatedAdminBusLayoutsRoute
   AuthenticatedAdminBusesRoute: typeof AuthenticatedAdminBusesRoute
   AuthenticatedAdminGalleryRoute: typeof AuthenticatedAdminGalleryRoute
@@ -458,6 +500,8 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminAssetsRoute: AuthenticatedAdminAssetsRoute,
+  AuthenticatedAdminBookingsRoute: AuthenticatedAdminBookingsRoute,
   AuthenticatedAdminBusLayoutsRoute: AuthenticatedAdminBusLayoutsRoute,
   AuthenticatedAdminBusesRoute: AuthenticatedAdminBusesRoute,
   AuthenticatedAdminGalleryRoute: AuthenticatedAdminGalleryRoute,
