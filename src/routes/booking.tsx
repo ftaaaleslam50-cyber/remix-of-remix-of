@@ -400,32 +400,29 @@ function BookingPage() {
 
 
 
-      let bookingId: string | null = null;
       if (editingCode) {
-        // UPDATE existing booking — no duplicates.
-        const { data: updated, error } = await supabase
+        // UPDATE existing booking — no duplicates. Authenticated users only reach this path.
+        const { error } = await supabase
           .from("bookings")
           .update(payload as never)
-          .eq("booking_code", editingCode)
-          .select("id")
-          .maybeSingle();
+          .eq("booking_code", editingCode);
         if (error) throw error;
-        bookingId = (updated as { id: string } | null)?.id ?? null;
       } else {
-        const { data: inserted, error } = await supabase
+        // Do NOT chain .select() — guests have no SELECT policy on bookings,
+        // which would surface as a false RLS-violation error on insert.
+        const { error } = await supabase
           .from("bookings")
-          .insert(payload as never)
-          .select("id")
-          .maybeSingle();
+          .insert(payload as never);
         if (error) throw error;
-        bookingId = (inserted as { id: string } | null)?.id ?? null;
       }
 
-      // Increment coupon usage via secure RPC (validates + increments atomically)
-      if (appliedCoupon && bookingId && !editingCode) {
+      // Increment coupon usage via secure RPC (validates + increments atomically).
+      // RPC resolves booking id from booking_code server-side (SECURITY DEFINER),
+      // so guests never need SELECT on bookings.
+      if (appliedCoupon && !editingCode) {
         await supabase.rpc("redeem_coupon" as never, {
           _code: appliedCoupon.code,
-          _booking_id: bookingId,
+          _booking_code: code,
         } as never);
       }
 
