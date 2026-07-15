@@ -257,7 +257,7 @@ function DrawPage() {
 
           <Button
             onClick={attemptSpin}
-            disabled={spinning || !config?.enabled}
+            disabled={spinning || config?.enabled === false}
             size="lg"
             className="btn-primary-glow rounded-full mt-6 h-14 px-10 text-base font-bold"
           >

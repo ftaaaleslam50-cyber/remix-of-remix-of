@@ -127,9 +127,19 @@ function AdminBuses() {
   }
 
   async function del(id: string) {
-    if (!confirm("حذف الحافلة؟ لن يمكن التراجع.")) return;
+    const used = bookingCounts[id] ?? 0;
+    if (used > 0) {
+      if (!confirm(`لا يمكن حذف الحافلة نهائياً لأنها مرتبطة بـ ${used} حجز. هل تريد أرشفتها (إيقافها عن الاستخدام مع الاحتفاظ بالسجلات)؟`)) return;
+      const { error } = await supabase.from("buses").update({ status: "stopped", active: false } as never).eq("id", id);
+      if (error) return toast.error(error.message);
+      toast.success("تمت أرشفة الحافلة");
+      qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
+      return;
+    }
+    if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) return;
     const { error } = await supabase.from("buses").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    toast.success("تم الحذف");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
 
