@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -23,12 +24,18 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin-users'
 import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
+import { Route as AuthenticatedAdminPackagesRouteImport } from './routes/_authenticated/admin-packages'
 import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
 import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
 import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
 import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
 import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
 
+const PackagesRoute = PackagesRouteImport.update({
+  id: '/packages',
+  path: '/packages',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GalleryRoute = GalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
@@ -98,6 +105,12 @@ const AuthenticatedAdminTripsRoute = AuthenticatedAdminTripsRouteImport.update({
   path: '/admin-trips',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminPackagesRoute =
+  AuthenticatedAdminPackagesRouteImport.update({
+    id: '/admin-packages',
+    path: '/admin-packages',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminHomepageRoute =
   AuthenticatedAdminHomepageRouteImport.update({
     id: '/admin-homepage',
@@ -134,10 +147,12 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/packages': typeof PackagesRoute
   '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
+  '/admin-packages': typeof AuthenticatedAdminPackagesRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
   '/audit': typeof AuthenticatedAuditRoute
@@ -154,10 +169,12 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/packages': typeof PackagesRoute
   '/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
+  '/admin-packages': typeof AuthenticatedAdminPackagesRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
   '/audit': typeof AuthenticatedAuditRoute
@@ -176,10 +193,12 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/packages': typeof PackagesRoute
   '/_authenticated/admin-bus-layouts': typeof AuthenticatedAdminBusLayoutsRoute
   '/_authenticated/admin-buses': typeof AuthenticatedAdminBusesRoute
   '/_authenticated/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/_authenticated/admin-homepage': typeof AuthenticatedAdminHomepageRoute
+  '/_authenticated/admin-packages': typeof AuthenticatedAdminPackagesRoute
   '/_authenticated/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/_authenticated/admin-users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
@@ -198,10 +217,12 @@ export interface FileRouteTypes {
     | '/contact'
     | '/draw'
     | '/gallery'
+    | '/packages'
     | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-gallery'
     | '/admin-homepage'
+    | '/admin-packages'
     | '/admin-trips'
     | '/admin-users'
     | '/audit'
@@ -218,10 +239,12 @@ export interface FileRouteTypes {
     | '/contact'
     | '/draw'
     | '/gallery'
+    | '/packages'
     | '/admin-bus-layouts'
     | '/admin-buses'
     | '/admin-gallery'
     | '/admin-homepage'
+    | '/admin-packages'
     | '/admin-trips'
     | '/admin-users'
     | '/audit'
@@ -239,10 +262,12 @@ export interface FileRouteTypes {
     | '/contact'
     | '/draw'
     | '/gallery'
+    | '/packages'
     | '/_authenticated/admin-bus-layouts'
     | '/_authenticated/admin-buses'
     | '/_authenticated/admin-gallery'
     | '/_authenticated/admin-homepage'
+    | '/_authenticated/admin-packages'
     | '/_authenticated/admin-trips'
     | '/_authenticated/admin-users'
     | '/_authenticated/audit'
@@ -261,12 +286,20 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DrawRoute: typeof DrawRoute
   GalleryRoute: typeof GalleryRoute
+  PackagesRoute: typeof PackagesRoute
   TicketCodeRoute: typeof TicketCodeRoute
   ApiPublicBootstrapAdminRoute: typeof ApiPublicBootstrapAdminRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/packages': {
+      id: '/packages'
+      path: '/packages'
+      fullPath: '/packages'
+      preLoaderRoute: typeof PackagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gallery': {
       id: '/gallery'
       path: '/gallery'
@@ -365,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTripsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-packages': {
+      id: '/_authenticated/admin-packages'
+      path: '/admin-packages'
+      fullPath: '/admin-packages'
+      preLoaderRoute: typeof AuthenticatedAdminPackagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-homepage': {
       id: '/_authenticated/admin-homepage'
       path: '/admin-homepage'
@@ -408,6 +448,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminBusesRoute: typeof AuthenticatedAdminBusesRoute
   AuthenticatedAdminGalleryRoute: typeof AuthenticatedAdminGalleryRoute
   AuthenticatedAdminHomepageRoute: typeof AuthenticatedAdminHomepageRoute
+  AuthenticatedAdminPackagesRoute: typeof AuthenticatedAdminPackagesRoute
   AuthenticatedAdminTripsRoute: typeof AuthenticatedAdminTripsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
@@ -421,6 +462,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminBusesRoute: AuthenticatedAdminBusesRoute,
   AuthenticatedAdminGalleryRoute: AuthenticatedAdminGalleryRoute,
   AuthenticatedAdminHomepageRoute: AuthenticatedAdminHomepageRoute,
+  AuthenticatedAdminPackagesRoute: AuthenticatedAdminPackagesRoute,
   AuthenticatedAdminTripsRoute: AuthenticatedAdminTripsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
@@ -440,6 +482,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DrawRoute: DrawRoute,
   GalleryRoute: GalleryRoute,
+  PackagesRoute: PackagesRoute,
   TicketCodeRoute: TicketCodeRoute,
   ApiPublicBootstrapAdminRoute: ApiPublicBootstrapAdminRoute,
 }
