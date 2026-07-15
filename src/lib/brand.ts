@@ -5,7 +5,7 @@ export const BRAND = {
   nationalNumber: "7029663460",
   whatsapp: "966573890050",
   logoUrl: "https://i.ibb.co/8ntds0qQ/image.png",
-  tagline: "رحلات عمرة منظمة من المدينة المنورة إلى مكة المكرمة",
+  tagline: "انطلق من مسجد قباء إلى مكة المكرمة",
 };
 
 export const NAV_LINKS = [
