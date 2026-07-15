@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "packages admin all" ON public.packages;
+CREATE POLICY "packages admin all" ON public.packages FOR ALL TO authenticated USING (has_role(auth.uid(), 'admin'::app_role)) WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
