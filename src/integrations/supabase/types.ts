@@ -363,7 +363,7 @@ export type Database = {
           price_addition: number
           priority: number
           status: Database["public"]["Enums"]["bus_status"]
-          trip_id: string
+          trip_id: string | null
           updated_at: string
         }
         Insert: {
@@ -385,7 +385,7 @@ export type Database = {
           price_addition?: number
           priority?: number
           status?: Database["public"]["Enums"]["bus_status"]
-          trip_id: string
+          trip_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -407,7 +407,7 @@ export type Database = {
           price_addition?: number
           priority?: number
           status?: Database["public"]["Enums"]["bus_status"]
-          trip_id?: string
+          trip_id?: string | null
           updated_at?: string
         }
         Relationships: [
