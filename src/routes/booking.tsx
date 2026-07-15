@@ -466,9 +466,12 @@ function BookingPage() {
           .eq("booking_code", editingCode);
         if (error) throw error;
       } else {
+        // Attach created_by so authenticated users can see the booking in "My Bookings".
+        const { data: { user } } = await supabase.auth.getUser();
+        const insertPayload = { ...payload, created_by: user?.id ?? null };
         // Do NOT chain .select() — guests have no SELECT policy on bookings,
         // which would surface as a false RLS-violation error on insert.
-        const { error } = await supabase.from("bookings").insert(payload as never);
+        const { error } = await supabase.from("bookings").insert(insertPayload as never);
         if (error) throw error;
       }
 
