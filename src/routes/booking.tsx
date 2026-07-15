@@ -93,6 +93,8 @@ function BookingPage() {
     same_whatsapp: true,
   });
   const [idFile, setIdFile] = useState<File | null>(null);
+  const [profileIdImagePath, setProfileIdImagePath] = useState<string | null>(null);
+  const [profileIdImageSignedUrl, setProfileIdImageSignedUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [noHotel, setNoHotel] = useState(false);
