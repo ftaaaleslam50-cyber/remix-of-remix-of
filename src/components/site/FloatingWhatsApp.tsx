@@ -1,13 +1,28 @@
 import { MessageCircle } from "lucide-react";
-
-// Fixed URL requested by owner — do not modify.
-const WHATSAPP_URL =
-  "https://api.whatsapp.com/send/?phone=966573890050&text&type=phone_number&app_absent=0";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { BRAND } from "@/lib/brand";
 
 export function FloatingWhatsApp() {
+  const { data } = useQuery({
+    queryKey: ["floating-whatsapp"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("whatsapp")
+        .eq("id", 1)
+        .maybeSingle();
+      return data as { whatsapp: string | null } | null;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const number = (data?.whatsapp || BRAND.whatsapp).replace(/\D/g, "");
+  const href = `https://wa.me/${number}`;
+
   return (
     <a
-      href={WHATSAPP_URL}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="تواصل عبر واتساب"
