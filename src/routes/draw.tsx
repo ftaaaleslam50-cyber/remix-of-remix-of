@@ -109,6 +109,20 @@ function DrawPage() {
     }
   }
 
+  function getDeviceId(): string {
+    try {
+      const KEY = "zt_device_id";
+      let id = localStorage.getItem(KEY);
+      if (!id) {
+        id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        localStorage.setItem(KEY, id);
+      }
+      return id;
+    } catch {
+      return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+  }
+
   async function attemptSpin() {
     if (spinLockRef.current || spinning) return;
     const normalized = normalizePhone(phone);
@@ -127,65 +141,71 @@ function DrawPage() {
     spinLockRef.current = true;
     setSpinning(true);
     try {
-      const clientIp = await fetchClientIp();
-      // Hybrid: block if phone OR ip has recently spun
-      const cutoff = new Date(Date.now() - config.spin_cooldown_days * 24 * 60 * 60 * 1000).toISOString();
-      const orFilter = clientIp ? `phone.eq.${normalized},ip.eq.${clientIp}` : `phone.eq.${normalized}`;
-      const { data: recent } = await supabase
-        .from("wheel_spins" as never)
-        .select("spun_at")
-        .or(orFilter)
-        .gte("spun_at", cutoff)
-        .order("spun_at", { ascending: false })
-        .limit(1);
-      const rec = (recent as unknown as { spun_at: string }[] | null) ?? [];
-      if (rec.length > 0) {
-        const nextDate = new Date(new Date(rec[0].spun_at).getTime() + config.spin_cooldown_days * 24 * 60 * 60 * 1000);
-        setShowBlocked({ nextDate });
+      const [clientIp, sessionRes] = await Promise.all([fetchClientIp(), supabase.auth.getUser()]);
+      const deviceId = getDeviceId();
+      const userId = sessionRes.data.user?.id ?? null;
+
+      // Server-authoritative: cooldown check, weighted pick, coupon issuance, spin log
+      const { data, error } = await supabase.rpc("perform_spin" as never, {
+        _phone: normalized,
+        _ip: clientIp,
+        _device_id: deviceId,
+        _user_id: userId,
+      } as never);
+
+      if (error) {
+        toast.error("تعذر إتمام السحب: " + error.message);
         setSpinning(false);
         spinLockRef.current = false;
         return;
       }
 
-      // Pick winner (weighted)
-      const winner = pickWeighted(segments);
+      const res = data as unknown as {
+        ok: boolean;
+        reason?: string;
+        next_at?: string;
+        segment_id?: string;
+        label?: string;
+        prize_type?: "lose" | "percent" | "fixed";
+        prize_value?: number;
+        color?: string;
+        coupon_code?: string | null;
+      };
+
+      if (!res?.ok) {
+        if (res?.reason === "cooldown" && res.next_at) {
+          setShowBlocked({ nextDate: new Date(res.next_at) });
+        } else if (res?.reason === "disabled") {
+          toast.error("عجلة السحب معطّلة حالياً");
+        } else if (res?.reason === "invalid_phone") {
+          toast.error("رقم الجوال غير صحيح");
+        } else {
+          toast.error("تعذر إتمام السحب");
+        }
+        setSpinning(false);
+        spinLockRef.current = false;
+        return;
+      }
+
+      // Animate wheel to the server-picked segment
+      const winner = segments.find((s) => s.id === res.segment_id) ?? segments[0];
       const winnerIndex = segments.findIndex((s) => s.id === winner.id);
-      // Target rotation: land pointer (top, 0°) on center of winner slice.
-      // Slices drawn clockwise from top starting at index 0.
       const targetCenter = winnerIndex * sliceAngle + sliceAngle / 2;
-      const spins = 6; // full rotations for suspense
+      const spins = 6;
       const finalRotation = rotation + spins * 360 + (360 - targetCenter);
       setRotation(finalRotation);
 
-      // After spin completes
       await new Promise((r) => setTimeout(r, 5200));
 
-      // Create coupon if winner
-      let code: string | null = null;
-      if (winner.prize_type !== "lose") {
-        code = generateCouponCode();
-        const expiry = new Date(Date.now() + config.coupon_expiry_hours * 60 * 60 * 1000).toISOString();
-        await supabase.from("coupons" as never).insert({
-          code,
-          phone: normalized,
-          prize_type: winner.prize_type,
-          prize_value: winner.prize_value,
-          label: winner.label,
-          expiry_date: expiry,
-        } as never);
-      }
-
-      // Log spin (with IP)
-      await supabase.from("wheel_spins" as never).insert({
-        phone: normalized,
-        ip: clientIp,
-        segment_id: winner.id,
-      } as never);
-
-      setWinnerSegment(winner);
-      setCouponCode(code);
+      setWinnerSegment({
+        ...winner,
+        prize_type: res.prize_type ?? winner.prize_type,
+        prize_value: res.prize_value ?? winner.prize_value,
+        label: res.label ?? winner.label,
+      });
+      setCouponCode(res.coupon_code ?? null);
       setShowWinner(true);
-      if (winner.prize_type !== "lose") {
+      if (res.prize_type && res.prize_type !== "lose") {
         confetti({ particleCount: 180, spread: 100, origin: { y: 0.6 } });
       }
     } catch (e: unknown) {
