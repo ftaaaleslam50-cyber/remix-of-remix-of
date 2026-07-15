@@ -435,7 +435,9 @@ function BookingPage() {
     if (!noBus && (!activeBus || !selectedTrip)) return;
     setSubmitting(true);
     try {
-      const id_image_url = await uploadIdImage();
+      const uploadedPath = await uploadIdImage();
+      // Fall back to the user's saved profile ID image when no new file was uploaded.
+      const id_image_url = uploadedPath ?? profileIdImagePath ?? null;
       const code = editingCode ?? generateBookingCode();
 
       const source = accountType === "representative" && repName ? repName : "Website";
