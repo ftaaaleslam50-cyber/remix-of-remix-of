@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, ArrowLeft, Plus, Trash2, Save, Upload } from "lucide-react";
+import { Package, ArrowLeft, Plus, Trash2, Save, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AssetPicker, type AssetSelection } from "@/components/admin/AssetPicker";
 
 export const Route = createFileRoute("/_authenticated/admin-packages")({
   component: AdminPackages,
@@ -19,10 +20,33 @@ interface PkgImage {
   display_order: number;
 }
 
+async function trackUsage(assetUrl: string, entityType: string, entityId: string) {
+  // Look up the asset by public_url, then insert into asset_usages (idempotent-ish).
+  const { data: asset } = await supabase
+    .from("assets" as never)
+    .select("id")
+    .eq("public_url", assetUrl)
+    .maybeSingle();
+  const assetId = (asset as { id?: string } | null)?.id;
+  if (!assetId) return;
+  await supabase.from("asset_usages" as never).insert({
+    asset_id: assetId,
+    entity_type: entityType,
+    entity_id: entityId,
+  } as never);
+}
+
+async function untrackUsage(entityType: string, entityId: string) {
+  await supabase.from("asset_usages" as never).delete()
+    .eq("entity_type", entityType).eq("entity_id", entityId);
+}
+
 function AdminPackages() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [ok, setOk] = useState<boolean | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerFor, setPickerFor] = useState<{ mode: "add" } | { mode: "replace"; id: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -42,35 +66,36 @@ function AdminPackages() {
     },
   });
 
-  async function addByUrl() {
-    const url = prompt("رابط الصورة:");
-    if (!url) return;
-    const { error } = await supabase
-      .from("package_images" as never)
-      .insert({ image_url: url, caption: "", display_order: images.length } as never);
-    if (error) return toast.error(error.message);
-    toast.success("تمت الإضافة");
+  async function onPicked(asset: AssetSelection) {
+    if (!pickerFor) return;
+    if (pickerFor.mode === "add") {
+      const { data: row, error } = await supabase
+        .from("package_images" as never)
+        .insert({ image_url: asset.url, caption: "", display_order: images.length } as never)
+        .select("id").single();
+      if (error) return toast.error(error.message);
+      const newId = (row as { id: string }).id;
+      await trackUsage(asset.url, "package_image", newId);
+      toast.success("تمت الإضافة");
+    } else {
+      const id = pickerFor.id;
+      const { error } = await supabase
+        .from("package_images" as never)
+        .update({ image_url: asset.url } as never).eq("id", id);
+      if (error) return toast.error(error.message);
+      await untrackUsage("package_image", id);
+      await trackUsage(asset.url, "package_image", id);
+      toast.success("تم استبدال الصورة");
+    }
     qc.invalidateQueries({ queryKey: ["admin-package-images"] });
-  }
-
-  async function uploadFile(file: File) {
-    const path = `packages/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const { error: upErr } = await supabase.storage.from("gallery").upload(path, file);
-    if (upErr) return toast.error(upErr.message);
-    const { data: signed } = await supabase.storage.from("gallery").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-    const url = signed?.signedUrl ?? path;
-    const { error } = await supabase
-      .from("package_images" as never)
-      .insert({ image_url: url, caption: "", display_order: images.length } as never);
-    if (error) return toast.error(error.message);
-    toast.success("تم الرفع");
-    qc.invalidateQueries({ queryKey: ["admin-package-images"] });
+    qc.invalidateQueries({ queryKey: ["admin-asset-usages"] });
+    setPickerFor(null);
   }
 
   async function saveOne(img: PkgImage) {
     const { error } = await supabase
       .from("package_images" as never)
-      .update({ image_url: img.image_url, caption: img.caption, display_order: img.display_order } as never)
+      .update({ caption: img.caption, display_order: img.display_order } as never)
       .eq("id", img.id);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
@@ -79,9 +104,11 @@ function AdminPackages() {
 
   async function deleteOne(id: string) {
     if (!confirm("حذف الصورة؟")) return;
+    await untrackUsage("package_image", id);
     const { error } = await supabase.from("package_images" as never).delete().eq("id", id);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["admin-package-images"] });
+    qc.invalidateQueries({ queryKey: ["admin-asset-usages"] });
   }
 
   if (ok === false) return <div className="p-8 text-center">ليس لديك صلاحية</div>;
@@ -91,34 +118,36 @@ function AdminPackages() {
       <header className="bg-[color:var(--color-navy)] text-white">
         <div className="container-luxe py-4 flex items-center justify-between">
           <h1 className="text-lg font-extrabold flex items-center gap-2"><Package className="h-5 w-5" /> إدارة صور الباقات</h1>
-          <Link to="/dashboard">
-            <Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
-              <ArrowLeft className="h-4 w-4 ml-1" /> لوحة التحكم
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link to="/admin-assets">
+              <Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+                مكتبة الوسائط
+              </Button>
+            </Link>
+            <Link to="/dashboard">
+              <Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
+                <ArrowLeft className="h-4 w-4 ml-1" /> لوحة التحكم
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="container-luxe py-8">
         <div className="surface-card p-6">
           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-            <h2 className="font-bold">الصور ({images.length})</h2>
-            <div className="flex gap-2">
-              <label className="inline-flex">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; }}
-                />
-                <span className="cursor-pointer inline-flex items-center h-9 px-4 rounded-full bg-[color:var(--color-navy)] text-white text-sm font-bold hover:opacity-90">
-                  <Upload className="h-4 w-4 ml-1" /> رفع صورة
-                </span>
-              </label>
-              <Button onClick={addByUrl} variant="outline" className="rounded-full">
-                <Plus className="h-4 w-4 ml-1" /> إضافة برابط
-              </Button>
+            <div>
+              <h2 className="font-bold">الصور ({images.length})</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                جميع الصور تُدار من مكتبة الوسائط المركزية.
+              </p>
             </div>
+            <Button
+              onClick={() => { setPickerFor({ mode: "add" }); setPickerOpen(true); }}
+              className="rounded-full"
+            >
+              <Plus className="h-4 w-4 ml-1" /> إضافة من مكتبة الوسائط
+            </Button>
           </div>
 
           {images.length === 0 ? (
@@ -126,26 +155,39 @@ function AdminPackages() {
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {images.map((img) => (
-                <ImageCard key={img.id} img={img} onSave={saveOne} onDelete={() => deleteOne(img.id)} />
+                <ImageCard
+                  key={img.id}
+                  img={img}
+                  onSave={saveOne}
+                  onDelete={() => deleteOne(img.id)}
+                  onReplace={() => { setPickerFor({ mode: "replace", id: img.id }); setPickerOpen(true); }}
+                />
               ))}
             </div>
           )}
         </div>
       </main>
+
+      <AssetPicker
+        open={pickerOpen}
+        onOpenChange={(v) => { setPickerOpen(v); if (!v) setPickerFor(null); }}
+        onSelect={onPicked}
+      />
     </div>
   );
 }
 
-function ImageCard({ img, onSave, onDelete }: { img: PkgImage; onSave: (i: PkgImage) => void; onDelete: () => void }) {
+function ImageCard({ img, onSave, onDelete, onReplace }: {
+  img: PkgImage; onSave: (i: PkgImage) => void; onDelete: () => void; onReplace: () => void;
+}) {
   const [local, setLocal] = useState(img);
   useEffect(() => setLocal(img), [img]);
   return (
     <div className="border rounded-2xl p-3 space-y-2 bg-white">
       {local.image_url && <img src={local.image_url} alt="" className="w-full h-40 rounded-lg object-cover" />}
-      <div>
-        <Label className="text-xs">رابط الصورة</Label>
-        <Input value={local.image_url} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} />
-      </div>
+      <Button size="sm" variant="outline" className="w-full" onClick={onReplace}>
+        <ImagePlus className="h-3 w-3 ml-1" /> استبدال من المكتبة
+      </Button>
       <div>
         <Label className="text-xs">التعليق</Label>
         <Input value={local.caption ?? ""} onChange={(e) => setLocal({ ...local, caption: e.target.value })} />
