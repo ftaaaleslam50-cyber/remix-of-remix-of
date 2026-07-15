@@ -1239,6 +1239,7 @@ function StepCustomer({
   accountType,
   repName,
   setRepName,
+  existingIdImageUrl,
 }: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
@@ -1247,6 +1248,7 @@ function StepCustomer({
   accountType: "customer" | "representative";
   repName: string;
   setRepName: React.Dispatch<React.SetStateAction<string>>;
+  existingIdImageUrl?: string | null;
 }) {
   return (
     <div>
