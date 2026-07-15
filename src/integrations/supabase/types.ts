@@ -137,6 +137,86 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_usages: {
+        Row: {
+          asset_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          field_name: string | null
+          id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          field_name?: string | null
+          id?: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          field_name?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_usages_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          created_at: string
+          height: number | null
+          id: string
+          mime_type: string | null
+          name: string
+          public_url: string
+          size_bytes: number | null
+          storage_path: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          public_url: string
+          size_bytes?: number | null
+          storage_path: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          public_url?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
