@@ -12,10 +12,7 @@ import type { RoomType } from "@/lib/booking/types";
 
 export const Route = createFileRoute("/ticket/$code")({
   head: () => ({
-    meta: [
-      { title: `تذكرة حجز | ${BRAND.name}` },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: `تذكرة حجز | ${BRAND.name}` }, { name: "robots", content: "noindex" }],
   }),
   component: TicketPage,
 });
@@ -56,7 +53,9 @@ function TicketPage() {
     (async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)")
+        .select(
+          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)",
+        )
         .eq("booking_code", code)
         .maybeSingle();
       if (error || !data) {
@@ -70,23 +69,35 @@ function TicketPage() {
   }, [code]);
 
   useEffect(() => {
-    QRCode.toDataURL(`ZT-TICKET:${code}`, { margin: 1, width: 240 }).then(setQr).catch(() => {});
+    QRCode.toDataURL(`ZT-TICKET:${code}`, { margin: 1, width: 240 })
+      .then(setQr)
+      .catch(() => {});
   }, [code]);
 
   useEffect(() => {
     (async () => {
       if (!booking?.id_image_url) return;
-      const { data } = await supabase.storage.from("id-uploads").createSignedUrl(booking.id_image_url, 60 * 60 * 24 * 7);
+      const { data } = await supabase.storage
+        .from("id-uploads")
+        .createSignedUrl(booking.id_image_url, 60 * 60 * 24 * 7);
       if (data?.signedUrl) setIdImageUrl(data.signedUrl);
     })();
   }, [booking?.id_image_url]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
 
   if (!booking) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center">
-        <div><h1 className="text-2xl font-extrabold">تعذر العثور على الحجز</h1><p className="text-muted-foreground mt-2">رقم الحجز: {code}</p></div>
+        <div>
+          <h1 className="text-2xl font-extrabold">تعذر العثور على الحجز</h1>
+          <p className="text-muted-foreground mt-2">رقم الحجز: {code}</p>
+        </div>
       </div>
     );
   }
@@ -105,21 +116,32 @@ function TicketPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-
-
-
   return (
     <div className="min-h-screen bg-muted py-10 print:bg-white print:py-0">
       <div className="no-print container-luxe mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">تذكرة حجز رحلة العمرة</h1>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => window.print()} className="btn-primary-glow rounded-full"><Printer className="h-4 w-4 ml-2" /> تحميل التذكرة PDF</Button>
-          
-          <Button onClick={shareWhatsApp} variant="outline" className="rounded-full bg-[#25D366] text-white border-0 hover:bg-[#25D366]/90 hover:text-white"><MessageCircle className="h-4 w-4 ml-2" /> مشاركة عبر واتساب</Button>
-          <Button onClick={copyDetails} variant="outline" className="rounded-full">{copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />} نسخ البيانات</Button>
+          <Button onClick={() => window.print()} className="btn-primary-glow rounded-full">
+            <Printer className="h-4 w-4 ml-2" /> تحميل التذكرة PDF
+          </Button>
+
+          <Button
+            onClick={shareWhatsApp}
+            variant="outline"
+            className="rounded-full bg-[#25D366] text-white border-0 hover:bg-[#25D366]/90 hover:text-white"
+          >
+            <MessageCircle className="h-4 w-4 ml-2" /> مشاركة عبر واتساب
+          </Button>
+          <Button onClick={copyDetails} variant="outline" className="rounded-full">
+            {copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />} نسخ البيانات
+          </Button>
           <Button
             onClick={() => {
-              try { localStorage.setItem("edit_booking_code", booking!.booking_code); } catch { /* ignore */ }
+              try {
+                localStorage.setItem("edit_booking_code", booking!.booking_code);
+              } catch {
+                /* ignore */
+              }
               navigate({ to: "/booking" });
             }}
             variant="outline"
@@ -141,13 +163,17 @@ function TicketPage() {
               <h2 className="text-xl font-extrabold">{BRAND.name}</h2>
               <p className="text-xs text-white/70">الرقم الموحد: {BRAND.nationalNumber}</p>
             </div>
-            <div className="rounded-full bg-[color:var(--color-gold)]/90 text-[color:var(--color-navy)] text-xs font-extrabold px-3 py-1.5">مؤكَّد</div>
+            <div className="rounded-full bg-[color:var(--color-gold)]/90 text-[color:var(--color-navy)] text-xs font-extrabold px-3 py-1.5">
+              مؤكَّد
+            </div>
           </div>
 
           <div className="px-8 py-6 border-b border-dashed border-border flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">رقم الحجز</p>
-              <p className="text-3xl font-extrabold tracking-wide text-primary" dir="ltr">{booking.booking_code}</p>
+              <p className="text-3xl font-extrabold tracking-wide text-primary" dir="ltr">
+                {booking.booking_code}
+              </p>
             </div>
             {qr && <img src={qr} alt="QR" className="h-24 w-24" />}
           </div>
@@ -158,7 +184,7 @@ function TicketPage() {
             <TicketRow label="جوال التواصل" value={booking.contact_phone} ltr />
             <TicketRow label="جوال الواتساب" value={booking.whatsapp_phone} ltr />
             <TicketRow label="الرحلة" value={booking.trips?.name ?? "-"} />
-            <TicketRow label="الباقة" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />
+            <TicketRow label="الفندق" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />
             <TicketRow label="نوع الحجز" value={booking.booking_type === "individual" ? "أفراد" : "عوائل"} />
             <TicketRow label="نوع الغرفة" value={ROOM_LABEL[booking.room_type as RoomType]} />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
@@ -171,7 +197,9 @@ function TicketPage() {
 
           {idImageUrl && (
             <div className="px-8 py-5 border-t border-dashed border-border">
-              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><FileImage className="h-3.5 w-3.5" /> صورة الهوية</p>
+              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                <FileImage className="h-3.5 w-3.5" /> صورة الهوية
+              </p>
               <img src={idImageUrl} alt="صورة الهوية" className="max-h-64 rounded-xl border border-border" />
             </div>
           )}
@@ -181,7 +209,9 @@ function TicketPage() {
               <p className="text-xs text-muted-foreground">سعر الفرد</p>
               <p className="text-lg font-extrabold">{sar(Number(booking.price_per_person))}</p>
               {booking.coupon_code && (
-                <p className="text-xs text-success mt-1">كود الخصم: <span dir="ltr">{booking.coupon_code}</span></p>
+                <p className="text-xs text-success mt-1">
+                  كود الخصم: <span dir="ltr">{booking.coupon_code}</span>
+                </p>
               )}
             </div>
             <div className="text-left">
@@ -206,7 +236,9 @@ function TicketRow({ label, value, ltr = false }: { label: string; value: string
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`font-bold ${ltr ? "text-right" : ""}`} dir={ltr ? "ltr" : undefined}>{value}</p>
+      <p className={`font-bold ${ltr ? "text-right" : ""}`} dir={ltr ? "ltr" : undefined}>
+        {value}
+      </p>
     </div>
   );
 }
