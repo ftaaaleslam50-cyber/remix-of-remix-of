@@ -93,6 +93,8 @@ function BookingPage() {
     same_whatsapp: true,
   });
   const [idFile, setIdFile] = useState<File | null>(null);
+  const [profileIdImagePath, setProfileIdImagePath] = useState<string | null>(null);
+  const [profileIdImageSignedUrl, setProfileIdImageSignedUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [noHotel, setNoHotel] = useState(false);
@@ -238,7 +240,7 @@ function BookingPage() {
       if (!user) return;
       const { data: prof } = await supabase
         .from("profiles")
-        .select("full_name,mobile_phone,whatsapp_phone,national_id,nationality,account_type")
+        .select("full_name,mobile_phone,whatsapp_phone,national_id,national_id_image_url,nationality,account_type")
         .eq("id", user.id)
         .maybeSingle();
       if (!prof) return;
@@ -255,6 +257,12 @@ function BookingPage() {
         whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
         nationality: c.nationality || ((prof as { nationality?: string | null }).nationality ?? ""),
       }));
+      const idPath = (prof as { national_id_image_url?: string | null }).national_id_image_url ?? null;
+      if (idPath) {
+        setProfileIdImagePath(idPath);
+        const { data: signed } = await supabase.storage.from("id-uploads").createSignedUrl(idPath, 3600);
+        if (signed?.signedUrl) setProfileIdImageSignedUrl(signed.signedUrl);
+      }
     })();
   }, []);
 
@@ -397,7 +405,7 @@ function BookingPage() {
           customer.nationality.trim().length > 1 &&
           /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
           /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
-          (!!idFile || !!editingCode)
+          (!!idFile || !!editingCode || !!profileIdImagePath)
         );
       default:
         return true;
@@ -427,7 +435,9 @@ function BookingPage() {
     if (!noBus && (!activeBus || !selectedTrip)) return;
     setSubmitting(true);
     try {
-      const id_image_url = await uploadIdImage();
+      const uploadedPath = await uploadIdImage();
+      // Fall back to the user's saved profile ID image when no new file was uploaded.
+      const id_image_url = uploadedPath ?? profileIdImagePath ?? null;
       const code = editingCode ?? generateBookingCode();
 
       const source = accountType === "representative" && repName ? repName : "Website";
@@ -626,6 +636,7 @@ function BookingPage() {
                   accountType={accountType}
                   repName={repName}
                   setRepName={setRepName}
+                  existingIdImageUrl={profileIdImageSignedUrl}
                 />
               )}
 
@@ -1228,6 +1239,7 @@ function StepCustomer({
   accountType,
   repName,
   setRepName,
+  existingIdImageUrl,
 }: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
@@ -1236,6 +1248,7 @@ function StepCustomer({
   accountType: "customer" | "representative";
   repName: string;
   setRepName: React.Dispatch<React.SetStateAction<string>>;
+  existingIdImageUrl?: string | null;
 }) {
   return (
     <div>
@@ -1312,7 +1325,16 @@ function StepCustomer({
       )}
 
       <div className="mt-6 max-w-3xl">
-        <Label className="font-semibold">رفع صورة الهوية</Label>
+        <Label className="font-semibold">صورة الهوية</Label>
+        {existingIdImageUrl && !idFile && (
+          <div className="mt-2 rounded-2xl border-2 border-border p-3 flex items-center gap-3 bg-muted/30">
+            <img src={existingIdImageUrl} alt="صورة الهوية من الملف الشخصي" className="h-16 w-24 object-cover rounded-lg border" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold">تم استخدام صورة الهوية من ملفك الشخصي</p>
+              <p className="text-xs text-muted-foreground">يمكنك رفع صورة أخرى لاستبدالها.</p>
+            </div>
+          </div>
+        )}
         <IdUploader file={idFile} onChange={setIdFile} />
       </div>
     </div>

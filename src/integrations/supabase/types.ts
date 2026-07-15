@@ -1040,6 +1040,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mobile_exists: { Args: { _mobile: string }; Returns: boolean }
       redeem_coupon: {
         Args: { _booking_code: string; _code: string }
         Returns: boolean

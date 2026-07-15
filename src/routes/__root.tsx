@@ -14,6 +14,7 @@ import "../main-fonts";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
+import { WelcomeGuide } from "@/components/site/WelcomeGuide";
 
 function NotFoundComponent() {
   return (
@@ -118,6 +119,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <WelcomeGuide />
       <Toaster richColors position="top-center" dir="rtl" />
     </QueryClientProvider>
   );
