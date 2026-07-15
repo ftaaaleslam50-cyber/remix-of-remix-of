@@ -1,16 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { MessageCircle, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/packages")({
   head: () => ({
     meta: [
       { title: `الباقات | ${BRAND.name}` },
-      { name: "description", content: `تصفح باقات ${BRAND.name} من خلال معرض الصور.` },
+      { name: "description", content: `تصفح باقات ${BRAND.name} واحجز رحلتك بسهولة.` },
       { property: "og:title", content: `الباقات | ${BRAND.name}` },
-      { property: "og:description", content: `تصفح باقات ${BRAND.name} من خلال معرض الصور.` },
+      { property: "og:description", content: `تصفح باقات ${BRAND.name} واحجز رحلتك بسهولة.` },
     ],
   }),
   component: PackagesPage,
@@ -34,6 +36,22 @@ function PackagesPage() {
       return (data as PackageImage[]) ?? [];
     },
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ["packages-cta-settings"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("whatsapp")
+        .eq("id", 1)
+        .maybeSingle();
+      return data as { whatsapp: string | null } | null;
+    },
+  });
+
+  const rawNumber = (settings?.whatsapp || BRAND.whatsapp).replace(/\D/g, "");
+  const waText = encodeURIComponent("السلام عليكم، أرغب في الاستفسار عن حجز رحلة عمرة.");
+  const waHref = `https://wa.me/${rawNumber}?text=${waText}`;
 
   return (
     <SiteLayout>
@@ -66,6 +84,52 @@ function PackagesPage() {
             ))}
           </div>
         )}
+
+        {/* Full-width promotional CTA */}
+        <div
+          className="relative overflow-hidden rounded-[2rem] p-8 md:p-14 text-white mt-14"
+          style={{ background: "var(--gradient-navy)" }}
+        >
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{ background: "radial-gradient(circle at top right, var(--color-gold), transparent 55%)" }}
+          />
+          <div className="relative text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-extrabold">صمّم رحلتك كما تريد</h2>
+            <p className="mt-4 text-white/80 leading-relaxed">
+              اختر الفندق، والرحلة، والحافلة، والمقاعد بكل مرونة، واستمتع بتجربة حجز تناسب احتياجاتك.
+            </p>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 max-w-xl mx-auto">
+              <Link to="/booking" className="w-full sm:col-span-2">
+                <Button className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-14 w-full px-8 text-base font-bold">
+                  ابدأ الحجز الآن
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                </Button>
+              </Link>
+
+              <div className="sm:col-span-2 flex items-center gap-3 my-1 text-white/60">
+                <span className="flex-1 h-px bg-white/20" />
+                <span className="text-xs font-semibold">أو</span>
+                <span className="flex-1 h-px bg-white/20" />
+              </div>
+
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="sm:col-span-2 w-full"
+              >
+                <Button
+                  className="rounded-full h-14 w-full px-8 text-base font-bold bg-[#25D366] hover:bg-[#1FB755] text-white border-0"
+                >
+                  <MessageCircle className="ml-2 h-5 w-5" />
+                  احجز عبر واتساب (مساعدة مباشرة)
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
       </section>
     </SiteLayout>
   );

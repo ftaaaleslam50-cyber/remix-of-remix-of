@@ -27,6 +27,7 @@ interface Settings {
   testimonials: Testimonial[] | null;
   faq: FaqItem[] | null;
   cta_title: string | null; cta_body: string | null; cta_button_label: string | null;
+  whatsapp: string | null;
 }
 
 interface Section {
@@ -72,6 +73,7 @@ function AdminHomepage() {
       about_title: local.about_title, about_body: local.about_body,
       features: local.features ?? [], testimonials: local.testimonials ?? [], faq: local.faq ?? [],
       cta_title: local.cta_title, cta_body: local.cta_body, cta_button_label: local.cta_button_label,
+      whatsapp: (local.whatsapp ?? "").replace(/\D/g, ""),
     } as never).eq("id", 1);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
@@ -136,7 +138,23 @@ function AdminHomepage() {
             <TabsTrigger value="testimonials" className="rounded-xl">آراء العملاء</TabsTrigger>
             <TabsTrigger value="faq" className="rounded-xl">الأسئلة الشائعة</TabsTrigger>
             <TabsTrigger value="cta" className="rounded-xl">دعوة الحجز</TabsTrigger>
+            <TabsTrigger value="contact" className="rounded-xl">التواصل</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="contact" className="mt-4 surface-card p-6 grid gap-3">
+            <div>
+              <Label>رقم واتساب الحجز (بدون رموز، مثال: 966573890050)</Label>
+              <Input
+                value={local.whatsapp ?? ""}
+                onChange={(e) => setLocal({ ...local, whatsapp: e.target.value })}
+                placeholder="966573890050"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                يُستخدم هذا الرقم في زر واتساب داخل صفحة الباقات والزر العائم في الموقع.
+              </p>
+            </div>
+          </TabsContent>
 
           <TabsContent value="sections" className="mt-4 space-y-3">
             <p className="text-sm text-muted-foreground">أعِد ترتيب أقسام الصفحة الرئيسية، أخفِ ما لا تحتاجه، وحرِّر العناوين والألوان والأزرار.</p>
