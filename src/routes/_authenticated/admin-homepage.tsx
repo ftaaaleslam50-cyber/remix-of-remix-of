@@ -73,6 +73,7 @@ function AdminHomepage() {
       about_title: local.about_title, about_body: local.about_body,
       features: local.features ?? [], testimonials: local.testimonials ?? [], faq: local.faq ?? [],
       cta_title: local.cta_title, cta_body: local.cta_body, cta_button_label: local.cta_button_label,
+      whatsapp: (local.whatsapp ?? "").replace(/\D/g, ""),
     } as never).eq("id", 1);
     if (error) return toast.error(error.message);
     toast.success("تم الحفظ");
