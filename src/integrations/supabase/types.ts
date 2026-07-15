@@ -1041,7 +1041,7 @@ export type Database = {
         Returns: boolean
       }
       redeem_coupon: {
-        Args: { _booking_id: string; _code: string }
+        Args: { _booking_code: string; _code: string }
         Returns: boolean
       }
       validate_coupon: {
