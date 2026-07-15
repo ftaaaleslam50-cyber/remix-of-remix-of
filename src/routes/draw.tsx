@@ -51,22 +51,7 @@ function normalizePhone(raw: string): string | null {
   return null;
 }
 
-function generateCouponCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let s = "";
-  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return `ZT-${s}`;
-}
-
-function pickWeighted<T extends { probability_weight: number }>(items: T[]): T {
-  const total = items.reduce((s, i) => s + Number(i.probability_weight || 0), 0);
-  let r = Math.random() * total;
-  for (const it of items) {
-    r -= Number(it.probability_weight || 0);
-    if (r <= 0) return it;
-  }
-  return items[items.length - 1];
-}
+// Winner selection happens server-side in the perform_spin RPC.
 
 function DrawPage() {
   const navigate = useNavigate();
