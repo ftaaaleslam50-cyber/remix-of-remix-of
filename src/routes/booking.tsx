@@ -240,7 +240,7 @@ function BookingPage() {
       if (!user) return;
       const { data: prof } = await supabase
         .from("profiles")
-        .select("full_name,mobile_phone,whatsapp_phone,national_id,nationality,account_type")
+        .select("full_name,mobile_phone,whatsapp_phone,national_id,national_id_image_url,nationality,account_type")
         .eq("id", user.id)
         .maybeSingle();
       if (!prof) return;
@@ -257,6 +257,12 @@ function BookingPage() {
         whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
         nationality: c.nationality || ((prof as { nationality?: string | null }).nationality ?? ""),
       }));
+      const idPath = (prof as { national_id_image_url?: string | null }).national_id_image_url ?? null;
+      if (idPath) {
+        setProfileIdImagePath(idPath);
+        const { data: signed } = await supabase.storage.from("id-uploads").createSignedUrl(idPath, 3600);
+        if (signed?.signedUrl) setProfileIdImageSignedUrl(signed.signedUrl);
+      }
     })();
   }, []);
 
