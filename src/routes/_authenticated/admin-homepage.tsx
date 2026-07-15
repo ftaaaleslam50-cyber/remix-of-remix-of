@@ -138,7 +138,23 @@ function AdminHomepage() {
             <TabsTrigger value="testimonials" className="rounded-xl">آراء العملاء</TabsTrigger>
             <TabsTrigger value="faq" className="rounded-xl">الأسئلة الشائعة</TabsTrigger>
             <TabsTrigger value="cta" className="rounded-xl">دعوة الحجز</TabsTrigger>
+            <TabsTrigger value="contact" className="rounded-xl">التواصل</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="contact" className="mt-4 surface-card p-6 grid gap-3">
+            <div>
+              <Label>رقم واتساب الحجز (بدون رموز، مثال: 966573890050)</Label>
+              <Input
+                value={local.whatsapp ?? ""}
+                onChange={(e) => setLocal({ ...local, whatsapp: e.target.value })}
+                placeholder="966573890050"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                يُستخدم هذا الرقم في زر واتساب داخل صفحة الباقات والزر العائم في الموقع.
+              </p>
+            </div>
+          </TabsContent>
 
           <TabsContent value="sections" className="mt-4 space-y-3">
             <p className="text-sm text-muted-foreground">أعِد ترتيب أقسام الصفحة الرئيسية، أخفِ ما لا تحتاجه، وحرِّر العناوين والألوان والأزرار.</p>
