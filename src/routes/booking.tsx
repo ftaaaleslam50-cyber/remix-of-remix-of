@@ -44,7 +44,6 @@ import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 
-
 export const Route = createFileRoute("/booking")({
   head: () => ({
     meta: [
@@ -66,7 +65,6 @@ const BASE_STEPS = [
   "البيانات",
   "التأكيد",
 ] as const;
-
 
 function BookingPage() {
   const navigate = useNavigate();
@@ -103,20 +101,26 @@ function BookingPage() {
   const [accountType, setAccountType] = useState<"customer" | "representative">("customer");
   const [repName, setRepName] = useState<string>("");
 
-
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
     queryFn: async () => {
-      const { data } = await supabase.from("packages" as never).select("*").eq("active", true).order("display_order");
-      return ((data as unknown as Package[]) ?? []);
+      const { data } = await supabase
+        .from("packages" as never)
+        .select("*")
+        .eq("active", true)
+        .order("display_order");
+      return (data as unknown as Package[]) ?? [];
     },
   });
 
   const { data: pricing = [] } = useQuery({
     queryKey: ["pricing_matrix"],
     queryFn: async () => {
-      const { data } = await supabase.from("pricing_matrix" as never).select("*").eq("active", true);
-      return ((data as unknown as PricingCell[]) ?? []);
+      const { data } = await supabase
+        .from("pricing_matrix" as never)
+        .select("*")
+        .eq("active", true);
+      return (data as unknown as PricingCell[]) ?? [];
     },
   });
 
@@ -142,7 +146,12 @@ function BookingPage() {
         .order("priority", { ascending: true })
         .order("bus_number", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as (Bus & { name?: string | null; status?: string; priority?: number; is_active_booking?: boolean })[];
+      return (data ?? []) as unknown as (Bus & {
+        name?: string | null;
+        status?: string;
+        priority?: number;
+        is_active_booking?: boolean;
+      })[];
     },
   });
 
@@ -151,7 +160,11 @@ function BookingPage() {
     queryKey: ["bus_reserved_all", tripId, editingCode],
     enabled: !!tripId && buses.length > 0,
     queryFn: async () => {
-      let q = supabase.from("bookings").select("bus_id,seat_numbers,booking_code").eq("trip_id", tripId!).neq("status", "cancelled");
+      let q = supabase
+        .from("bookings")
+        .select("bus_id,seat_numbers,booking_code")
+        .eq("trip_id", tripId!)
+        .neq("status", "cancelled");
       if (editingCode) q = q.neq("booking_code", editingCode);
       const { data, error } = await q;
       if (error) throw error;
@@ -187,18 +200,26 @@ function BookingPage() {
     queryKey: ["bus_layout", activeLayoutId],
     enabled: !!activeLayoutId,
     queryFn: async () => {
-      const { data } = await supabase.from("bus_layouts").select("layout_json,seat_count").eq("id", activeLayoutId!).maybeSingle();
+      const { data } = await supabase
+        .from("bus_layouts")
+        .select("layout_json,seat_count")
+        .eq("id", activeLayoutId!)
+        .maybeSingle();
       return (data as { layout_json: LayoutJson; seat_count: number } | null) ?? null;
     },
   });
 
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
-  const remainingSeats = activeBus ? (activeBus.capacity ?? 49) - ((activeBus.blocked_seats ?? ["A2"]).length) - bookedSeats.length : 0;
+  const remainingSeats = activeBus
+    ? (activeBus.capacity ?? 49) - (activeBus.blocked_seats ?? ["A2"]).length - bookedSeats.length
+    : 0;
 
-
-
-  useEffect(() => { if (bookingType === "individual") setRoomType("5"); }, [bookingType]);
-  useEffect(() => { if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount)); }, [passengerCount]);
+  useEffect(() => {
+    if (bookingType === "individual") setRoomType("5");
+  }, [bookingType]);
+  useEffect(() => {
+    if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
+  }, [passengerCount]);
   useEffect(() => {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
   }, [customer.same_whatsapp, customer.contact_phone]);
@@ -211,11 +232,19 @@ function BookingPage() {
   // Auto-populate customer fields from signed-in user's profile
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: prof } = await supabase.from("profiles").select("full_name,mobile_phone,whatsapp_phone,national_id,nationality,account_type").eq("id", user.id).maybeSingle();
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name,mobile_phone,whatsapp_phone,national_id,nationality,account_type")
+        .eq("id", user.id)
+        .maybeSingle();
       if (!prof) return;
-      const acct = ((prof as { account_type?: string }).account_type === "representative" ? "representative" : "customer") as "customer" | "representative";
+      const acct = (
+        (prof as { account_type?: string }).account_type === "representative" ? "representative" : "customer"
+      ) as "customer" | "representative";
       setAccountType(acct);
       if (acct === "representative") setRepName((prof.full_name ?? "").trim());
       setCustomer((c) => ({
@@ -228,7 +257,6 @@ function BookingPage() {
       }));
     })();
   }, []);
-
 
   // Apply pending coupon from wheel
   useEffect(() => {
@@ -248,7 +276,9 @@ function BookingPage() {
     (async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code")
+        .select(
+          "booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code",
+        )
         .eq("booking_code", editCode)
         .maybeSingle();
       if (!data) return;
@@ -278,7 +308,6 @@ function BookingPage() {
   const STEPS: readonly string[] = noBus ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
 
-
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
   useEffect(() => {
     if (step > STEPS.length - 1) setStep(STEPS.length - 1);
@@ -287,7 +316,7 @@ function BookingPage() {
   const busSurcharge = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
   const pricePerPerson = useMemo(
     () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing) + busSurcharge,
-    [selectedPackage, roomType, passengerCount, pricing, busSurcharge]
+    [selectedPackage, roomType, passengerCount, pricing, busSurcharge],
   );
 
   const subtotal = pricePerPerson * passengerCount;
@@ -302,21 +331,46 @@ function BookingPage() {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
     const { data } = await supabase.rpc("validate_coupon" as never, { _code: code } as never);
-    const rows = (data as unknown as Array<{
-      code: string; prize_type: "percent" | "fixed"; prize_value: number;
-      used: boolean; expiry_date: string; label?: string | null;
-      active?: boolean; max_uses?: number | null; usage_count?: number;
-    }> | null) ?? [];
+    const rows =
+      (data as unknown as Array<{
+        code: string;
+        prize_type: "percent" | "fixed";
+        prize_value: number;
+        used: boolean;
+        expiry_date: string;
+        label?: string | null;
+        active?: boolean;
+        max_uses?: number | null;
+        usage_count?: number;
+      }> | null) ?? [];
     const c = rows[0] ?? null;
-    if (!c) { toast.error("الكود غير موجود"); setAppliedCoupon(null); return; }
-    if (c.active === false) { toast.error("الكود معطّل"); setAppliedCoupon(null); return; }
-    if (new Date(c.expiry_date) < new Date()) { toast.error("الكود منتهي الصلاحية"); setAppliedCoupon(null); return; }
+    if (!c) {
+      toast.error("الكود غير موجود");
+      setAppliedCoupon(null);
+      return;
+    }
+    if (c.active === false) {
+      toast.error("الكود معطّل");
+      setAppliedCoupon(null);
+      return;
+    }
+    if (new Date(c.expiry_date) < new Date()) {
+      toast.error("الكود منتهي الصلاحية");
+      setAppliedCoupon(null);
+      return;
+    }
     // Multi-use enforcement: if max_uses is set, allow while usage_count < max_uses;
     // otherwise fall back to single-use `used` flag.
     if (c.max_uses != null) {
-      if ((c.usage_count ?? 0) >= c.max_uses) { toast.error("تم استنفاد استخدامات الكود"); setAppliedCoupon(null); return; }
+      if ((c.usage_count ?? 0) >= c.max_uses) {
+        toast.error("تم استنفاد استخدامات الكود");
+        setAppliedCoupon(null);
+        return;
+      }
     } else if (c.used) {
-      toast.error("الكود مستخدم مسبقاً"); setAppliedCoupon(null); return;
+      toast.error("الكود مستخدم مسبقاً");
+      setAppliedCoupon(null);
+      return;
     }
     setAppliedCoupon({ code: c.code, prize_type: c.prize_type, prize_value: Number(c.prize_value), label: c.label });
     toast.success("تم تطبيق كود الخصم");
@@ -324,12 +378,18 @@ function BookingPage() {
 
   function canProceed(): boolean {
     switch (stepName) {
-      case "نوع الحجز": return !!bookingType;
-      case "عدد الأفراد": return passengerCount > 0;
-      case "الفندق": return noHotel || !!packageId;
-      case "الرحلة": return !!tripId;
-      case "الحافلة": return noBus || !!busId;
-      case "المقاعد": return seats.length === passengerCount;
+      case "نوع الحجز":
+        return !!bookingType;
+      case "عدد الأفراد":
+        return passengerCount > 0;
+      case "الفندق":
+        return noHotel || !!packageId;
+      case "الرحلة":
+        return !!tripId;
+      case "الحافلة":
+        return noBus || !!busId;
+      case "المقاعد":
+        return seats.length === passengerCount;
       case "البيانات":
         return (
           customer.customer_name.trim().length > 1 &&
@@ -339,17 +399,18 @@ function BookingPage() {
           /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
           (!!idFile || !!editingCode)
         );
-      default: return true;
+      default:
+        return true;
     }
   }
-
 
   async function uploadIdImage(): Promise<string | null> {
     if (!idFile) return null;
     const ext = idFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("id-uploads").upload(path, idFile, {
-      contentType: idFile.type, cacheControl: "3600",
+      contentType: idFile.type,
+      cacheControl: "3600",
     });
     if (error) throw error;
     return path;
@@ -369,8 +430,7 @@ function BookingPage() {
       const id_image_url = await uploadIdImage();
       const code = editingCode ?? generateBookingCode();
 
-      const source =
-        accountType === "representative" && repName ? repName : "Website";
+      const source = accountType === "representative" && repName ? repName : "Website";
 
       const payload = {
         booking_code: code,
@@ -398,8 +458,6 @@ function BookingPage() {
         status: "confirmed",
       };
 
-
-
       if (editingCode) {
         // UPDATE existing booking — no duplicates. Authenticated users only reach this path.
         const { error } = await supabase
@@ -410,9 +468,7 @@ function BookingPage() {
       } else {
         // Do NOT chain .select() — guests have no SELECT policy on bookings,
         // which would surface as a false RLS-violation error on insert.
-        const { error } = await supabase
-          .from("bookings")
-          .insert(payload as never);
+        const { error } = await supabase.from("bookings").insert(payload as never);
         if (error) throw error;
       }
 
@@ -420,10 +476,13 @@ function BookingPage() {
       // RPC resolves booking id from booking_code server-side (SECURITY DEFINER),
       // so guests never need SELECT on bookings.
       if (appliedCoupon && !editingCode) {
-        await supabase.rpc("redeem_coupon" as never, {
-          _code: appliedCoupon.code,
-          _booking_code: code,
-        } as never);
+        await supabase.rpc(
+          "redeem_coupon" as never,
+          {
+            _code: appliedCoupon.code,
+            _booking_code: code,
+          } as never,
+        );
       }
 
       const cache = {
@@ -443,17 +502,24 @@ function BookingPage() {
         id_image_url,
         created_at: new Date().toISOString(),
         packages: selectedPackage ? { name: selectedPackage.name } : null,
-        trips: selectedTrip ? { name: selectedTrip.name, departure_day: selectedTrip.departure_day, return_day: selectedTrip.return_day } : null,
+        trips: selectedTrip
+          ? { name: selectedTrip.name, departure_day: selectedTrip.departure_day, return_day: selectedTrip.return_day }
+          : null,
         buses: activeBus ? { bus_number: activeBus.bus_number } : null,
       };
-      try { localStorage.setItem(`booking:${code}`, JSON.stringify(cache)); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(`booking:${code}`, JSON.stringify(cache));
+      } catch {
+        /* ignore */
+      }
       toast.success(editingCode ? "تم تحديث الحجز بنجاح 🌹" : "تم تأكيد الحجز بنجاح 🌹");
       setEditingCode(null);
       navigate({ to: "/ticket/$code", params: { code } });
     } catch (e: unknown) {
       console.error("[booking submit]", e);
       const anyE = e as { message?: string; error?: string; details?: string; hint?: string } | null;
-      const msg = anyE?.message || anyE?.error || anyE?.details || anyE?.hint || (typeof e === "string" ? e : "حدث خطأ");
+      const msg =
+        anyE?.message || anyE?.error || anyE?.details || anyE?.hint || (typeof e === "string" ? e : "حدث خطأ");
       toast.error("تعذر إتمام الحجز: " + msg);
     } finally {
       setSubmitting(false);
@@ -466,17 +532,24 @@ function BookingPage() {
         <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-navy)" }} />
         <div className="container-luxe py-4 md:py-10 text-white">
           <h1 className="text-lg md:text-4xl font-extrabold">احجز رحلتك للعمرة</h1>
-          <p className="mt-1 md:mt-2 text-white/75 max-w-2xl text-xs md:text-base hidden sm:block">أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.</p>
+          <p className="mt-1 md:mt-2 text-white/75 max-w-2xl text-xs md:text-base hidden sm:block">
+            أكمل الخطوات التالية لحجز رحلتك بكل سهولة وراحة.
+          </p>
         </div>
       </section>
-
 
       <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-32 md:pb-40">
         <Stepper steps={STEPS} step={step} />
 
         <div className="surface-card p-3 md:p-10 mt-3 md:mt-6 min-h-[300px] md:min-h-[400px]">
           <AnimatePresence mode="wait">
-            <motion.div key={stepName} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+            <motion.div
+              key={stepName}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+            >
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
               {stepName === "الفندق" && (
@@ -485,8 +558,14 @@ function BookingPage() {
                   pricing={pricing}
                   value={noHotel ? null : packageId}
                   noHotel={noHotel}
-                  onChange={(id) => { setNoHotel(false); setPackageId(id); }}
-                  onSelectNoHotel={() => { setNoHotel(true); setPackageId(null); }}
+                  onChange={(id) => {
+                    setNoHotel(false);
+                    setPackageId(id);
+                  }}
+                  onSelectNoHotel={() => {
+                    setNoHotel(true);
+                    setPackageId(null);
+                  }}
                   passengerCount={passengerCount}
                   roomType={roomType}
                 />
@@ -498,8 +577,15 @@ function BookingPage() {
                   busReserved={busReserved}
                   value={busId}
                   noBus={noBus}
-                  onChange={(id) => { setNoBus(false); setBusId(id); }}
-                  onSelectNoBus={() => { setNoBus(true); setBusId(null); setSeats([]); }}
+                  onChange={(id) => {
+                    setNoBus(false);
+                    setBusId(id);
+                  }}
+                  onSelectNoBus={() => {
+                    setNoBus(true);
+                    setBusId(null);
+                    setSeats([]);
+                  }}
                 />
               )}
               {stepName === "المقاعد" && (
@@ -517,7 +603,12 @@ function BookingPage() {
                     if (m === "random") {
                       const auto = activeLayout?.layout_json
                         ? pickRandomLayoutSeats(passengerCount, activeLayout.layout_json, bookedSeats)
-                        : pickRandomSeats(passengerCount, bookedSeats, activeBus?.blocked_seats ?? ["A2"], ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A");
+                        : pickRandomSeats(
+                            passengerCount,
+                            bookedSeats,
+                            activeBus?.blocked_seats ?? ["A2"],
+                            ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A",
+                          );
                       setSeats(auto);
                     }
                   }}
@@ -535,7 +626,6 @@ function BookingPage() {
                 />
               )}
 
-
               {stepName === "التأكيد" && (
                 <StepConfirm
                   bookingType={bookingType}
@@ -545,7 +635,6 @@ function BookingPage() {
                   noBus={noBus}
                   noHotel={noHotel}
                   bookingSource={accountType === "representative" && repName ? repName : "Website"}
-
                   pkg={selectedPackage}
                   trip={selectedTrip}
                   seats={seats}
@@ -559,24 +648,43 @@ function BookingPage() {
                   setCouponInput={setCouponInput}
                   appliedCoupon={appliedCoupon}
                   applyCoupon={applyCoupon}
-                  clearCoupon={() => { setAppliedCoupon(null); setCouponInput(""); }}
+                  clearCoupon={() => {
+                    setAppliedCoupon(null);
+                    setCouponInput("");
+                  }}
                 />
               )}
             </motion.div>
           </AnimatePresence>
 
           <div className="mt-4 md:mt-10 flex items-center justify-between gap-2">
-            <Button variant="outline" size="sm" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} className="rounded-full md:h-11 md:px-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              disabled={step === 0}
+              className="rounded-full md:h-11 md:px-6"
+            >
               <ChevronRight className="h-4 w-4 ml-1" />
               السابق
             </Button>
             {step < STEPS.length - 1 ? (
-              <Button size="sm" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6" disabled={!canProceed()} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+              <Button
+                size="sm"
+                className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6"
+                disabled={!canProceed()}
+                onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+              >
                 التالي
                 <ChevronLeft className="h-4 w-4 mr-1" />
               </Button>
             ) : (
-              <Button size="sm" className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6" disabled={submitting} onClick={submitBooking}>
+              <Button
+                size="sm"
+                className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6"
+                disabled={submitting}
+                onClick={submitBooking}
+              >
                 {submitting && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
                 تأكيد الحجز
                 <Check className="h-4 w-4 mr-2" />
@@ -609,10 +717,16 @@ function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
           const done = i < step;
           return (
             <li key={label} className="flex items-center gap-2">
-              <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}>
+              <div
+                className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}
+              >
                 {done ? <Check className="h-4 w-4" /> : i + 1}
               </div>
-              <span className={`text-xs md:text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+              <span
+                className={`text-xs md:text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {label}
+              </span>
               {i < steps.length - 1 && <div className="h-[2px] w-8 bg-border" />}
             </li>
           );
@@ -643,13 +757,24 @@ function StepBookingType({ value, onChange }: { value: BookingType | null; onCha
         {options.map((o) => {
           const active = value === o.value;
           return (
-            <button key={o.value} type="button" onClick={() => onChange(o.value)} className={`text-right rounded-3xl border-2 p-6 transition-all bg-white ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.02]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-soft)]"}`}>
-              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${active ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange(o.value)}
+              className={`text-right rounded-3xl border-2 p-6 transition-all bg-white ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.02]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-soft)]"}`}
+            >
+              <div
+                className={`h-14 w-14 rounded-2xl flex items-center justify-center ${active ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}
+              >
                 <o.icon className="h-7 w-7" />
               </div>
               <h3 className="mt-4 text-xl font-extrabold">{o.label}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{o.desc}</p>
-              {active && <div className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+              {active && (
+                <div className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary">
+                  <CheckCircle2 className="h-4 w-4" /> تم الاختيار
+                </div>
+              )}
             </button>
           );
         })}
@@ -663,39 +788,75 @@ function StepCount({ value, onChange }: { value: number; onChange: (n: number) =
     <div>
       <StepHeader title="عدد الأفراد" desc="يرجى تحديد عدد الأفراد" />
       <div className="mx-auto max-w-sm surface-card p-6 flex items-center justify-between">
-        <Button size="icon" variant="outline" className="h-12 w-12 rounded-full" onClick={() => onChange(Math.max(1, value - 1))}><Minus className="h-5 w-5" /></Button>
+        <Button
+          size="icon"
+          variant="outline"
+          className="h-12 w-12 rounded-full"
+          onClick={() => onChange(Math.max(1, value - 1))}
+        >
+          <Minus className="h-5 w-5" />
+        </Button>
         <div className="text-center">
           <p className="text-5xl font-extrabold text-[color:var(--color-navy)]">{value}</p>
           <p className="text-xs text-muted-foreground mt-1">عدد المقاعد المطلوبة</p>
         </div>
-        <Button size="icon" className="h-12 w-12 rounded-full btn-primary-glow" onClick={() => onChange(Math.min(48, value + 1))}><Plus className="h-5 w-5" /></Button>
+        <Button
+          size="icon"
+          className="h-12 w-12 rounded-full btn-primary-glow"
+          onClick={() => onChange(Math.min(48, value + 1))}
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );
 }
 
-function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHotel, passengerCount, roomType }: {
-  packages: Package[]; pricing: PricingCell[]; value: string | null; onChange: (id: string) => void;
-  onSelectNoHotel: () => void; noHotel: boolean;
-  passengerCount: number; roomType: RoomType;
+function StepPackage({
+  packages,
+  pricing,
+  value,
+  onChange,
+  onSelectNoHotel,
+  noHotel,
+  passengerCount,
+  roomType,
+}: {
+  packages: Package[];
+  pricing: PricingCell[];
+  value: string | null;
+  onChange: (id: string) => void;
+  onSelectNoHotel: () => void;
+  noHotel: boolean;
+  passengerCount: number;
+  roomType: RoomType;
 }) {
-
   const [openPkg, setOpenPkg] = useState<Package | null>(null);
   return (
     <div>
-      <StepHeader title="اختر الباقة" desc="اختر الباقة الأنسب لرحلتك" />
+      <StepHeader title="اختر الفندق" desc="اختر الفندق الأنسب لرحلتك" />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {packages.map((p) => {
           const active = value === p.id;
           const price = getPackagePrice(p, roomType, passengerCount, pricing);
           return (
-            <div key={p.id} onClick={() => onChange(p.id)}
-              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]"}`}>
+            <div
+              key={p.id}
+              onClick={() => onChange(p.id)}
+              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]"}`}
+            >
               <div className="relative h-40 overflow-hidden" style={{ background: "var(--gradient-navy)" }}>
                 {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                  <img
+                    src={p.image_url}
+                    alt={p.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
                 ) : (
-                  <div className="h-full flex items-center justify-center text-white/60"><PackageIcon className="h-14 w-14" /></div>
+                  <div className="h-full flex items-center justify-center text-white/60">
+                    <PackageIcon className="h-14 w-14" />
+                  </div>
                 )}
                 {typeof p.stars === "number" && p.stars > 0 ? (
                   <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-0.5">
@@ -703,50 +864,85 @@ function StepPackage({ packages, pricing, value, onChange, onSelectNoHotel, noHo
                       <Star key={i} className="h-3 w-3 fill-yellow-500 text-yellow-500" />
                     ))}
                   </div>
-                ) : p.tier && p.tier !== "basic" && p.tier !== "economy" && (
-                  <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
-                    {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-
+                ) : (
+                  p.tier &&
+                  p.tier !== "basic" &&
+                  p.tier !== "economy" && (
+                    <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
+                      {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                    </div>
+                  )
+                )}
+                {active && (
+                  <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                    <Check className="h-5 w-5" />
                   </div>
                 )}
-                {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
               </div>
               <div className="p-5 text-center">
                 <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{p.name}</h3>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.description}</p>
-                <p className="mt-3 text-primary font-extrabold text-xl">{sar(price)} <span className="text-xs text-muted-foreground font-normal">للفرد</span></p>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setOpenPkg(p); }} className="mt-3 text-xs font-semibold text-[color:var(--color-navy)] underline-offset-2 hover:underline">التفاصيل</button>
+                <p className="mt-3 text-primary font-extrabold text-xl">
+                  {sar(price)} <span className="text-xs text-muted-foreground font-normal">للفرد</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenPkg(p);
+                  }}
+                  className="mt-3 text-xs font-semibold text-[color:var(--color-navy)] underline-offset-2 hover:underline"
+                >
+                  التفاصيل
+                </button>
               </div>
             </div>
           );
         })}
-        <button type="button" onClick={onSelectNoHotel}
-          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[280px] ${noHotel ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}>
-          <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noHotel ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+        <button
+          type="button"
+          onClick={onSelectNoHotel}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[280px] ${noHotel ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}
+        >
+          <div
+            className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noHotel ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}
+          >
             <X className="h-7 w-7" />
           </div>
           <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون فندق</h3>
           <p className="text-sm text-muted-foreground text-center">مواصلات فقط — لن يتم حجز فندق</p>
-          {noHotel && <div className="inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+          {noHotel && (
+            <div className="inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <CheckCircle2 className="h-4 w-4" /> تم الاختيار
+            </div>
+          )}
         </button>
       </div>
-
 
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
           {openPkg && (
             <>
-              <DialogHeader><DialogTitle className="text-2xl">{openPkg.name}</DialogTitle></DialogHeader>
-              {openPkg.image_url && <img src={openPkg.image_url} alt={openPkg.name} className="rounded-xl w-full h-64 object-cover" />}
+              <DialogHeader>
+                <DialogTitle className="text-2xl">{openPkg.name}</DialogTitle>
+              </DialogHeader>
+              {openPkg.image_url && (
+                <img src={openPkg.image_url} alt={openPkg.name} className="rounded-xl w-full h-64 object-cover" />
+              )}
               <p className="text-muted-foreground">{openPkg.description}</p>
               {openPkg.includes?.length > 0 && (
                 <ul className="grid grid-cols-2 gap-2 text-sm">
                   {openPkg.includes.map((it, i) => (
-                    <li key={i} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" />{it}</li>
+                    <li key={i} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      {it}
+                    </li>
                   ))}
                 </ul>
               )}
-              <p className="text-lg font-bold text-primary">{sar(getPackagePrice(openPkg, roomType, passengerCount, pricing))} للفرد</p>
+              <p className="text-lg font-bold text-primary">
+                {sar(getPackagePrice(openPkg, roomType, passengerCount, pricing))} للفرد
+              </p>
             </>
           )}
         </DialogContent>
@@ -759,16 +955,30 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
   const rooms: RoomType[] = ["1", "2", "3", "4", "5"];
   return (
     <div>
-      <StepHeader title="نوع الغرفة" desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة" : "اختر نوع الغرفة المناسبة لعائلتك"} />
-      {forced && <div className="mb-4 rounded-2xl bg-accent/60 border border-[color:var(--color-gold)]/40 p-4 text-sm">🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة.</div>}
+      <StepHeader
+        title="نوع الغرفة"
+        desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة" : "اختر نوع الغرفة المناسبة لعائلتك"}
+      />
+      {forced && (
+        <div className="mb-4 rounded-2xl bg-accent/60 border border-[color:var(--color-gold)]/40 p-4 text-sm">
+          🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة.
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {rooms.map((r) => {
           const active = value === r;
           return (
-            <button key={r} type="button" disabled={forced && r !== "5"} onClick={() => onChange(r)}
-              className={`rounded-2xl border-2 p-5 text-center bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"} ${forced && r !== "5" ? "opacity-40 cursor-not-allowed" : ""}`}>
+            <button
+              key={r}
+              type="button"
+              disabled={forced && r !== "5"}
+              onClick={() => onChange(r)}
+              className={`rounded-2xl border-2 p-5 text-center bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"} ${forced && r !== "5" ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
               <p className="text-lg font-extrabold">{ROOM_LABEL[r]}</p>
-              <p className="text-xs text-muted-foreground mt-1">{r} {r === "1" ? "شخص" : "أشخاص"}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {r} {r === "1" ? "شخص" : "أشخاص"}
+              </p>
             </button>
           );
         })}
@@ -785,8 +995,12 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
         {trips.map((t) => {
           const active = value === t.id;
           return (
-            <button key={t.id} type="button" onClick={() => onChange(t.id)}
-              className={`text-right rounded-3xl border-2 p-6 bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"}`}>
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onChange(t.id)}
+              className={`text-right rounded-3xl border-2 p-6 bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"}`}
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
@@ -796,7 +1010,11 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
                     الذهاب: {t.departure_day} • العودة: {t.return_day}
                   </div>
                 </div>
-                {active && <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
+                {active && (
+                  <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                    <Check className="h-5 w-5" />
+                  </div>
+                )}
               </div>
             </button>
           );
@@ -806,28 +1024,48 @@ function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | n
   );
 }
 
-function StepSeats({ count, seats, reserved, onChange, bus, layout, remainingSeats, mode, onModeChange }: {
-  count: number; seats: string[]; reserved: string[]; onChange: (s: string[]) => void; bus: (Bus & { name?: string | null }) | null;
+function StepSeats({
+  count,
+  seats,
+  reserved,
+  onChange,
+  bus,
+  layout,
+  remainingSeats,
+  mode,
+  onModeChange,
+}: {
+  count: number;
+  seats: string[];
+  reserved: string[];
+  onChange: (s: string[]) => void;
+  bus: (Bus & { name?: string | null }) | null;
   layout: LayoutJson | null;
   remainingSeats: number;
-  mode: "manual" | "random"; onModeChange: (m: "manual" | "random") => void;
+  mode: "manual" | "random";
+  onModeChange: (m: "manual" | "random") => void;
 }) {
   const busLabel = bus?.name || `الحافلة رقم ${bus?.bus_number ?? 1}`;
   return (
     <div>
       <StepHeader title="اختر مقاعدك" desc={`اختر ${count} ${count === 1 ? "مقعد" : "مقاعد"} في ${busLabel}`} />
       <div className="mb-4 rounded-2xl bg-accent/50 border border-[color:var(--color-gold)]/40 p-3 text-sm text-center font-semibold">
-        🚌 حافلتك: <span className="text-primary">{busLabel}</span> — <span className="text-primary">{remainingSeats}</span> مقعد متبقٍ
+        🚌 حافلتك: <span className="text-primary">{busLabel}</span> —{" "}
+        <span className="text-primary">{remainingSeats}</span> مقعد متبقٍ
       </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
-        <button onClick={() => onModeChange("manual")}
-          className={`rounded-2xl border-2 p-4 transition-all ${mode === "manual" ? "border-primary bg-primary/5" : "border-border"}`}>
+        <button
+          onClick={() => onModeChange("manual")}
+          className={`rounded-2xl border-2 p-4 transition-all ${mode === "manual" ? "border-primary bg-primary/5" : "border-border"}`}
+        >
           <MousePointerClick className="h-6 w-6 mx-auto text-primary" />
           <p className="mt-2 font-bold text-sm">اختيار يدوي</p>
         </button>
-        <button onClick={() => onModeChange("random")}
-          className={`rounded-2xl border-2 p-4 transition-all ${mode === "random" ? "border-primary bg-primary/5" : "border-border"}`}>
+        <button
+          onClick={() => onModeChange("random")}
+          className={`rounded-2xl border-2 p-4 transition-all ${mode === "random" ? "border-primary bg-primary/5" : "border-border"}`}
+        >
           <Shuffle className="h-6 w-6 mx-auto text-primary" />
           <p className="mt-2 font-bold text-sm">اختيار عشوائي</p>
         </button>
@@ -835,10 +1073,17 @@ function StepSeats({ count, seats, reserved, onChange, bus, layout, remainingSea
 
       <div className="rounded-2xl bg-accent/40 border border-border p-4 mb-6 flex items-center justify-between">
         <div className="font-semibold">
-          المقاعد المختارة: <span className="text-primary">{seats.length} من {count}</span>
+          المقاعد المختارة:{" "}
+          <span className="text-primary">
+            {seats.length} من {count}
+          </span>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {seats.map((s) => <Badge key={s} variant="secondary" className="font-bold">{s}</Badge>)}
+          {seats.map((s) => (
+            <Badge key={s} variant="secondary" className="font-bold">
+              {s}
+            </Badge>
+          ))}
         </div>
       </div>
       <div className="max-w-md mx-auto">
@@ -858,7 +1103,7 @@ function StepSeats({ count, seats, reserved, onChange, bus, layout, remainingSea
             onChange={(next) => {
               if (next.length > seats.length && seats.length >= count) {
                 toast.warning(
-                  "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد."
+                  "لقد قمت باختيار جميع المقاعد المطلوبة. إذا أردت اختيار مقعد آخر، اضغط على أحد المقاعد التي قمت باختيارها لإلغاء اختياره أولًا، ثم اختر المقعد الجديد.",
                 );
                 return;
               }
@@ -873,8 +1118,14 @@ function StepSeats({ count, seats, reserved, onChange, bus, layout, remainingSea
   );
 }
 
-
-function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: {
+function StepBus({
+  buses,
+  busReserved,
+  value,
+  noBus,
+  onChange,
+  onSelectNoBus,
+}: {
   buses: (Bus & { name?: string | null })[];
   busReserved: Record<string, string[]>;
   value: string | null;
@@ -894,87 +1145,165 @@ function StepBus({ buses, busReserved, value, noBus, onChange, onSelectNoBus }: 
           const available = Math.max(0, cap - blocked - used);
           const full = available <= 0;
           return (
-            <button key={b.id} type="button" disabled={full} onClick={() => onChange(b.id)}
-              className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"} ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+            <button
+              key={b.id}
+              type="button"
+              disabled={full}
+              onClick={() => onChange(b.id)}
+              className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"} ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
               <div className="relative h-40 overflow-hidden bg-muted">
                 {b.image_url ? (
-                  <img src={b.image_url} alt={b.name ?? `حافلة ${b.bus_number}`} className="w-full h-full object-cover" loading="lazy" />
+                  <img
+                    src={b.image_url}
+                    alt={b.name ?? `حافلة ${b.bus_number}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                 ) : (
                   <div className="h-full flex items-center justify-center text-muted-foreground text-4xl">🚌</div>
                 )}
-                {active && <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center"><Check className="h-5 w-5" /></div>}
+                {active && (
+                  <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                    <Check className="h-5 w-5" />
+                  </div>
+                )}
               </div>
               <div className="p-4 space-y-1.5">
-                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{b.name || `الحافلة رقم ${b.bus_number}`}</h3>
+                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">
+                  {b.name || `الحافلة رقم ${b.bus_number}`}
+                </h3>
                 {b.bus_type && <p className="text-xs font-semibold text-muted-foreground">النوع: {b.bus_type}</p>}
                 <div className="flex items-center justify-between text-sm pt-1">
-                  <span className="text-muted-foreground">إجمالي المقاعد: <span className="font-bold text-foreground">{cap}</span></span>
-                  <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>{full ? "مكتملة" : `${available} متاح`}</span>
+                  <span className="text-muted-foreground">
+                    إجمالي المقاعد: <span className="font-bold text-foreground">{cap}</span>
+                  </span>
+                  <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
+                    {full ? "مكتملة" : `${available} متاح`}
+                  </span>
                 </div>
               </div>
             </button>
           );
         })}
-        <button type="button" onClick={onSelectNoBus}
-          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[240px] ${noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}>
-          <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}>
+        <button
+          type="button"
+          onClick={onSelectNoBus}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[240px] ${noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}
+        >
+          <div
+            className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}
+          >
             <X className="h-7 w-7" />
           </div>
           <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون حافلة</h3>
           <p className="text-sm text-muted-foreground text-center">فندق فقط — لن يتم حجز مواصلات</p>
-          {noBus && <div className="inline-flex items-center gap-1 text-xs font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> تم الاختيار</div>}
+          {noBus && (
+            <div className="inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <CheckCircle2 className="h-4 w-4" /> تم الاختيار
+            </div>
+          )}
         </button>
       </div>
     </div>
   );
 }
 
-
-type CustomerState = { customer_name: string; id_number: string; contact_phone: string; whatsapp_phone: string; nationality: string; same_whatsapp: boolean };
-function StepCustomer({ customer, setCustomer, idFile, setIdFile, accountType, repName, setRepName }: {
+type CustomerState = {
+  customer_name: string;
+  id_number: string;
+  contact_phone: string;
+  whatsapp_phone: string;
+  nationality: string;
+  same_whatsapp: boolean;
+};
+function StepCustomer({
+  customer,
+  setCustomer,
+  idFile,
+  setIdFile,
+  accountType,
+  repName,
+  setRepName,
+}: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
-  idFile: File | null; setIdFile: (f: File | null) => void;
+  idFile: File | null;
+  setIdFile: (f: File | null) => void;
   accountType: "customer" | "representative";
   repName: string;
   setRepName: React.Dispatch<React.SetStateAction<string>>;
 }) {
-
   return (
     <div>
       <StepHeader title="بيانات الحجز" desc="أدخل بيانات صاحب الحجز" />
       <div className="grid md:grid-cols-2 gap-5 max-w-3xl">
         <div>
           <Label className="font-semibold">الاسم الكامل</Label>
-          <Input className="mt-2 h-12 rounded-xl" value={customer.customer_name} onChange={(e) => setCustomer({ ...customer, customer_name: e.target.value })} placeholder="الاسم الثلاثي" />
+          <Input
+            className="mt-2 h-12 rounded-xl"
+            value={customer.customer_name}
+            onChange={(e) => setCustomer({ ...customer, customer_name: e.target.value })}
+            placeholder="الاسم الثلاثي"
+          />
         </div>
         <div>
           <Label className="font-semibold">رقم الهوية / الإقامة / الجواز</Label>
-          <Input className="mt-2 h-12 rounded-xl" value={customer.id_number} onChange={(e) => setCustomer({ ...customer, id_number: e.target.value })} placeholder="1XXXXXXXXX" />
+          <Input
+            className="mt-2 h-12 rounded-xl"
+            value={customer.id_number}
+            onChange={(e) => setCustomer({ ...customer, id_number: e.target.value })}
+            placeholder="1XXXXXXXXX"
+          />
         </div>
         <div>
           <Label className="font-semibold">الجنسية</Label>
-          <Input className="mt-2 h-12 rounded-xl" value={customer.nationality} onChange={(e) => setCustomer({ ...customer, nationality: e.target.value })} placeholder="السعودية" />
+          <Input
+            className="mt-2 h-12 rounded-xl"
+            value={customer.nationality}
+            onChange={(e) => setCustomer({ ...customer, nationality: e.target.value })}
+            placeholder="السعودية"
+          />
         </div>
         <div>
           <Label className="font-semibold">رقم جوال الاتصال</Label>
-          <Input dir="ltr" className="mt-2 h-12 rounded-xl text-right" value={customer.contact_phone} onChange={(e) => setCustomer({ ...customer, contact_phone: e.target.value })} placeholder="05XXXXXXXX" />
+          <Input
+            dir="ltr"
+            className="mt-2 h-12 rounded-xl text-right"
+            value={customer.contact_phone}
+            onChange={(e) => setCustomer({ ...customer, contact_phone: e.target.value })}
+            placeholder="05XXXXXXXX"
+          />
         </div>
         <div>
           <Label className="font-semibold">رقم واتساب</Label>
-          <Input dir="ltr" disabled={customer.same_whatsapp} className="mt-2 h-12 rounded-xl text-right disabled:opacity-60" value={customer.whatsapp_phone} onChange={(e) => setCustomer({ ...customer, whatsapp_phone: e.target.value })} placeholder="05XXXXXXXX" />
+          <Input
+            dir="ltr"
+            disabled={customer.same_whatsapp}
+            className="mt-2 h-12 rounded-xl text-right disabled:opacity-60"
+            value={customer.whatsapp_phone}
+            onChange={(e) => setCustomer({ ...customer, whatsapp_phone: e.target.value })}
+            placeholder="05XXXXXXXX"
+          />
           <label className="mt-2 flex items-center gap-2 text-sm">
-            <Checkbox checked={customer.same_whatsapp} onCheckedChange={(v) => setCustomer({ ...customer, same_whatsapp: !!v })} />
+            <Checkbox
+              checked={customer.same_whatsapp}
+              onCheckedChange={(v) => setCustomer({ ...customer, same_whatsapp: !!v })}
+            />
             رقم الواتساب هو نفسه رقم التواصل
           </label>
         </div>
       </div>
 
-
       {accountType === "representative" && (
         <div className="mt-6 max-w-3xl">
           <Label className="font-semibold">مصدر الحجز (اسم المندوب)</Label>
-          <Input className="mt-2 h-12 rounded-xl" value={repName} onChange={(e) => setRepName(e.target.value)} placeholder="اسم المندوب" />
+          <Input
+            className="mt-2 h-12 rounded-xl"
+            value={repName}
+            onChange={(e) => setRepName(e.target.value)}
+            placeholder="اسم المندوب"
+          />
           <p className="text-xs text-muted-foreground mt-1">يظهر هذا الاسم في تقارير الإدارة كمصدر للحجز.</p>
         </div>
       )}
@@ -985,7 +1314,6 @@ function StepCustomer({ customer, setCustomer, idFile, setIdFile, accountType, r
       </div>
     </div>
   );
-
 }
 
 function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File | null) => void }) {
@@ -993,16 +1321,37 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
   return (
     <label
       className={`mt-2 block rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)}
-      onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) onChange(f); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        const f = e.dataTransfer.files?.[0];
+        if (f) onChange(f);
+      }}
     >
-      <input type="file" className="hidden" accept="image/jpeg,image/png,application/pdf" onChange={(e) => onChange(e.target.files?.[0] ?? null)} />
+      <input
+        type="file"
+        className="hidden"
+        accept="image/jpeg,image/png,application/pdf"
+        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+      />
       {file ? (
         <div className="flex flex-col items-center gap-2">
           <CheckCircle2 className="h-10 w-10 text-success" />
           <p className="font-semibold">{file.name}</p>
           <p className="text-xs text-muted-foreground">{Math.round(file.size / 1024)} KB</p>
-          <button type="button" onClick={(e) => { e.preventDefault(); onChange(null); }} className="text-xs font-semibold text-primary inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onChange(null);
+            }}
+            className="text-xs font-semibold text-primary inline-flex items-center gap-1"
+          >
             <X className="h-3 w-3" /> إزالة
           </button>
         </div>
@@ -1018,15 +1367,27 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
 }
 
 function StepConfirm(props: {
-  bookingType: BookingType | null; passengerCount: number; roomType: RoomType;
-  transportOnly: boolean; noBus: boolean; noHotel: boolean;
-  pkg: Package | null; trip: Trip | null; seats: string[];
+  bookingType: BookingType | null;
+  passengerCount: number;
+  roomType: RoomType;
+  transportOnly: boolean;
+  noBus: boolean;
+  noHotel: boolean;
+  pkg: Package | null;
+  trip: Trip | null;
+  seats: string[];
   customer: { customer_name: string; id_number: string; contact_phone: string; nationality: string };
   bookingSource: string;
-  pricePerPerson: number; subtotal: number; discount: number; total: number; busNumber: number;
-  couponInput: string; setCouponInput: (v: string) => void;
+  pricePerPerson: number;
+  subtotal: number;
+  discount: number;
+  total: number;
+  busNumber: number;
+  couponInput: string;
+  setCouponInput: (v: string) => void;
   appliedCoupon: { code: string; prize_type: "percent" | "fixed"; prize_value: number; label?: string | null } | null;
-  applyCoupon: () => void; clearCoupon: () => void;
+  applyCoupon: () => void;
+  clearCoupon: () => void;
 }) {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
@@ -1055,34 +1416,59 @@ function StepConfirm(props: {
       </div>
 
       <div className="mt-6 surface-card p-5">
-        <Label className="font-semibold flex items-center gap-2"><Ticket className="h-4 w-4 text-primary" /> كود الخصم</Label>
+        <Label className="font-semibold flex items-center gap-2">
+          <Ticket className="h-4 w-4 text-primary" /> كود الخصم
+        </Label>
         <div className="mt-2 flex gap-2">
-          <Input dir="ltr" className="h-12 rounded-xl text-right flex-1" placeholder="ZT-XXXXXXXX" value={props.couponInput} onChange={(e) => props.setCouponInput(e.target.value)} disabled={!!props.appliedCoupon} />
+          <Input
+            dir="ltr"
+            className="h-12 rounded-xl text-right flex-1"
+            placeholder="ZT-XXXXXXXX"
+            value={props.couponInput}
+            onChange={(e) => props.setCouponInput(e.target.value)}
+            disabled={!!props.appliedCoupon}
+          />
           {props.appliedCoupon ? (
-            <Button variant="outline" className="rounded-xl h-12" onClick={props.clearCoupon}>إزالة</Button>
+            <Button variant="outline" className="rounded-xl h-12" onClick={props.clearCoupon}>
+              إزالة
+            </Button>
           ) : (
-            <Button className="btn-primary-glow rounded-xl h-12" onClick={props.applyCoupon}>تطبيق</Button>
+            <Button className="btn-primary-glow rounded-xl h-12" onClick={props.applyCoupon}>
+              تطبيق
+            </Button>
           )}
         </div>
         {props.appliedCoupon && (
           <p className="mt-2 text-sm text-success font-semibold">
-            تم تطبيق: {props.appliedCoupon.prize_type === "percent" ? `${props.appliedCoupon.prize_value}%` : `${props.appliedCoupon.prize_value} ريال`} خصم
+            تم تطبيق:{" "}
+            {props.appliedCoupon.prize_type === "percent"
+              ? `${props.appliedCoupon.prize_value}%`
+              : `${props.appliedCoupon.prize_value} ريال`}{" "}
+            خصم
           </p>
         )}
       </div>
 
       <div className="mt-6 rounded-3xl p-6 text-white" style={{ background: "var(--gradient-navy)" }}>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-white/70">المجموع الفرعي</span><span className="font-bold">{sar(props.subtotal)}</span></div>
+          <div className="flex justify-between">
+            <span className="text-white/70">المجموع الفرعي</span>
+            <span className="font-bold">{sar(props.subtotal)}</span>
+          </div>
           {props.discount > 0 && (
-            <div className="flex justify-between text-[color:var(--color-gold)]"><span>الخصم</span><span className="font-bold">− {sar(props.discount)}</span></div>
+            <div className="flex justify-between text-[color:var(--color-gold)]">
+              <span>الخصم</span>
+              <span className="font-bold">− {sar(props.discount)}</span>
+            </div>
           )}
           <div className="h-px bg-white/20 my-2" />
           <div className="flex justify-between items-baseline">
             <span className="text-white/80">الإجمالي النهائي</span>
             <span className="text-3xl font-extrabold">{sar(props.total)}</span>
           </div>
-          <p className="text-xs text-white/60 text-center">{sar(props.pricePerPerson)} × {props.passengerCount}</p>
+          <p className="text-xs text-white/60 text-center">
+            {sar(props.pricePerPerson)} × {props.passengerCount}
+          </p>
         </div>
       </div>
     </div>
@@ -1090,8 +1476,14 @@ function StepConfirm(props: {
 }
 
 function PriceBar(props: {
-  packageName?: string; passengerCount: number; roomType: RoomType; tripName?: string;
-  pricePerPerson: number; subtotal: number; discount: number; total: number;
+  packageName?: string;
+  passengerCount: number;
+  roomType: RoomType;
+  tripName?: string;
+  pricePerPerson: number;
+  subtotal: number;
+  discount: number;
+  total: number;
 }) {
   return (
     <div className="fixed bottom-0 inset-x-0 z-30 glass-bar border-t shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)]">
@@ -1114,7 +1506,12 @@ function PriceBar(props: {
   );
 }
 function PriceCell({ label, value }: { label: string; value: string }) {
-  return <div className="flex flex-col"><span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span><span className="font-bold">{value}</span></div>;
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="font-bold">{value}</span>
+    </div>
+  );
 }
 
 /**
@@ -1131,17 +1528,26 @@ function BookingFocusLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <Sheet>
             <SheetTrigger asChild>
-              <button aria-label="القائمة" className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition">
+              <button
+                aria-label="القائمة"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition"
+              >
                 <Menu className="h-5 w-5" />
               </button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72">
               <nav className="mt-8 flex flex-col gap-1">
                 {NAV_LINKS.map((l) => (
-                  <Link key={l.to} to={l.to} className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">{l.label}</Link>
+                  <Link key={l.to} to={l.to} className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">
+                    {l.label}
+                  </Link>
                 ))}
-                <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">حجوزاتي</Link>
-                <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الملف الشخصي</Link>
+                <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">
+                  حجوزاتي
+                </Link>
+                <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">
+                  الملف الشخصي
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
@@ -1151,4 +1557,3 @@ function BookingFocusLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
