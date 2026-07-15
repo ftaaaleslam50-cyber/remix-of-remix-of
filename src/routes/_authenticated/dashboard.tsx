@@ -146,6 +146,8 @@ function Dashboard() {
             {isAdmin && <Link to="/admin-packages"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> الباقات</Button></Link>}
             {isAdmin && <Link to="/admin-homepage"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> الرئيسية</Button></Link>}
             {isAdmin && <Link to="/admin-users"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Users className="h-4 w-4 ml-1" /> المستخدمون</Button></Link>}
+            {isAdmin && <Link to="/admin-bookings"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Ticket className="h-4 w-4 ml-1" /> الحجوزات</Button></Link>}
+            {isAdmin && <Link to="/admin-assets"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> مكتبة الوسائط</Button></Link>}
             <Link to="/" className="text-sm text-white/80 hover:text-white">الموقع</Link>
             <Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={signOut}>
               <LogOut className="h-4 w-4 ml-1" /> خروج
