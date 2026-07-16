@@ -107,11 +107,15 @@ export function AssetPicker({
           contentType: blob.type, upsert: false,
         });
         if (upErr) { toast.error(upErr.message); continue; }
+        // Assets bucket is private; store a long-lived signed URL so <img> tags work.
+        let signedUrl = "";
+        try { signedUrl = await getLongLivedSignedUrl("assets", path); } catch { /* fall through */ }
         const { data: pub } = supabase.storage.from("assets").getPublicUrl(path);
+        const savedUrl = signedUrl || pub.publicUrl;
         const { data: row, error } = await supabase
           .from("assets" as never)
           .insert({
-            name: file.name, storage_path: path, public_url: pub.publicUrl,
+            name: file.name, storage_path: path, public_url: savedUrl,
             mime_type: blob.type, size_bytes: blob.size,
             width: dims?.w ?? null, height: dims?.h ?? null,
           } as never)
@@ -120,6 +124,7 @@ export function AssetPicker({
         if (error) { toast.error(error.message); continue; }
         const r = row as unknown as Asset;
         last = { id: r.id, url: r.public_url, name: r.name, storage_path: r.storage_path };
+
       }
       qc.invalidateQueries({ queryKey: ["admin-assets"] });
       if (last) {
@@ -168,11 +173,20 @@ export function AssetPicker({
             <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4 pb-2">
               {filtered.map((a) => {
                 const src = signed[a.id] ?? a.public_url;
+                async function pick() {
+                  let url = a.public_url;
+                  // Legacy rows may still hold a broken /object/public/ URL — upgrade to signed on the fly.
+                  if (!url.includes("/object/sign/")) {
+                    try { url = await getLongLivedSignedUrl("assets", a.storage_path); } catch { /* keep original */ }
+                  }
+                  onSelect({ id: a.id, url, name: a.name, storage_path: a.storage_path });
+                  onOpenChange(false);
+                }
                 return (
                   <button
                     key={a.id}
                     type="button"
-                    onClick={() => { onSelect({ id: a.id, url: a.public_url, name: a.name, storage_path: a.storage_path }); onOpenChange(false); }}
+                    onClick={pick}
                     className="group relative rounded-xl overflow-hidden border-2 border-transparent hover:border-primary transition"
                   >
                     <div className="aspect-square bg-muted">
@@ -185,6 +199,7 @@ export function AssetPicker({
                   </button>
                 );
               })}
+
             </div>
           )}
         </div>
