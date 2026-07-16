@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AssetField } from "@/components/admin/AssetField";
+import { trackAssetUsage } from "@/lib/asset-usage";
 
 export const Route = createFileRoute("/_authenticated/admin-homepage")({
   component: AdminHomepage,
@@ -88,6 +90,7 @@ function AdminHomepage() {
       visible: s.visible, display_order: s.display_order,
     } as never).eq("id", s.id);
     if (error) return toast.error(error.message);
+    await trackAssetUsage(s.image_url, "homepage_section", s.id);
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["homepage-sections-admin"] });
     qc.invalidateQueries({ queryKey: ["homepage-sections"] });
@@ -167,7 +170,13 @@ function AdminHomepage() {
             <div><Label>العنوان الرئيسي</Label><Input value={local.hero_title} onChange={(e) => setLocal({ ...local, hero_title: e.target.value })} /></div>
             <div><Label>العنوان الفرعي</Label><Textarea value={local.hero_subtitle} onChange={(e) => setLocal({ ...local, hero_subtitle: e.target.value })} /></div>
             <div><Label>نص زر الحجز</Label><Input value={local.hero_cta} onChange={(e) => setLocal({ ...local, hero_cta: e.target.value })} /></div>
-            <div><Label>صورة الخلفية (URL)</Label><Input value={local.hero_image_url ?? ""} onChange={(e) => setLocal({ ...local, hero_image_url: e.target.value })} /></div>
+            <div><Label>صورة الخلفية</Label>
+              <AssetField
+                value={local.hero_image_url}
+                onChange={(url) => setLocal({ ...local, hero_image_url: url })}
+                aspect="video"
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="about" className="mt-4 surface-card p-6 grid gap-3">
@@ -240,7 +249,13 @@ function SectionCard({ section, onSave, onToggle, onUp, onDown }: {
       <div className="grid gap-2 md:grid-cols-2">
         <div><Label className="text-xs">العنوان</Label><Input value={local.title ?? ""} onChange={(e) => setLocal({ ...local, title: e.target.value })} /></div>
         <div><Label className="text-xs">الوصف</Label><Input value={local.subtitle ?? ""} onChange={(e) => setLocal({ ...local, subtitle: e.target.value })} /></div>
-        <div><Label className="text-xs">رابط الصورة</Label><Input value={local.image_url ?? ""} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} /></div>
+        <div className="md:col-span-2"><Label className="text-xs">الصورة</Label>
+          <AssetField
+            value={local.image_url}
+            onChange={(url) => setLocal({ ...local, image_url: url })}
+            aspect="video"
+          />
+        </div>
         <div><Label className="text-xs">لون الخلفية</Label><Input placeholder="#0f2a44" value={local.bg_color ?? ""} onChange={(e) => setLocal({ ...local, bg_color: e.target.value })} /></div>
         <div><Label className="text-xs">نص الزر</Label><Input value={local.button_text ?? ""} onChange={(e) => setLocal({ ...local, button_text: e.target.value })} /></div>
         <div><Label className="text-xs">رابط الزر</Label><Input value={local.button_link ?? ""} onChange={(e) => setLocal({ ...local, button_link: e.target.value })} /></div>
