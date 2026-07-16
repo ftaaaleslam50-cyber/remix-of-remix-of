@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AssetField } from "@/components/admin/AssetField";
+import { trackAssetUsage, untrackAssetUsage } from "@/lib/asset-usage";
 
 export const Route = createFileRoute("/_authenticated/admin-gallery")({
   component: AdminGallery,
@@ -55,13 +57,23 @@ function AdminGallery() {
   }
   async function addMedia(type: "image" | "video") {
     if (albums.length === 0) return toast.error("أنشئ ألبوماً أولاً");
-    const url = prompt(type === "image" ? "رابط الصورة:" : "رابط الفيديو (mp4):");
-    if (!url) return;
-    const payload = type === "image"
-      ? { album_id: albums[0].id, image_url: url, caption: "", media_type: "image", display_order: media.length }
-      : { album_id: albums[0].id, image_url: "", video_url: url, caption: "", media_type: "video", display_order: media.length };
-    const { error } = await supabase.from("gallery_images").insert(payload as never);
+    if (type === "video") {
+      const url = prompt("رابط الفيديو (mp4):");
+      if (!url) return;
+      const { error } = await supabase.from("gallery_images").insert({
+        album_id: albums[0].id, image_url: "", video_url: url, caption: "", media_type: "video", display_order: media.length,
+      } as never);
+      if (error) return toast.error(error.message);
+      qc.invalidateQueries({ queryKey: ["admin-media"] });
+      return;
+    }
+    // Image → create empty row and let user pick from library via the card UI.
+    const { data: row, error } = await supabase.from("gallery_images").insert({
+      album_id: albums[0].id, image_url: "", caption: "", media_type: "image", display_order: media.length,
+    } as never).select("id").single();
     if (error) return toast.error(error.message);
+    toast.success("تمت الإضافة — اختر الصورة من المكتبة");
+    void row;
     qc.invalidateQueries({ queryKey: ["admin-media"] });
   }
   async function saveMedia(m: Media) {
@@ -69,11 +81,13 @@ function AdminGallery() {
       album_id: m.album_id, image_url: m.image_url, video_url: m.video_url, caption: m.caption, media_type: m.media_type, display_order: m.display_order,
     } as never).eq("id", m.id);
     if (error) return toast.error(error.message);
+    if (m.media_type !== "video") await trackAssetUsage(m.image_url, "gallery_image", m.id);
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-media"] });
   }
   async function delMedia(id: string) {
     if (!confirm("حذف؟")) return;
+    await untrackAssetUsage("gallery_image", id);
     await supabase.from("gallery_images").delete().eq("id", id);
     qc.invalidateQueries({ queryKey: ["admin-media"] });
   }
@@ -154,9 +168,16 @@ function MediaCard({ m, albums, onSave, onDelete, kind }: {
   return (
     <div className="border rounded-2xl p-3 space-y-2">
       {kind === "video" ? (
-        local.video_url && <video src={local.video_url} controls className="w-full rounded-lg max-h-48" />
+        <>
+          {local.video_url && <video src={local.video_url} controls className="w-full rounded-lg max-h-48" />}
+          <div><Label className="text-xs">رابط الفيديو</Label><Input value={local.video_url ?? ""} onChange={(e) => setLocal({ ...local, video_url: e.target.value })} /></div>
+        </>
       ) : (
-        local.image_url && <img src={local.image_url} alt="" className="w-full rounded-lg max-h-48 object-cover" />
+        <AssetField
+          value={local.image_url}
+          onChange={(url) => setLocal({ ...local, image_url: url ?? "" })}
+          aspect="video"
+        />
       )}
       <div className="grid gap-2">
         <div><Label className="text-xs">الألبوم</Label>
@@ -165,11 +186,6 @@ function MediaCard({ m, albums, onSave, onDelete, kind }: {
             <SelectContent>{albums.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        {kind === "video" ? (
-          <div><Label className="text-xs">رابط الفيديو</Label><Input value={local.video_url ?? ""} onChange={(e) => setLocal({ ...local, video_url: e.target.value })} /></div>
-        ) : (
-          <div><Label className="text-xs">رابط الصورة</Label><Input value={local.image_url} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} /></div>
-        )}
         <div><Label className="text-xs">التعليق</Label><Input value={local.caption ?? ""} onChange={(e) => setLocal({ ...local, caption: e.target.value })} /></div>
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="outline" onClick={onDelete}><Trash2 className="h-3 w-3" /></Button>

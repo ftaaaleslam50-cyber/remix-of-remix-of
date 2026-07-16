@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AssetField } from "@/components/admin/AssetField";
+import { trackAssetUsage, untrackAssetUsage } from "@/lib/asset-usage";
 
 export const Route = createFileRoute("/_authenticated/admin-buses")({
   component: AdminBuses,
@@ -122,6 +124,7 @@ function AdminBuses() {
     }
     const { error } = await supabase.from("buses").update(patch as never).eq("id", b.id);
     if (error) return toast.error(error.message);
+    await trackAssetUsage(b.image_url, "bus", b.id);
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
@@ -139,6 +142,7 @@ function AdminBuses() {
     if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) return;
     const { error } = await supabase.from("buses").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    await untrackAssetUsage("bus", id);
     toast.success("تم الحذف");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
@@ -240,8 +244,11 @@ function BusEditRow({ bus, used, layouts, onSave, onDelete, onDuplicate, onTrans
       <TableCell><span className={free <= 0 ? "text-destructive font-bold" : "font-semibold"}>{used}/{local.capacity}</span><div className="text-[10px] text-muted-foreground">متبقٍ {free}</div></TableCell>
       <TableCell><Input type="number" className="h-9 w-24" value={local.price_addition ?? 0} onChange={(e) => setLocal({ ...local, price_addition: Number(e.target.value) })} /></TableCell>
       <TableCell>
-        <Input className="h-9 w-40" placeholder="URL صورة" value={local.image_url ?? ""} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} />
-        {local.image_url && <img src={local.image_url} alt="" className="mt-1 h-8 w-14 object-cover rounded" />}
+        <AssetField
+          compact
+          value={local.image_url}
+          onChange={(url) => setLocal({ ...local, image_url: url })}
+        />
       </TableCell>
       <TableCell>
         <Select value={local.status} onValueChange={(v) => setLocal({ ...local, status: v as BusRow["status"] })}>
