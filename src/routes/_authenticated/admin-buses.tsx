@@ -124,6 +124,7 @@ function AdminBuses() {
     }
     const { error } = await supabase.from("buses").update(patch as never).eq("id", b.id);
     if (error) return toast.error(error.message);
+    await trackAssetUsage(b.image_url, "bus", b.id);
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
@@ -141,6 +142,7 @@ function AdminBuses() {
     if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) return;
     const { error } = await supabase.from("buses").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    await untrackAssetUsage("bus", id);
     toast.success("تم الحذف");
     qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
   }
