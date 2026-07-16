@@ -69,12 +69,12 @@ function PackagesPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {images.map((img) => (
               <figure key={img.id} className="surface-card overflow-hidden">
-                <img
+                <AssetImg
                   src={img.image_url}
                   alt={img.caption ?? "باقة"}
-                  loading="lazy"
                   className="w-full h-64 object-cover"
                 />
+
                 {img.caption && (
                   <figcaption className="p-3 text-sm text-center font-semibold text-[color:var(--color-navy)]">
                     {img.caption}
