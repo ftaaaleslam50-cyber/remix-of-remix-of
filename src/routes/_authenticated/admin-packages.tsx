@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AssetPicker, type AssetSelection } from "@/components/admin/AssetPicker";
+import { AssetImg } from "@/components/admin/AssetImg";
+
 
 export const Route = createFileRoute("/_authenticated/admin-packages")({
   component: AdminPackages,

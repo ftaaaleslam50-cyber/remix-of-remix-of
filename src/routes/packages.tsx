@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
+import { AssetImg } from "@/components/admin/AssetImg";
+
 
 export const Route = createFileRoute("/packages")({
   head: () => ({
