@@ -6,6 +6,8 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AssetImg } from "@/components/admin/AssetImg";
+
 
 interface Album { id: string; name: string; slug: string }
 interface Image { id: string; album_id: string; image_url: string; caption: string; media_type?: string; video_url?: string | null }
@@ -65,12 +67,12 @@ function GalleryPage() {
                 {isVideo ? (
                   <video src={img.video_url ?? undefined} className="h-full w-full object-cover" muted playsInline />
                 ) : (
-                  <img
+                  <AssetImg
                     src={img.image_url}
                     alt={img.caption || "معرض"}
                     className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    loading="lazy"
                   />
+
                 )}
                 {isVideo && <span className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-3xl">▶</span>}
               </button>

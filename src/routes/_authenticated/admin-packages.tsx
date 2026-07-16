@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AssetPicker, type AssetSelection } from "@/components/admin/AssetPicker";
+import { AssetImg } from "@/components/admin/AssetImg";
+
 
 export const Route = createFileRoute("/_authenticated/admin-packages")({
   component: AdminPackages,
@@ -184,7 +186,7 @@ function ImageCard({ img, onSave, onDelete, onReplace }: {
   useEffect(() => setLocal(img), [img]);
   return (
     <div className="border rounded-2xl p-3 space-y-2 bg-white">
-      {local.image_url && <img src={local.image_url} alt="" className="w-full h-40 rounded-lg object-cover" />}
+      {local.image_url && <AssetImg src={local.image_url} className="w-full h-40 rounded-lg object-cover" />}
       <Button size="sm" variant="outline" className="w-full" onClick={onReplace}>
         <ImagePlus className="h-3 w-3 ml-1" /> استبدال من المكتبة
       </Button>

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ImagePlus, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AssetPicker, type AssetSelection } from "@/components/admin/AssetPicker";
+import { AssetImg } from "@/components/admin/AssetImg";
+
 
 /**
  * Compact media-library field: preview + Select/Replace/Remove.
@@ -38,10 +40,11 @@ export function AssetField({
     return (
       <div className="flex items-center gap-2">
         {value ? (
-          <img src={value} alt="" className="h-10 w-16 rounded object-cover border" />
+          <AssetImg src={value} className="h-10 w-16 rounded object-cover border" />
         ) : (
           <div className="h-10 w-16 rounded border grid place-items-center bg-muted text-muted-foreground">
             <ImageIcon className="h-4 w-4" />
+
           </div>
         )}
         <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
@@ -62,8 +65,9 @@ export function AssetField({
       {label && <div className="text-xs font-medium">{label}</div>}
       {value ? (
         <div className={`relative rounded-lg overflow-hidden border ${aspectCls} bg-muted`}>
-          <img src={value} alt="" className="w-full h-full object-cover" />
+          <AssetImg src={value} className="w-full h-full object-cover" />
         </div>
+
       ) : (
         <div className={`rounded-lg border-2 border-dashed grid place-items-center text-muted-foreground ${aspectCls}`}>
           <div className="text-center">

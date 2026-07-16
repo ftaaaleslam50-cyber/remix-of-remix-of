@@ -141,6 +141,8 @@ function Dashboard() {
             {isAdmin && <NotificationBell />}
             {isAdmin && <Link to="/audit"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">السجل</Button></Link>}
             {isAdmin && <Link to="/admin-buses"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Bus className="h-4 w-4 ml-1" /> الأسطول</Button></Link>}
+            {isAdmin && <Link to="/admin-hotels"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</Button></Link>}
+
             {isAdmin && <Link to="/admin-trips"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><CalendarClock className="h-4 w-4 ml-1" /> الرحلات</Button></Link>}
             {isAdmin && <Link to="/admin-gallery"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> المعرض</Button></Link>}
             {isAdmin && <Link to="/admin-packages"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> الباقات</Button></Link>}
