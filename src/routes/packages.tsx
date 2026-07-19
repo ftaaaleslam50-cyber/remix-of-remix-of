@@ -68,13 +68,13 @@ function PackagesPage() {
         ) : images.length === 0 ? (
           <div className="text-center text-muted-foreground py-16">لا توجد صور بعد.</div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-6">
             {images.map((img) => (
               <figure key={img.id} className="surface-card overflow-hidden">
                 <AssetImg
                   src={img.image_url}
                   alt={img.caption ?? "باقة"}
-                  className="w-full h-64 object-cover"
+                  className="w-full h-auto block"
                 />
 
                 {img.caption && (

@@ -141,7 +141,7 @@ function Dashboard() {
             {isAdmin && <NotificationBell />}
             {isAdmin && <Link to="/audit"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">السجل</Button></Link>}
             {isAdmin && <Link to="/admin-buses"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Bus className="h-4 w-4 ml-1" /> الأسطول</Button></Link>}
-            {isAdmin && <Link to="/admin-hotels"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</Button></Link>}
+            
 
             {isAdmin && <Link to="/admin-trips"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><CalendarClock className="h-4 w-4 ml-1" /> الرحلات</Button></Link>}
             {isAdmin && <Link to="/admin-gallery"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> المعرض</Button></Link>}
@@ -555,12 +555,12 @@ function PricingTab() {
     },
   });
 
-  async function updateCell(pkgId: string, room: string, pax: number, price: number) {
-    const existing = pricing.find((p) => p.package_id === pkgId && p.room_type === room && p.passenger_count === pax);
+  async function updateCell(pkgId: string, pax: number, price: number) {
+    const existing = pricing.find((p) => p.package_id === pkgId && p.passenger_count === pax);
     if (existing) {
-      await supabase.from("pricing_matrix" as never).update({ price } as never).eq("id", existing.id);
+      await supabase.from("pricing_matrix" as never).update({ price, active: true } as never).eq("id", existing.id);
     } else {
-      await supabase.from("pricing_matrix" as never).insert({ package_id: pkgId, room_type: room, passenger_count: pax, price, active: true } as never);
+      await supabase.from("pricing_matrix" as never).insert({ package_id: pkgId, room_type: "5", passenger_count: pax, price, active: true } as never);
     }
     toast.success("تم تحديث السعر");
     qc.invalidateQueries({ queryKey: ["admin-pricing"] });
@@ -570,19 +570,19 @@ function PricingTab() {
   return (
     <div className="surface-card p-6">
       <h2 className="text-lg font-extrabold mb-4">مصفوفة الأسعار</h2>
-      <p className="text-sm text-muted-foreground mb-4">حدّد سعر الفرد لكل باقة حسب نوع الغرفة.</p>
+      <p className="text-sm text-muted-foreground mb-4">حدّد سعر الفرد لكل فندق حسب عدد الأفراد في الغرفة.</p>
       <div className="space-y-6">
         {packages.map((p) => (
           <div key={p.id} className="border-2 border-border rounded-2xl p-4">
             <h3 className="font-bold mb-3">{p.name}</h3>
-            <div className="grid grid-cols-6 gap-2 text-sm">
-              <div className="font-bold text-muted-foreground">الغرفة →</div>
-              {["1", "2", "3", "4", "5"].map((r) => <div key={r} className="font-bold text-center">{r}</div>)}
+            <div className="grid grid-cols-6 gap-2 text-sm items-center">
+              <div className="font-bold text-muted-foreground">عدد الأفراد →</div>
+              {[1, 2, 3, 4, 5].map((n) => <div key={n} className="font-bold text-center">{n}</div>)}
               <div className="font-bold text-muted-foreground">السعر (ر.س)</div>
-              {["1", "2", "3", "4", "5"].map((r) => {
-                const cell = pricing.find((c) => c.package_id === p.id && c.room_type === r && c.passenger_count === Number(r));
+              {[1, 2, 3, 4, 5].map((n) => {
+                const cell = pricing.find((c) => c.package_id === p.id && c.passenger_count === n);
                 return (
-                  <PriceInput key={r} value={cell?.price ?? 0} onSave={(v) => updateCell(p.id, r, Number(r), v)} />
+                  <PriceInput key={n} value={cell?.price ?? 0} onSave={(v) => updateCell(p.id, n, v)} />
                 );
               })}
             </div>
