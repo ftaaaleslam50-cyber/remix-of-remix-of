@@ -594,8 +594,9 @@ function BookingPage() {
                     setNoHotel(true);
                     setPackageId(null);
                   }}
-                  passengerCount={passengerCount}
+                  passengerCount={pricingCount}
                   roomType={roomType}
+
                 />
               )}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
