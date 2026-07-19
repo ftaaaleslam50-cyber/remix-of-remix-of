@@ -139,11 +139,21 @@ function BookingPage() {
     queryKey: ["buses", tripId],
     enabled: !!tripId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("buses")
-        .select("*")
-        .eq("trip_id", tripId!)
-        .in("status", ["active"])
+      // Buses are linked to trips via the trip_buses join table (with a legacy
+      // buses.trip_id fallback for older data).
+      const { data: joins } = await supabase
+        .from("trip_buses")
+        .select("bus_id")
+        .eq("trip_id", tripId!);
+      const joinIds = (joins ?? []).map((r) => r.bus_id).filter(Boolean) as string[];
+
+      let query = supabase.from("buses").select("*").in("status", ["active"]);
+      if (joinIds.length > 0) {
+        query = query.or(`id.in.(${joinIds.join(",")}),trip_id.eq.${tripId}`);
+      } else {
+        query = query.eq("trip_id", tripId!);
+      }
+      const { data, error } = await query
         .order("is_active_booking", { ascending: false })
         .order("priority", { ascending: true })
         .order("bus_number", { ascending: true });
@@ -156,6 +166,7 @@ function BookingPage() {
       })[];
     },
   });
+
 
   // Load reserved-seat counts for all candidate buses to pick the first with room.
   const { data: busReserved = {} } = useQuery({
@@ -322,10 +333,14 @@ function BookingPage() {
   }, [STEPS.length, step]);
 
   const busSurcharge = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
+  // For "individual" bookings we price the passenger as one member of a shared
+  // 5-person room, regardless of the actual passenger count.
+  const pricingCount = bookingType === "individual" ? 5 : passengerCount;
   const pricePerPerson = useMemo(
-    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing) + busSurcharge,
-    [selectedPackage, roomType, passengerCount, pricing, busSurcharge],
+    () => getPackagePrice(selectedPackage, roomType, pricingCount, pricing) + busSurcharge,
+    [selectedPackage, roomType, pricingCount, pricing, busSurcharge],
   );
+
 
   const subtotal = pricePerPerson * passengerCount;
   const discount = useMemo(() => {
@@ -579,8 +594,9 @@ function BookingPage() {
                     setNoHotel(true);
                     setPackageId(null);
                   }}
-                  passengerCount={passengerCount}
+                  passengerCount={pricingCount}
                   roomType={roomType}
+
                 />
               )}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
