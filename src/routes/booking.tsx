@@ -333,10 +333,14 @@ function BookingPage() {
   }, [STEPS.length, step]);
 
   const busSurcharge = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
+  // For "individual" bookings we price the passenger as one member of a shared
+  // 5-person room, regardless of the actual passenger count.
+  const pricingCount = bookingType === "individual" ? 5 : passengerCount;
   const pricePerPerson = useMemo(
-    () => getPackagePrice(selectedPackage, roomType, passengerCount, pricing) + busSurcharge,
-    [selectedPackage, roomType, passengerCount, pricing, busSurcharge],
+    () => getPackagePrice(selectedPackage, roomType, pricingCount, pricing) + busSurcharge,
+    [selectedPackage, roomType, pricingCount, pricing, busSurcharge],
   );
+
 
   const subtotal = pricePerPerson * passengerCount;
   const discount = useMemo(() => {
