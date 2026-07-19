@@ -7,14 +7,22 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { AssetImg } from "@/components/admin/AssetImg";
 
-
 export const Route = createFileRoute("/packages")({
   head: () => ({
     meta: [
       { title: `الباقات | ${BRAND.name}` },
-      { name: "description", content: `تصفح باقات ${BRAND.name} واحجز رحلتك بسهولة.` },
-      { property: "og:title", content: `الباقات | ${BRAND.name}` },
-      { property: "og:description", content: `تصفح باقات ${BRAND.name} واحجز رحلتك بسهولة.` },
+      {
+        name: "description",
+        content: `تصفح باقات ${BRAND.name} واحجز رحلتك بسهولة.`,
+      },
+      {
+        property: "og:title",
+        content: `الباقات | ${BRAND.name}`,
+      },
+      {
+        property: "og:description",
+        content: `تصفح باقات ${BRAND.name} واحجز رحلتك بسهولة.`,
+      },
     ],
   }),
   component: PackagesPage,
@@ -35,6 +43,7 @@ function PackagesPage() {
         .from("package_images" as never)
         .select("*")
         .order("display_order");
+
       return (data as PackageImage[]) ?? [];
     },
   });
@@ -42,17 +51,16 @@ function PackagesPage() {
   const { data: settings } = useQuery({
     queryKey: ["packages-cta-settings"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("whatsapp")
-        .eq("id", 1)
-        .maybeSingle();
+      const { data } = await supabase.from("app_settings").select("whatsapp").eq("id", 1).maybeSingle();
+
       return data as { whatsapp: string | null } | null;
     },
   });
 
   const rawNumber = (settings?.whatsapp || BRAND.whatsapp).replace(/\D/g, "");
+
   const waText = encodeURIComponent("السلام عليكم، أرغب في الاستفسار عن حجز رحلة عمرة.");
+
   const waHref = `https://wa.me/${rawNumber}?text=${waText}`;
 
   return (
@@ -60,6 +68,7 @@ function PackagesPage() {
       <section className="container-luxe py-12">
         <header className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-extrabold text-[color:var(--color-navy)]">الباقات</h1>
+
           <p className="text-muted-foreground mt-2">تصفح صور باقاتنا المتاحة</p>
         </header>
 
@@ -71,11 +80,14 @@ function PackagesPage() {
           <div className="space-y-6">
             {images.map((img) => (
               <figure key={img.id} className="surface-card overflow-hidden">
-                <AssetImg
-                  src={img.image_url}
-                  alt={img.caption ?? "باقة"}
-                  className="w-full h-auto block"
-                />
+                {/* عرض الصورة كاملة بدون قص أو ارتفاع ثابت */}
+                <div className="w-full">
+                  <AssetImg
+                    src={img.image_url}
+                    alt={img.caption ?? "باقة"}
+                    className="!w-full !h-auto !max-h-none !object-contain block"
+                  />
+                </div>
 
                 {img.caption && (
                   <figcaption className="p-3 text-sm text-center font-semibold text-[color:var(--color-navy)]">
@@ -94,10 +106,14 @@ function PackagesPage() {
         >
           <div
             className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{ background: "radial-gradient(circle at top right, var(--color-gold), transparent 55%)" }}
+            style={{
+              background: "radial-gradient(circle at top right, var(--color-gold), transparent 55%)",
+            }}
           />
+
           <div className="relative text-center max-w-2xl mx-auto">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold">صمّم رحلتك كما تريد</h2>
+
             <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/80 leading-relaxed">
               اختر الفندق، والرحلة، والحافلة، والمقاعد بكل مرونة، واستمتع بتجربة حجز تناسب احتياجاتك.
             </p>
@@ -116,15 +132,8 @@ function PackagesPage() {
                 <span className="flex-1 h-px bg-white/20" />
               </div>
 
-              <a
-                href={waHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full"
-              >
-                <Button
-                  className="rounded-full h-12 sm:h-14 w-full px-4 sm:px-8 text-sm sm:text-base font-bold bg-[#25D366] hover:bg-[#1FB755] text-white border-0 whitespace-nowrap"
-                >
+              <a href={waHref} target="_blank" rel="noopener noreferrer" className="w-full">
+                <Button className="rounded-full h-12 sm:h-14 w-full px-4 sm:px-8 text-sm sm:text-base font-bold bg-[#25D366] hover:bg-[#1FB755] text-white border-0 whitespace-nowrap">
                   <MessageCircle className="ml-2 h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
                   <span className="truncate">احجز عبر واتساب</span>
                 </Button>
