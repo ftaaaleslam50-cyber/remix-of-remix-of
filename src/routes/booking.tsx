@@ -54,14 +54,13 @@ export const Route = createFileRoute("/booking")({
   component: BookingPage,
 });
 
-// Booking steps. "الحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
+// Booking steps. "الرحلة والحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
 const BASE_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
-  "الفندق",
-  "الرحلة",
-  "الحافلة",
+  "الرحلة والحافلة",
   "المقاعد",
+  "الفندق",
   "البيانات",
   "التأكيد",
 ] as const;
@@ -233,10 +232,8 @@ function BookingPage() {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
   }, [customer.same_whatsapp, customer.contact_phone]);
 
-  // When "no hotel" is toggled, auto-select the first (transport) package so pricing works.
-  useEffect(() => {
-    if (noHotel && !packageId && packages.length > 0) setPackageId(packages[0].id);
-  }, [noHotel, packageId, packages]);
+  // (Removed) Previously auto-selected first package when noHotel — hotel price is now 0 for "no hotel".
+
 
   // Auto-populate customer fields from signed-in user's profile
   useEffect(() => {
@@ -328,14 +325,17 @@ function BookingPage() {
     if (step > STEPS.length - 1) setStep(STEPS.length - 1);
   }, [STEPS.length, step]);
 
-  const busSurcharge = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
-  // For "individual" bookings we price the passenger as one member of a shared
-  // 5-person room, regardless of the actual passenger count.
+  // Pricing = passengers × (bus per-person + hotel per-person).
+  // Bus per-person = activeBus.price_addition (0 when noBus).
+  // Hotel per-person = getPackagePrice(pkg, room, count, pricing) (0 when noHotel).
+  const busPerPerson = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
+  // Individual bookings are priced as one member of a shared 5-person room.
   const pricingCount = bookingType === "individual" ? 5 : passengerCount;
-  const pricePerPerson = useMemo(
-    () => getPackagePrice(selectedPackage, roomType, pricingCount, pricing) + busSurcharge,
-    [selectedPackage, roomType, pricingCount, pricing, busSurcharge],
+  const hotelPerPerson = useMemo(
+    () => (noHotel || !selectedPackage ? 0 : getPackagePrice(selectedPackage, roomType, pricingCount, pricing)),
+    [noHotel, selectedPackage, roomType, pricingCount, pricing],
   );
+  const pricePerPerson = hotelPerPerson + busPerPerson;
 
   const subtotal = pricePerPerson * passengerCount;
   const discount = useMemo(() => {
@@ -400,14 +400,13 @@ function BookingPage() {
         return !!bookingType;
       case "عدد الأفراد":
         return passengerCount > 0;
-      case "الفندق":
-        return noHotel || !!packageId;
-      case "الرحلة":
-        return !!tripId;
-      case "الحافلة":
-        return noBus || !!busId;
+      case "الرحلة والحافلة":
+        // "No bus" = valid on its own; otherwise both a trip and a bus must be picked.
+        return noBus || (!!tripId && !!busId);
       case "المقاعد":
         return seats.length === passengerCount;
+      case "الفندق":
+        return noHotel || !!packageId;
       case "البيانات":
         return (
           customer.customer_name.trim().length > 1 &&
@@ -577,6 +576,32 @@ function BookingPage() {
             >
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
+              {stepName === "الرحلة والحافلة" && (
+                <StepTripBus
+                  trips={trips}
+                  tripId={tripId}
+                  onSelectTrip={(id) => {
+                    setNoBus(false);
+                    setTripId(id);
+                    setBusId(null);
+                    setSeats([]);
+                  }}
+                  buses={buses}
+                  busReserved={busReserved}
+                  busId={busId}
+                  onSelectBus={(id) => {
+                    setNoBus(false);
+                    setBusId(id);
+                  }}
+                  noBus={noBus}
+                  onSelectNoBus={() => {
+                    setNoBus(true);
+                    setBusId(null);
+                    setTripId(null);
+                    setSeats([]);
+                  }}
+                />
+              )}
               {stepName === "الفندق" && (
                 <StepPackage
                   packages={packages}
@@ -593,24 +618,6 @@ function BookingPage() {
                   }}
                   passengerCount={pricingCount}
                   roomType={roomType}
-                />
-              )}
-              {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
-              {stepName === "الحافلة" && (
-                <StepBus
-                  buses={buses}
-                  busReserved={busReserved}
-                  value={busId}
-                  noBus={noBus}
-                  onChange={(id) => {
-                    setNoBus(false);
-                    setBusId(id);
-                  }}
-                  onSelectNoBus={() => {
-                    setNoBus(true);
-                    setBusId(null);
-                    setSeats([]);
-                  }}
                 />
               )}
               {stepName === "المقاعد" && (
@@ -862,6 +869,24 @@ function StepPackage({
     <div>
       <StepHeader title="اختر الفندق" desc="اختر الفندق الأنسب لرحلتك" />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <button
+          type="button"
+          onClick={onSelectNoHotel}
+          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[280px] ${noHotel ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}
+        >
+          <div
+            className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noHotel ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}
+          >
+            <X className="h-7 w-7" />
+          </div>
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون فندق</h3>
+          <p className="text-sm text-muted-foreground text-center">مواصلات فقط — لن يتم حجز فندق</p>
+          {noHotel && (
+            <div className="inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <CheckCircle2 className="h-4 w-4" /> تم الاختيار
+            </div>
+          )}
+        </button>
         {packages.map((p) => {
           const active = value === p.id;
           const price = getPackagePrice(p, roomType, passengerCount, pricing);
@@ -925,25 +950,8 @@ function StepPackage({
             </div>
           );
         })}
-        <button
-          type="button"
-          onClick={onSelectNoHotel}
-          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[280px] ${noHotel ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}
-        >
-          <div
-            className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noHotel ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}
-          >
-            <X className="h-7 w-7" />
-          </div>
-          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون فندق</h3>
-          <p className="text-sm text-muted-foreground text-center">مواصلات فقط — لن يتم حجز فندق</p>
-          {noHotel && (
-            <div className="inline-flex items-center gap-1 text-xs font-bold text-primary">
-              <CheckCircle2 className="h-4 w-4" /> تم الاختيار
-            </div>
-          )}
-        </button>
       </div>
+
 
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
@@ -1013,42 +1021,150 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
   );
 }
 
-function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | null; onChange: (id: string) => void }) {
+function StepTripBus({
+  trips,
+  tripId,
+  onSelectTrip,
+  buses,
+  busReserved,
+  busId,
+  onSelectBus,
+  noBus,
+  onSelectNoBus,
+}: {
+  trips: Trip[];
+  tripId: string | null;
+  onSelectTrip: (id: string) => void;
+  buses: (Bus & { name?: string | null })[];
+  busReserved: Record<string, string[]>;
+  busId: string | null;
+  onSelectBus: (id: string) => void;
+  noBus: boolean;
+  onSelectNoBus: () => void;
+}) {
   return (
     <div>
-      <StepHeader title="اختر الرحلة" desc="حدد موعد الرحلة المناسب" />
+      <StepHeader title="اختر الرحلة والحافلة" desc="حدد موعد الرحلة، ثم اختر الحافلة المتاحة" />
+
+      {/* No-transport shortcut — jumps straight to the Hotel step */}
+      <button
+        type="button"
+        onClick={onSelectNoBus}
+        className={`w-full text-right rounded-3xl border-2 p-5 mb-5 bg-white transition-all flex items-center gap-4 ${
+          noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"
+        }`}
+      >
+        <div
+          className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${
+            noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"
+          }`}
+        >
+          <X className="h-6 w-6" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون مواصلات</h3>
+          <p className="text-sm text-muted-foreground">فندق فقط — الانتقال مباشرة إلى خطوة الفندق</p>
+        </div>
+        {noBus && <CheckCircle2 className="h-5 w-5 text-primary" />}
+      </button>
+
       <div className="grid md:grid-cols-2 gap-4">
         {trips.map((t) => {
-          const active = value === t.id;
+          const active = !noBus && tripId === t.id;
+          const tripBuses = active ? buses : [];
           return (
-            <button
+            <div
               key={t.id}
-              type="button"
-              onClick={() => onChange(t.id)}
-              className={`text-right rounded-3xl border-2 p-6 bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"}`}
+              className={`rounded-3xl border-2 bg-white transition-all ${
+                active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+              }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
-                  <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
-                  <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    الذهاب: {t.departure_day} • العودة: {t.return_day}
+              <button
+                type="button"
+                onClick={() => onSelectTrip(t.id)}
+                className="w-full text-right p-6"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
+                    <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
+                    <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      الذهاب: {t.departure_day} • العودة: {t.return_day}
+                    </div>
                   </div>
+                  {active && (
+                    <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                      <Check className="h-5 w-5" />
+                    </div>
+                  )}
                 </div>
-                {active && (
-                  <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
-                    <Check className="h-5 w-5" />
-                  </div>
-                )}
-              </div>
-            </button>
+              </button>
+
+              {active && (
+                <div className="border-t border-border p-4 space-y-2 bg-muted/30 rounded-b-3xl">
+                  <p className="text-sm font-bold text-[color:var(--color-navy)] mb-1">الحافلات المتاحة</p>
+                  {tripBuses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">لا توجد حافلات متاحة لهذه الرحلة</p>
+                  ) : (
+                    tripBuses.map((b) => {
+                      const cap = b.capacity ?? 49;
+                      const blocked = (b.blocked_seats ?? ["A2"]).length;
+                      const used = (busReserved[b.id] ?? []).length;
+                      const available = Math.max(0, cap - blocked - used);
+                      const full = available <= 0;
+                      const selected = busId === b.id;
+                      const busPrice = Number(b.price_addition ?? 0);
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          disabled={full}
+                          onClick={() => onSelectBus(b.id)}
+                          className={`w-full text-right rounded-2xl border-2 p-3 flex items-center gap-3 transition-all bg-white ${
+                            selected
+                              ? "border-primary shadow-[var(--shadow-red)]"
+                              : "border-border hover:border-primary/40"
+                          } ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                            {b.image_url ? (
+                              <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-2xl">🚌</div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-sm text-[color:var(--color-navy)] truncate">
+                              {b.name || `الحافلة رقم ${b.bus_number}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {b.bus_type ? `${b.bus_type} • ` : ""}السعة: {cap}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1 text-xs">
+                              <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
+                                {full ? "مكتملة" : `${available} متاح`}
+                              </span>
+                              {busPrice > 0 && (
+                                <span className="text-muted-foreground">• {sar(busPrice)} للفرد</span>
+                              )}
+                            </div>
+                          </div>
+                          {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
     </div>
   );
 }
+
 
 function StepSeats({
   count,
@@ -1144,96 +1260,6 @@ function StepSeats({
   );
 }
 
-function StepBus({
-  buses,
-  busReserved,
-  value,
-  noBus,
-  onChange,
-  onSelectNoBus,
-}: {
-  buses: (Bus & { name?: string | null })[];
-  busReserved: Record<string, string[]>;
-  value: string | null;
-  noBus: boolean;
-  onChange: (id: string) => void;
-  onSelectNoBus: () => void;
-}) {
-  return (
-    <div>
-      <StepHeader title="اختر الحافلة" desc="اختر الحافلة التي تناسبك" />
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {buses.map((b) => {
-          const active = !noBus && value === b.id;
-          const cap = b.capacity ?? 49;
-          const blocked = (b.blocked_seats ?? ["A2"]).length;
-          const used = (busReserved[b.id] ?? []).length;
-          const available = Math.max(0, cap - blocked - used);
-          const full = available <= 0;
-          return (
-            <button
-              key={b.id}
-              type="button"
-              disabled={full}
-              onClick={() => onChange(b.id)}
-              className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"} ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <div className="relative h-40 overflow-hidden bg-muted">
-                {b.image_url ? (
-                  <img
-                    src={b.image_url}
-                    alt={b.name ?? `حافلة ${b.bus_number}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground text-4xl">🚌</div>
-                )}
-                {active && (
-                  <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
-                    <Check className="h-5 w-5" />
-                  </div>
-                )}
-              </div>
-              <div className="p-4 space-y-1.5">
-                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">
-                  {b.name || `الحافلة رقم ${b.bus_number}`}
-                </h3>
-                {b.bus_type && <p className="text-xs font-semibold text-muted-foreground">النوع: {b.bus_type}</p>}
-                <div className="flex items-center justify-between text-sm pt-1">
-                  <span className="text-muted-foreground">
-                    إجمالي المقاعد: <span className="font-bold text-foreground">{cap}</span>
-                  </span>
-                  <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
-                    {full ? "مكتملة" : `${available} متاح`}
-                  </span>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={onSelectNoBus}
-          className={`text-right rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer p-6 flex flex-col items-center justify-center gap-2 min-h-[240px] ${noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"}`}
-        >
-          <div
-            className={`h-14 w-14 rounded-2xl flex items-center justify-center ${noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"}`}
-          >
-            <X className="h-7 w-7" />
-          </div>
-          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون حافلة</h3>
-          <p className="text-sm text-muted-foreground text-center">فندق فقط — لن يتم حجز مواصلات</p>
-          {noBus && (
-            <div className="inline-flex items-center gap-1 text-xs font-bold text-primary">
-              <CheckCircle2 className="h-4 w-4" /> تم الاختيار
-            </div>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 type CustomerState = {
   customer_name: string;
