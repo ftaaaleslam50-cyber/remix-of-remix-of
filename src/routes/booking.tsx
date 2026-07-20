@@ -400,14 +400,13 @@ function BookingPage() {
         return !!bookingType;
       case "عدد الأفراد":
         return passengerCount > 0;
-      case "الفندق":
-        return noHotel || !!packageId;
-      case "الرحلة":
-        return !!tripId;
-      case "الحافلة":
-        return noBus || !!busId;
+      case "الرحلة والحافلة":
+        // "No bus" = valid on its own; otherwise both a trip and a bus must be picked.
+        return noBus || (!!tripId && !!busId);
       case "المقاعد":
         return seats.length === passengerCount;
+      case "الفندق":
+        return noHotel || !!packageId;
       case "البيانات":
         return (
           customer.customer_name.trim().length > 1 &&
