@@ -55,15 +55,7 @@ export const Route = createFileRoute("/booking")({
 });
 
 // Booking steps. "الرحلة والحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
-const BASE_STEPS = [
-  "نوع الحجز",
-  "عدد الأفراد",
-  "الرحلة والحافلة",
-  "المقاعد",
-  "الفندق",
-  "البيانات",
-  "التأكيد",
-] as const;
+const BASE_STEPS = ["نوع الحجز", "عدد الأفراد", "الرحلة والحافلة", "المقاعد", "الفندق", "البيانات", "التأكيد"] as const;
 
 function BookingPage() {
   const navigate = useNavigate();
@@ -233,7 +225,6 @@ function BookingPage() {
   }, [customer.same_whatsapp, customer.contact_phone]);
 
   // (Removed) Previously auto-selected first package when noHotel — hotel price is now 0 for "no hotel".
-
 
   // Auto-populate customer fields from signed-in user's profile
   useEffect(() => {
@@ -952,7 +943,6 @@ function StepPackage({
         })}
       </div>
 
-
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
           {openPkg && (
@@ -1079,11 +1069,7 @@ function StepTripBus({
                 active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
               }`}
             >
-              <button
-                type="button"
-                onClick={() => onSelectTrip(t.id)}
-                className="w-full text-right p-6"
-              >
+              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-6">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
@@ -1103,7 +1089,9 @@ function StepTripBus({
 
               {active && (
                 <div className="border-t border-border p-4 space-y-2 bg-muted/30 rounded-b-3xl">
-                  <p className="text-sm font-bold text-[color:var(--color-navy)] mb-1">الحافلات المتاحة</p>
+                  <p className="text-sm font-bold text-[color:var(--color-navy)] mb-1">
+                    اختر حافلتك من الحافلات المتاحة
+                  </p>
                   {tripBuses.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">لا توجد حافلات متاحة لهذه الرحلة</p>
                   ) : (
@@ -1145,9 +1133,7 @@ function StepTripBus({
                               <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
                                 {full ? "مكتملة" : `${available} متاح`}
                               </span>
-                              {busPrice > 0 && (
-                                <span className="text-muted-foreground">• {sar(busPrice)} للفرد</span>
-                              )}
+                              {busPrice > 0 && <span className="text-muted-foreground">• {sar(busPrice)} للفرد</span>}
                             </div>
                           </div>
                           {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
@@ -1164,7 +1150,6 @@ function StepTripBus({
     </div>
   );
 }
-
 
 function StepSeats({
   count,
@@ -1259,7 +1244,6 @@ function StepSeats({
     </div>
   );
 }
-
 
 type CustomerState = {
   customer_name: string;
