@@ -141,10 +141,7 @@ function BookingPage() {
     queryFn: async () => {
       // Buses are linked to trips via the trip_buses join table (with a legacy
       // buses.trip_id fallback for older data).
-      const { data: joins } = await supabase
-        .from("trip_buses")
-        .select("bus_id")
-        .eq("trip_id", tripId!);
+      const { data: joins } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId!);
       const joinIds = (joins ?? []).map((r) => r.bus_id).filter(Boolean) as string[];
 
       let query = supabase.from("buses").select("*").in("status", ["active"]);
@@ -166,7 +163,6 @@ function BookingPage() {
       })[];
     },
   });
-
 
   // Load reserved-seat counts for all candidate buses to pick the first with room.
   const { data: busReserved = {} } = useQuery({
@@ -341,7 +337,6 @@ function BookingPage() {
     [selectedPackage, roomType, pricingCount, pricing, busSurcharge],
   );
 
-
   const subtotal = pricePerPerson * passengerCount;
   const discount = useMemo(() => {
     if (!appliedCoupon) return 0;
@@ -492,7 +487,9 @@ function BookingPage() {
         if (error) throw error;
       } else {
         // Attach created_by so authenticated users can see the booking in "My Bookings".
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         const insertPayload = { ...payload, created_by: user?.id ?? null };
         // Do NOT chain .select() — guests have no SELECT policy on bookings,
         // which would surface as a false RLS-violation error on insert.
@@ -596,7 +593,6 @@ function BookingPage() {
                   }}
                   passengerCount={pricingCount}
                   roomType={roomType}
-
                 />
               )}
               {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
@@ -777,8 +773,8 @@ function StepHeader({ title, desc }: { title: string; desc?: string }) {
 
 function StepBookingType({ value, onChange }: { value: BookingType | null; onChange: (v: BookingType) => void }) {
   const options: { value: BookingType; label: string; desc: string; icon: typeof User }[] = [
-    { value: "individual", label: "أفراد", desc: "حجز بمقعد فردي في غرفة خماسية مشتركة", icon: User },
-    { value: "family", label: "عوائل", desc: "حجز عائلي مع اختيار نوع الغرفة", icon: Users },
+    { value: "individual", label: " أفراد(عزاب)", desc: "حجز بمقعد فردي في غرفة خماسية مشتركة", icon: User },
+    { value: "family", label: " عوائل أو غرفة خاصة", desc: "حجز عائلي أو حجز غرفة خاصة ", icon: Users },
   ];
   return (
     <div>
@@ -1344,7 +1340,11 @@ function StepCustomer({
         <Label className="font-semibold">صورة الهوية</Label>
         {existingIdImageUrl && !idFile && (
           <div className="mt-2 rounded-2xl border-2 border-border p-3 flex items-center gap-3 bg-muted/30">
-            <img src={existingIdImageUrl} alt="صورة الهوية من الملف الشخصي" className="h-16 w-24 object-cover rounded-lg border" />
+            <img
+              src={existingIdImageUrl}
+              alt="صورة الهوية من الملف الشخصي"
+              className="h-16 w-24 object-cover rounded-lg border"
+            />
             <div className="flex-1">
               <p className="text-sm font-semibold">تم استخدام صورة الهوية من ملفك الشخصي</p>
               <p className="text-xs text-muted-foreground">يمكنك رفع صورة أخرى لاستبدالها.</p>
