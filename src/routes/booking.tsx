@@ -1021,42 +1021,150 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
   );
 }
 
-function StepTrip({ trips, value, onChange }: { trips: Trip[]; value: string | null; onChange: (id: string) => void }) {
+function StepTripBus({
+  trips,
+  tripId,
+  onSelectTrip,
+  buses,
+  busReserved,
+  busId,
+  onSelectBus,
+  noBus,
+  onSelectNoBus,
+}: {
+  trips: Trip[];
+  tripId: string | null;
+  onSelectTrip: (id: string) => void;
+  buses: (Bus & { name?: string | null })[];
+  busReserved: Record<string, string[]>;
+  busId: string | null;
+  onSelectBus: (id: string) => void;
+  noBus: boolean;
+  onSelectNoBus: () => void;
+}) {
   return (
     <div>
-      <StepHeader title="اختر الرحلة" desc="حدد موعد الرحلة المناسب" />
+      <StepHeader title="اختر الرحلة والحافلة" desc="حدد موعد الرحلة، ثم اختر الحافلة المتاحة" />
+
+      {/* No-transport shortcut — jumps straight to the Hotel step */}
+      <button
+        type="button"
+        onClick={onSelectNoBus}
+        className={`w-full text-right rounded-3xl border-2 p-5 mb-5 bg-white transition-all flex items-center gap-4 ${
+          noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"
+        }`}
+      >
+        <div
+          className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${
+            noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"
+          }`}
+        >
+          <X className="h-6 w-6" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون مواصلات</h3>
+          <p className="text-sm text-muted-foreground">فندق فقط — الانتقال مباشرة إلى خطوة الفندق</p>
+        </div>
+        {noBus && <CheckCircle2 className="h-5 w-5 text-primary" />}
+      </button>
+
       <div className="grid md:grid-cols-2 gap-4">
         {trips.map((t) => {
-          const active = value === t.id;
+          const active = !noBus && tripId === t.id;
+          const tripBuses = active ? buses : [];
           return (
-            <button
+            <div
               key={t.id}
-              type="button"
-              onClick={() => onChange(t.id)}
-              className={`text-right rounded-3xl border-2 p-6 bg-white transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40"}`}
+              className={`rounded-3xl border-2 bg-white transition-all ${
+                active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+              }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
-                  <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
-                  <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    الذهاب: {t.departure_day} • العودة: {t.return_day}
+              <button
+                type="button"
+                onClick={() => onSelectTrip(t.id)}
+                className="w-full text-right p-6"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
+                    <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
+                    <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      الذهاب: {t.departure_day} • العودة: {t.return_day}
+                    </div>
                   </div>
+                  {active && (
+                    <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                      <Check className="h-5 w-5" />
+                    </div>
+                  )}
                 </div>
-                {active && (
-                  <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
-                    <Check className="h-5 w-5" />
-                  </div>
-                )}
-              </div>
-            </button>
+              </button>
+
+              {active && (
+                <div className="border-t border-border p-4 space-y-2 bg-muted/30 rounded-b-3xl">
+                  <p className="text-sm font-bold text-[color:var(--color-navy)] mb-1">الحافلات المتاحة</p>
+                  {tripBuses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">لا توجد حافلات متاحة لهذه الرحلة</p>
+                  ) : (
+                    tripBuses.map((b) => {
+                      const cap = b.capacity ?? 49;
+                      const blocked = (b.blocked_seats ?? ["A2"]).length;
+                      const used = (busReserved[b.id] ?? []).length;
+                      const available = Math.max(0, cap - blocked - used);
+                      const full = available <= 0;
+                      const selected = busId === b.id;
+                      const busPrice = Number(b.price_addition ?? 0);
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          disabled={full}
+                          onClick={() => onSelectBus(b.id)}
+                          className={`w-full text-right rounded-2xl border-2 p-3 flex items-center gap-3 transition-all bg-white ${
+                            selected
+                              ? "border-primary shadow-[var(--shadow-red)]"
+                              : "border-border hover:border-primary/40"
+                          } ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                            {b.image_url ? (
+                              <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-2xl">🚌</div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-sm text-[color:var(--color-navy)] truncate">
+                              {b.name || `الحافلة رقم ${b.bus_number}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {b.bus_type ? `${b.bus_type} • ` : ""}السعة: {cap}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1 text-xs">
+                              <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
+                                {full ? "مكتملة" : `${available} متاح`}
+                              </span>
+                              {busPrice > 0 && (
+                                <span className="text-muted-foreground">• {sar(busPrice)} للفرد</span>
+                              )}
+                            </div>
+                          </div>
+                          {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
     </div>
   );
 }
+
 
 function StepSeats({
   count,
