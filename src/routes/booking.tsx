@@ -576,6 +576,32 @@ function BookingPage() {
             >
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
               {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
+              {stepName === "الرحلة والحافلة" && (
+                <StepTripBus
+                  trips={trips}
+                  tripId={tripId}
+                  onSelectTrip={(id) => {
+                    setNoBus(false);
+                    setTripId(id);
+                    setBusId(null);
+                    setSeats([]);
+                  }}
+                  buses={buses}
+                  busReserved={busReserved}
+                  busId={busId}
+                  onSelectBus={(id) => {
+                    setNoBus(false);
+                    setBusId(id);
+                  }}
+                  noBus={noBus}
+                  onSelectNoBus={() => {
+                    setNoBus(true);
+                    setBusId(null);
+                    setTripId(null);
+                    setSeats([]);
+                  }}
+                />
+              )}
               {stepName === "الفندق" && (
                 <StepPackage
                   packages={packages}
@@ -592,24 +618,6 @@ function BookingPage() {
                   }}
                   passengerCount={pricingCount}
                   roomType={roomType}
-                />
-              )}
-              {stepName === "الرحلة" && <StepTrip trips={trips} value={tripId} onChange={setTripId} />}
-              {stepName === "الحافلة" && (
-                <StepBus
-                  buses={buses}
-                  busReserved={busReserved}
-                  value={busId}
-                  noBus={noBus}
-                  onChange={(id) => {
-                    setNoBus(false);
-                    setBusId(id);
-                  }}
-                  onSelectNoBus={() => {
-                    setNoBus(true);
-                    setBusId(null);
-                    setSeats([]);
-                  }}
                 />
               )}
               {stepName === "المقاعد" && (
