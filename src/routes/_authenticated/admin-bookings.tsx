@@ -20,30 +20,23 @@ interface AdminBooking {
   booking_code: string;
   status: string;
   created_at: string;
-
   customer_name: string | null;
   id_number: string | null;
   contact_phone: string | null;
   whatsapp_phone: string | null;
-
   passenger_count: number;
   seat_numbers: string[] | null;
-
   total_price: number;
   price_per_person: number;
   discount_amount: number;
   coupon_code: string | null;
-
   nationality: string | null;
   booking_source: string | null;
-
   trip_id: string | null;
   bus_id: string | null;
   package_id: string | null;
-
   no_hotel: boolean;
   no_bus: boolean;
-
   deleted_at: string | null;
   rep_name: string | null;
 
@@ -77,10 +70,9 @@ function AdminBookings() {
 
   const [ok, setOk] = useState<boolean | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("all");
-
   const [q, setQ] = useState("");
   const [details, setDetails] = useState<AdminBooking | null>(null);
-  const [busFilter, setBusFilter] = useState<string>("");
+  const [busFilter, setBusFilter] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -107,14 +99,42 @@ function AdminBookings() {
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["admin-bookings"],
     enabled: ok === true,
-
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,status,created_at,customer_name,id_number,contact_phone,whatsapp_phone,passenger_count,seat_numbers,total_price,price_per_person,discount_amount,coupon_code,nationality,booking_source,trip_id,bus_id,package_id,no_hotel,no_bus,deleted_at,rep_name,trips(name,departure_day),buses(name,bus_number),packages(name)",
+          `
+          id,
+          booking_code,
+          status,
+          created_at,
+          customer_name,
+          id_number,
+          contact_phone,
+          whatsapp_phone,
+          passenger_count,
+          seat_numbers,
+          total_price,
+          price_per_person,
+          discount_amount,
+          coupon_code,
+          nationality,
+          booking_source,
+          trip_id,
+          bus_id,
+          package_id,
+          no_hotel,
+          no_bus,
+          deleted_at,
+          rep_name,
+          trips(name,departure_day),
+          buses(name,bus_number),
+          packages(name)
+        `,
         )
-        .order("created_at", { ascending: false })
+        .order("created_at", {
+          ascending: false,
+        })
         .limit(500);
 
       if (error) throw error;
@@ -126,9 +146,10 @@ function AdminBookings() {
   const { data: buses = [] } = useQuery({
     queryKey: ["admin-buses-list"],
     enabled: ok === true,
-
     queryFn: async () => {
-      const { data } = await supabase.from("buses").select("id,name,bus_number").order("bus_number");
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number").order("bus_number");
+
+      if (error) throw error;
 
       return (data ?? []) as Array<{
         id: string;
@@ -141,9 +162,15 @@ function AdminBookings() {
   const filtered = useMemo(() => {
     let list = bookings;
 
-    // المحذوفة تظهر فقط في تبويب المحذوف
+    /*
+     * تبويب المحذوف:
+     * يعرض الحجوزات التي تحتوي على deleted_at
+     *
+     * باقي التبويبات:
+     * تستبعد الحجوزات المحذوفة
+     */
     if (tab === "deleted") {
-      list = list.filter((b) => !!b.deleted_at);
+      list = list.filter((b) => b.deleted_at);
     } else {
       list = list.filter((b) => !b.deleted_at);
     }
@@ -196,12 +223,6 @@ function AdminBookings() {
     });
   }
 
-  /*
-   * الحذف الناعم:
-   * - نضع deleted_at
-   * - نغير status إلى cancelled
-   * - بذلك لا يتم احتساب المقاعد في صفحة الحافلات
-   */
   async function softDelete(b: AdminBooking) {
     if (!confirm(`حذف الحجز ${b.booking_code}؟`)) {
       return;
@@ -211,7 +232,6 @@ function AdminBookings() {
       .from("bookings")
       .update({
         deleted_at: new Date().toISOString(),
-        status: "cancelled",
       })
       .eq("id", b.id);
 
@@ -220,7 +240,7 @@ function AdminBookings() {
       return;
     }
 
-    toast.success("تم حذف الحجز وتحرير المقاعد");
+    toast.success("تم الحذف");
 
     qc.invalidateQueries({
       queryKey: ["admin-bookings"],
@@ -231,18 +251,11 @@ function AdminBookings() {
     });
   }
 
-  /*
-   * استرجاع الحجز:
-   * - حذف علامة deleted_at
-   * - إعادته إلى pending
-   * - المقاعد تعود للحسابات النشطة
-   */
   async function restore(b: AdminBooking) {
     const { error } = await supabase
       .from("bookings")
       .update({
         deleted_at: null,
-        status: "pending",
       })
       .eq("id", b.id);
 
@@ -251,7 +264,7 @@ function AdminBookings() {
       return;
     }
 
-    toast.success("تم استرجاع الحجز");
+    toast.success("تم الاسترجاع");
 
     qc.invalidateQueries({
       queryKey: ["admin-bookings"],
@@ -264,15 +277,26 @@ function AdminBookings() {
 
   function editBooking(code: string) {
     localStorage.setItem("edit_booking_code", code);
-    navigate({ to: "/booking" });
+
+    navigate({
+      to: "/booking",
+    });
   }
 
+  /*
+   * حساب إشغال الحافلة:
+   *
+   * يتم احتساب المقاعد فقط من:
+   * - الحجوزات غير المحذوفة
+   * - الحجوزات غير الملغاة
+   * - الحجوزات المرتبطة بالحافلة المختارة
+   */
   const busOccupancy = useMemo(() => {
     if (tab !== "by-bus" || !busFilter) {
       return null;
     }
 
-    const rows = bookings.filter((b) => !b.deleted_at && b.bus_id === busFilter && b.status !== "cancelled");
+    const rows = bookings.filter((b) => !b.deleted_at && b.status !== "cancelled" && b.bus_id === busFilter);
 
     const seats = rows.flatMap((b) => b.seat_numbers ?? []);
 
