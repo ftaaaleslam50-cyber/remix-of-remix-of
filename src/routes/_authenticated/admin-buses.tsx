@@ -23,17 +23,13 @@ interface BusRow {
   bus_number: number;
   capacity: number;
   active: boolean;
-
   name: string | null;
   plate: string | null;
   model: string | null;
-
   status: "active" | "maintenance" | "stopped";
-
   blocked_seats: string[] | null;
   layout: "A" | "B" | null;
   layout_id: string | null;
-
   image_url: string | null;
   bus_type: string | null;
   details: string | null;
@@ -63,12 +59,8 @@ function AdminBuses() {
   const qc = useQueryClient();
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-
   const [transferFrom, setTransferFrom] = useState<BusRow | null>(null);
 
-  /*
-   * التحقق من صلاحية المسؤول
-   */
   useEffect(() => {
     (async () => {
       const {
@@ -91,83 +83,61 @@ function AdminBuses() {
     })();
   }, [navigate]);
 
-  /*
-   * جلب الحافلات
-   */
   const { data: buses = [] } = useQuery({
     queryKey: ["admin-buses-fleet"],
     enabled: isAdmin === true,
-
     queryFn: async () => {
-      const { data } = await supabase.from("buses").select("*").order("bus_number");
+      const { data, error } = await supabase.from("buses").select("*").order("bus_number");
+
+      if (error) throw error;
 
       return (data as unknown as BusRow[]) ?? [];
     },
   });
 
-  /*
-   * جلب تخطيطات الحافلات
-   */
   const { data: layouts = [] } = useQuery({
     queryKey: ["bus-layouts"],
     enabled: isAdmin === true,
-
     queryFn: async () => {
-      const { data } = await supabase.from("bus_layouts").select("id,name,seat_count").order("name");
+      const { data, error } = await supabase.from("bus_layouts").select("id,name,seat_count").order("name");
+
+      if (error) throw error;
 
       return (data as unknown as LayoutRow[]) ?? [];
     },
   });
 
   /*
-   * حساب المقاعد المحجوزة لكل حافلة
+   * حساب المقاعد المشغولة فعليًا:
    *
-   * يتم احتساب الحجوزات فقط إذا:
+   * يتم استبعاد:
+   * 1. الحجوزات الملغاة status = cancelled
+   * 2. الحجوزات المحذوفة deleted_at IS NOT NULL
    *
-   * 1. deleted_at = NULL
-   * 2. status ليست cancelled
-   *
-   * لذلك الحجز المحذوف أو الملغى
-   * لا يستمر في احتساب المقاعد.
+   * لذلك عند حذف جميع الحجوزات من صفحة الحجوزات
+   * يجب أن يعود عدد المقاعد المشغولة إلى 0.
    */
   const { data: bookingCounts = {} } = useQuery({
     queryKey: ["admin-buses-booking-counts"],
-
     enabled: isAdmin === true,
-
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("bus_id, seat_numbers, status, deleted_at")
-        .is("deleted_at", null)
-        .neq("status", "cancelled");
+        .select("bus_id,seat_numbers,status,deleted_at")
+        .neq("status", "cancelled")
+        .is("deleted_at", null);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       const map: Record<string, number> = {};
 
       for (const b of (data ?? []) as {
         bus_id: string | null;
         seat_numbers: string[] | null;
-        status: string | null;
+        status: string;
         deleted_at: string | null;
       }[]) {
         if (!b.bus_id) continue;
-
-        /*
-         * أمان إضافي:
-         * لا نحسب الحجوزات المحذوفة
-         * حتى لو وصلت نتيجة غير متوقعة.
-         */
-        if (b.deleted_at !== null) {
-          continue;
-        }
-
-        if (b.status === "cancelled") {
-          continue;
-        }
 
         map[b.bus_id] = (map[b.bus_id] ?? 0) + (b.seat_numbers?.length ?? 0);
       }
@@ -176,9 +146,6 @@ function AdminBuses() {
     },
   });
 
-  /*
-   * إضافة حافلة
-   */
   async function addBus() {
     const next = buses.reduce((m, b) => Math.max(m, b.bus_number), 0) + 1;
 
@@ -192,7 +159,8 @@ function AdminBuses() {
     } as never);
 
     if (error) {
-      return toast.error(error.message);
+      toast.error(error.message);
+      return;
     }
 
     toast.success("تمت الإضافة");
@@ -202,37 +170,29 @@ function AdminBuses() {
     });
   }
 
-  /*
-   * نسخ حافلة
-   */
   async function duplicateBus(b: BusRow) {
     const next = buses.reduce((m, x) => Math.max(m, x.bus_number), 0) + 1;
 
     const { error } = await supabase.from("buses").insert({
       bus_number: next,
-
       name: b.name ? `${b.name} (نسخة)` : `حافلة ${next}`,
-
       plate: null,
       model: b.model,
       bus_type: b.bus_type,
       details: b.details,
-
       capacity: b.capacity,
       layout: b.layout,
       layout_id: b.layout_id,
-
       image_url: b.image_url,
       price_addition: b.price_addition,
-
       status: "active",
       active: true,
-
       trip_id: b.trip_id,
     } as never);
 
     if (error) {
-      return toast.error(error.message);
+      toast.error(error.message);
+      return;
     }
 
     toast.success("تم النسخ");
@@ -242,34 +202,23 @@ function AdminBuses() {
     });
   }
 
-  /*
-   * حفظ تعديلات الحافلة
-   */
   async function save(b: BusRow) {
     const patch: Record<string, unknown> = {
       name: b.name,
       plate: b.plate,
       model: b.model,
-
       capacity: b.capacity,
-
       status: b.status,
       active: b.status === "active",
-
       layout: b.layout,
       layout_id: b.layout_id,
-
       image_url: b.image_url,
       bus_type: b.bus_type,
       details: b.details,
-
       price_addition: Number(b.price_addition) || 0,
     };
 
-    /*
-     * مزامنة سعة الحافلة
-     * مع التخطيط المختار
-     */
+    // مزامنة سعة الحافلة مع القالب المختار
     if (b.layout_id) {
       const lay = layouts.find((l) => l.id === b.layout_id);
 
@@ -284,7 +233,8 @@ function AdminBuses() {
       .eq("id", b.id);
 
     if (error) {
-      return toast.error(error.message);
+      toast.error(error.message);
+      return;
     }
 
     await trackAssetUsage(b.image_url, "bus", b.id);
@@ -300,16 +250,9 @@ function AdminBuses() {
     });
   }
 
-  /*
-   * حذف أو أرشفة الحافلة
-   */
   async function del(id: string) {
     const used = bookingCounts[id] ?? 0;
 
-    /*
-     * إذا كانت هناك حجوزات فعالة
-     * لا يتم حذف الحافلة نهائيًا
-     */
     if (used > 0) {
       if (
         !confirm(
@@ -328,7 +271,8 @@ function AdminBuses() {
         .eq("id", id);
 
       if (error) {
-        return toast.error(error.message);
+        toast.error(error.message);
+        return;
       }
 
       toast.success("تمت أرشفة الحافلة");
@@ -340,10 +284,6 @@ function AdminBuses() {
       return;
     }
 
-    /*
-     * إذا لم توجد حجوزات فعالة
-     * يسمح بالحذف النهائي
-     */
     if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) {
       return;
     }
@@ -351,7 +291,8 @@ function AdminBuses() {
     const { error } = await supabase.from("buses").delete().eq("id", id);
 
     if (error) {
-      return toast.error(error.message);
+      toast.error(error.message);
+      return;
     }
 
     await untrackAssetUsage("bus", id);
@@ -360,10 +301,6 @@ function AdminBuses() {
 
     qc.invalidateQueries({
       queryKey: ["admin-buses-fleet"],
-    });
-
-    qc.invalidateQueries({
-      queryKey: ["admin-buses-booking-counts"],
     });
   }
 
@@ -422,26 +359,16 @@ function AdminBuses() {
               <TableHeader>
                 <TableRow>
                   <TableHead>الاسم</TableHead>
-
                   <TableHead>اللوحة</TableHead>
-
                   <TableHead>الطراز</TableHead>
-
                   <TableHead>النوع</TableHead>
-
                   <TableHead>القالب</TableHead>
-
                   <TableHead>السعة</TableHead>
-
                   <TableHead>المحجوز</TableHead>
-
                   <TableHead>+سعر</TableHead>
-
                   <TableHead>صورة</TableHead>
-
                   <TableHead>الحالة</TableHead>
-
-                  <TableHead />
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -500,7 +427,6 @@ function BusEditRow({
   bus: BusRow;
   used: number;
   layouts: LayoutRow[];
-
   onSave: (b: BusRow) => void;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -707,8 +633,7 @@ function TransferDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [targetId, setTargetId] = useState<string>("");
-
+  const [targetId, setTargetId] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -716,9 +641,7 @@ function TransferDialog({
   }, [from?.id]);
 
   async function run() {
-    if (!from || !targetId) {
-      return;
-    }
+    if (!from || !targetId) return;
 
     setBusy(true);
 
@@ -732,9 +655,7 @@ function TransferDialog({
         .neq("status", "cancelled")
         .is("deleted_at", null);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       toast.success("تم نقل جميع الحجوزات");
 
@@ -754,7 +675,7 @@ function TransferDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">اختر الحافلة الهدف. سيتم نقل جميع الحجوزات النشطة.</p>
+          <p className="text-sm text-muted-foreground">اختر الحافلة الهدف. سيتم نقل جميع الحجوزات النشطة فقط.</p>
 
           <Select value={targetId} onValueChange={setTargetId}>
             <SelectTrigger>
