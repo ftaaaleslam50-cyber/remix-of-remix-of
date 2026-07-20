@@ -54,14 +54,13 @@ export const Route = createFileRoute("/booking")({
   component: BookingPage,
 });
 
-// Booking steps. "الحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
+// Booking steps. "الرحلة والحافلة" hosts the "No Bus" option; picking it drops "المقاعد".
 const BASE_STEPS = [
   "نوع الحجز",
   "عدد الأفراد",
-  "الفندق",
-  "الرحلة",
-  "الحافلة",
+  "الرحلة والحافلة",
   "المقاعد",
+  "الفندق",
   "البيانات",
   "التأكيد",
 ] as const;
