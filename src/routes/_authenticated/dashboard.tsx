@@ -446,10 +446,18 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
   useEffect(() => setLocal(pkg), [pkg]);
   return (
     <div className="border-2 border-border rounded-2xl p-4 grid md:grid-cols-6 gap-3">
-      <div><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
-      <div className="md:col-span-2"><Label className="text-xs">الوصف</Label><Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} /></div>
-      <div className="md:col-span-2"><Label className="text-xs">صورة (URL)</Label><Input value={local.image_url} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} /></div>
-      <div>
+      <div className="md:col-span-2 md:row-span-2">
+        <AssetField
+          label="صورة الفندق"
+          value={local.image_url}
+          onChange={async (url) => {
+            setLocal({ ...local, image_url: url ?? "" });
+            if (url) await trackAssetUsage(url, "hotel", local.id);
+          }}
+        />
+      </div>
+      <div className="md:col-span-2"><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
+      <div className="md:col-span-2">
         <Label className="text-xs">تصنيف النجوم (اختياري)</Label>
         <div className="flex gap-1 mt-2 items-center">
           <button type="button" onClick={() => setLocal({ ...local, stars: null })} className="text-[10px] text-muted-foreground underline">لا يوجد</button>
@@ -458,6 +466,7 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
           ))}
         </div>
       </div>
+      <div className="md:col-span-4"><Label className="text-xs">الوصف</Label><Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} /></div>
       <div className="flex items-center gap-2 md:col-span-6">
         <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّل</span></div>
         <div className="ms-auto flex gap-1">
@@ -465,7 +474,7 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
           <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
-      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الأسعار تُدار من تبويب <strong>مصفوفة الأسعار</strong> (لا سعر داخل الفندق).</p>
+      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الصور تُدار من مكتبة الوسائط المركزية. الأسعار من تبويب <strong>الأسعار</strong>.</p>
     </div>
   );
 }
