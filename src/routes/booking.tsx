@@ -177,22 +177,13 @@ function BookingPage() {
     },
   });
 
-  // User-selected bus (from Bus step). Fallback to first bus with room.
+  // User-selected bus (from Bus step). No auto-fallback: until the user picks a
+  // bus explicitly, there is no active bus and therefore no bus price/details.
   const activeBus = useMemo(() => {
     if (noBus) return null;
-    if (busId) {
-      const found = buses.find((b) => b.id === busId);
-      if (found) return found;
-    }
-    for (const b of buses) {
-      const cap = b.capacity ?? 49;
-      const blocked = (b.blocked_seats ?? ["A2"]).length;
-      const used = (busReserved[b.id] ?? []).length;
-      const free = cap - blocked - used;
-      if (free >= passengerCount) return b;
-    }
-    return buses[0] ?? null;
-  }, [buses, busReserved, passengerCount, busId, noBus]);
+    if (!busId) return null;
+    return buses.find((b) => b.id === busId) ?? null;
+  }, [buses, busId, noBus]);
 
   // Fetch the assigned bus_layouts row for the active bus (if any).
   const activeLayoutId = (activeBus as { layout_id?: string | null } | null)?.layout_id ?? null;
@@ -214,9 +205,17 @@ function BookingPage() {
     ? (activeBus.capacity ?? 49) - (activeBus.blocked_seats ?? ["A2"]).length - bookedSeats.length
     : 0;
 
+  // Room type follows booking type + passenger count automatically:
+  // - individual bookings always price against the shared 5-person room column.
+  // - family bookings use the column that matches the passenger count (1-5).
   useEffect(() => {
-    if (bookingType === "individual") setRoomType("5");
-  }, [bookingType]);
+    if (bookingType === "individual") {
+      setRoomType("5");
+    } else if (bookingType === "family") {
+      const r = String(Math.min(Math.max(passengerCount, 1), 5)) as RoomType;
+      setRoomType(r);
+    }
+  }, [bookingType, passengerCount]);
   useEffect(() => {
     if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
   }, [passengerCount]);
@@ -317,14 +316,12 @@ function BookingPage() {
   }, [STEPS.length, step]);
 
   // Pricing = passengers × (bus per-person + hotel per-person).
-  // Bus per-person = activeBus.price_addition (0 when noBus).
+  // Bus per-person = activeBus.price_addition (0 when noBus or no bus selected yet).
   // Hotel per-person = getPackagePrice(pkg, room, count, pricing) (0 when noHotel).
   const busPerPerson = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
-  // Individual bookings are priced as one member of a shared 5-person room.
-  const pricingCount = bookingType === "individual" ? 5 : passengerCount;
   const hotelPerPerson = useMemo(
-    () => (noHotel || !selectedPackage ? 0 : getPackagePrice(selectedPackage, roomType, pricingCount, pricing)),
-    [noHotel, selectedPackage, roomType, pricingCount, pricing],
+    () => (noHotel || !selectedPackage ? 0 : getPackagePrice(selectedPackage, roomType, passengerCount, pricing)),
+    [noHotel, selectedPackage, roomType, passengerCount, pricing],
   );
   const pricePerPerson = hotelPerPerson + busPerPerson;
 
@@ -607,7 +604,7 @@ function BookingPage() {
                     setNoHotel(true);
                     setPackageId(null);
                   }}
-                  passengerCount={pricingCount}
+                  passengerCount={passengerCount}
                   roomType={roomType}
                 />
               )}
