@@ -6,7 +6,7 @@
 
 /*
  * Zahrat Taybah — Premium Umrah Booking Platform
- * Brand: Navy #1F2B3D, Red #B22234, White, Soft Gray #F5F5F5
+ * Brand: Green #2E6B4F, Red #B22234, White, Soft Gray #F5F5F5
  * Typography: Cairo (primary), Tajawal (fallback)
  * Layout: RTL Arabic
  */
@@ -69,27 +69,27 @@
   --radius: 0.875rem;
 
   /* Brand */
-  --background: oklch(0.985 0.003 80);          /* warm off-white #FAFAF7 */
-  --foreground: oklch(0.22 0.03 256);           /* deep navy text */
+  --background: oklch(0.985 0.003 80); /* warm off-white #FAFAF7 */
+  --foreground: oklch(0.22 0.03 256); /* deep neutral text */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.03 256);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.03 256);
 
-  --navy: oklch(0.28 0.04 256);                 /* #1F2B3D */
+  --navy: oklch(0.4 0.09 152); /* brand green, matches new logo */
   --navy-foreground: oklch(0.98 0.005 80);
 
-  --primary: oklch(0.52 0.20 25);               /* #B22234 deep red */
+  --primary: oklch(0.52 0.2 25); /* #B22234 deep red — unchanged, matches logo */
   --primary-foreground: oklch(0.99 0 0);
   --primary-glow: oklch(0.62 0.22 25);
 
-  --secondary: oklch(0.28 0.04 256);            /* navy */
+  --secondary: oklch(0.4 0.09 152); /* green */
   --secondary-foreground: oklch(0.99 0 0);
 
-  --muted: oklch(0.965 0.005 80);               /* soft gray #F5F5F5 */
+  --muted: oklch(0.965 0.005 80); /* soft gray #F5F5F5 */
   --muted-foreground: oklch(0.48 0.02 256);
 
-  --accent: oklch(0.96 0.01 60);                /* warm parchment */
+  --accent: oklch(0.96 0.01 60); /* warm parchment */
   --accent-foreground: oklch(0.28 0.04 256);
 
   --destructive: oklch(0.55 0.22 25);
@@ -99,37 +99,37 @@
   --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.78 0.15 80);
 
-  --gold: oklch(0.78 0.13 80);                  /* subtle gold accent */
+  --gold: oklch(0.78 0.13 80); /* subtle gold accent */
 
   --border: oklch(0.91 0.01 80);
   --input: oklch(0.91 0.01 80);
-  --ring: oklch(0.52 0.20 25);
+  --ring: oklch(0.52 0.2 25);
 
-  --chart-1: oklch(0.52 0.20 25);
-  --chart-2: oklch(0.28 0.04 256);
+  --chart-1: oklch(0.52 0.2 25);
+  --chart-2: oklch(0.4 0.09 152);
   --chart-3: oklch(0.78 0.13 80);
   --chart-4: oklch(0.62 0.14 155);
-  --chart-5: oklch(0.55 0.10 220);
+  --chart-5: oklch(0.55 0.1 220);
 
-  --sidebar: oklch(0.28 0.04 256);
+  --sidebar: oklch(0.4 0.09 152);
   --sidebar-foreground: oklch(0.98 0.005 80);
-  --sidebar-primary: oklch(0.52 0.20 25);
+  --sidebar-primary: oklch(0.52 0.2 25);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.33 0.04 256);
+  --sidebar-accent: oklch(0.46 0.09 152);
   --sidebar-accent-foreground: oklch(0.99 0 0);
-  --sidebar-border: oklch(0.35 0.04 256);
-  --sidebar-ring: oklch(0.52 0.20 25);
+  --sidebar-border: oklch(0.48 0.09 152);
+  --sidebar-ring: oklch(0.52 0.2 25);
 
   /* Gradients & shadows */
-  --gradient-primary: linear-gradient(135deg, oklch(0.52 0.20 25), oklch(0.62 0.22 25));
-  --gradient-navy: linear-gradient(135deg, oklch(0.22 0.04 256), oklch(0.34 0.05 256));
-  --gradient-hero: linear-gradient(135deg, oklch(0.22 0.04 256) 0%, oklch(0.30 0.05 256) 60%, oklch(0.38 0.06 250) 100%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.52 0.2 25), oklch(0.62 0.22 25));
+  --gradient-navy: linear-gradient(135deg, oklch(0.32 0.08 152), oklch(0.46 0.1 152));
+  --gradient-hero: linear-gradient(135deg, oklch(0.32 0.08 152) 0%, oklch(0.4 0.09 152) 60%, oklch(0.48 0.1 148) 100%);
   --gradient-gold: linear-gradient(135deg, oklch(0.82 0.12 82), oklch(0.72 0.14 78));
 
   --shadow-soft: 0 4px 20px -8px oklch(0.22 0.04 256 / 0.12);
-  --shadow-elegant: 0 18px 50px -20px oklch(0.22 0.04 256 / 0.25);
-  --shadow-red: 0 14px 30px -10px oklch(0.52 0.20 25 / 0.45);
-  --shadow-glow: 0 0 0 4px oklch(0.52 0.20 25 / 0.15);
+  --shadow-elegant: 0 18px 50px -20px oklch(0.32 0.08 152 / 0.25);
+  --shadow-red: 0 14px 30px -10px oklch(0.52 0.2 25 / 0.45);
+  --shadow-glow: 0 0 0 4px oklch(0.52 0.2 25 / 0.15);
 }
 
 .dark {
@@ -141,12 +141,12 @@
   --popover-foreground: oklch(0.96 0.005 80);
   --primary: oklch(0.62 0.22 25);
   --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.70 0.22 25);
-  --secondary: oklch(0.30 0.04 256);
+  --primary-glow: oklch(0.7 0.22 25);
+  --secondary: oklch(0.3 0.04 256);
   --secondary-foreground: oklch(0.96 0.005 80);
   --muted: oklch(0.26 0.03 256);
   --muted-foreground: oklch(0.72 0.02 256);
-  --accent: oklch(0.30 0.04 256);
+  --accent: oklch(0.3 0.04 256);
   --accent-foreground: oklch(0.96 0.005 80);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
@@ -167,7 +167,10 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: -0.01em;
   }
@@ -184,11 +187,14 @@
   background-image: var(--gradient-primary);
   color: var(--color-primary-foreground);
   box-shadow: var(--shadow-red);
-  transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
 }
 @utility btn-primary-glow-hover {
   transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 22px 40px -14px oklch(0.52 0.20 25 / 0.55);
+  box-shadow: 0 22px 40px -14px oklch(0.52 0.2 25 / 0.55);
   filter: brightness(1.05);
 }
 
@@ -208,7 +214,14 @@
 
 /* Print styles for ticket page */
 @media print {
-  body { background: white !important; }
-  .no-print { display: none !important; }
-  .print-page { box-shadow: none !important; margin: 0 !important; }
+  body {
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
 }
