@@ -1130,9 +1130,7 @@ function StepTripBus({
                               <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
                                 {full ? "مكتملة" : `${available} متاح`}
                               </span>
-                              {busPrice > 0 && (
-                                <span className="text-red-600 font-bold text-base">• {sar(busPrice)} للفرد</span>
-                              )}
+                             {busPrice > 0 && <span className="text-red-600 font-bold text-lg">• {sar(busPrice)} للفرد</span>}</parameter>
                             </div>
                           </div>
                           {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
