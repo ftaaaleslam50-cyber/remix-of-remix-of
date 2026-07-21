@@ -35,7 +35,7 @@ CREATE TABLE public.app_settings (
   email TEXT NOT NULL DEFAULT 'zhrttybt888@gmail.com',
   national_number TEXT NOT NULL DEFAULT '7029663460',
   whatsapp TEXT NOT NULL DEFAULT '966573890050',
-  phone TEXT NOT NULL DEFAULT '966500000000',
+  phone TEXT NOT NULL DEFAULT '966573890050',
   tiktok_url TEXT DEFAULT '',
   instagram_url TEXT DEFAULT '',
   snapchat_url TEXT DEFAULT '',
