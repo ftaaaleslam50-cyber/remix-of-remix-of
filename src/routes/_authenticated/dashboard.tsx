@@ -1034,7 +1034,7 @@ interface SettingsRow {
   phone: string; instagram_url: string; snapchat_url: string; maps_url: string; logo_url: string;
   hero_title: string; hero_subtitle: string; hero_cta: string; terms_text: string;
 }
-function SettingsTab() {
+function SiteTab() {
   const qc = useQueryClient();
   const { data: settings } = useQuery({
     queryKey: ["admin-settings"],
@@ -1045,7 +1045,6 @@ function SettingsTab() {
   });
   const [local, setLocal] = useState<SettingsRow | null>(null);
   useEffect(() => { if (settings) setLocal(settings); }, [settings]);
-  if (!local) return null;
 
   async function save() {
     if (!local) return;
@@ -1057,20 +1056,43 @@ function SettingsTab() {
   }
 
   return (
-    <div className="surface-card p-6 space-y-4">
-      <h2 className="text-lg font-extrabold">إعدادات الموقع</h2>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div><Label>اسم المؤسسة</Label><Input value={local.company_name} onChange={(e) => setLocal({ ...local, company_name: e.target.value })} /></div>
-        <div><Label>البريد</Label><Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} /></div>
-        <div><Label>الرقم الموحد</Label><Input value={local.national_number} onChange={(e) => setLocal({ ...local, national_number: e.target.value })} /></div>
-        <div><Label>واتساب</Label><Input dir="ltr" value={local.whatsapp} onChange={(e) => setLocal({ ...local, whatsapp: e.target.value })} /></div>
-        <div><Label>الجوال</Label><Input dir="ltr" value={local.phone} onChange={(e) => setLocal({ ...local, phone: e.target.value })} /></div>
-        <div><Label>الشعار (URL)</Label><Input value={local.logo_url} onChange={(e) => setLocal({ ...local, logo_url: e.target.value })} /></div>
-        <div><Label>عنوان الواجهة</Label><Input value={local.hero_title} onChange={(e) => setLocal({ ...local, hero_title: e.target.value })} /></div>
-        <div><Label>عنوان فرعي</Label><Input value={local.hero_subtitle} onChange={(e) => setLocal({ ...local, hero_subtitle: e.target.value })} /></div>
-        <div className="md:col-span-2"><Label>الشروط والأحكام</Label><Textarea rows={4} value={local.terms_text ?? ""} onChange={(e) => setLocal({ ...local, terms_text: e.target.value })} /></div>
+    <div className="space-y-4">
+      {/* Homepage builder callout */}
+      <div className="surface-card p-6 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-l from-primary/5 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary"><Layout className="h-6 w-6" /></div>
+          <div>
+            <h3 className="font-extrabold">محرر أقسام الرئيسية</h3>
+            <p className="text-xs text-muted-foreground">أعد ترتيب وتحرير أقسام الصفحة الرئيسية.</p>
+          </div>
+        </div>
+        <Link to="/admin-homepage"><Button className="rounded-full"><Pencil className="h-4 w-4 ml-1" /> فتح المحرر</Button></Link>
       </div>
-      <Button onClick={save} className="btn-primary-glow rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ الإعدادات</Button>
+
+      <div className="surface-card p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-extrabold">إعدادات الموقع</h2>
+          <p className="text-xs text-muted-foreground">بيانات المؤسسة، الشعار، ونصوص الواجهة.</p>
+        </div>
+        {local && (
+          <>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div><Label>اسم المؤسسة</Label><Input value={local.company_name} onChange={(e) => setLocal({ ...local, company_name: e.target.value })} /></div>
+              <div><Label>البريد</Label><Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} /></div>
+              <div><Label>الرقم الموحد</Label><Input value={local.national_number} onChange={(e) => setLocal({ ...local, national_number: e.target.value })} /></div>
+              <div><Label>واتساب</Label><Input dir="ltr" value={local.whatsapp} onChange={(e) => setLocal({ ...local, whatsapp: e.target.value })} /></div>
+              <div><Label>الجوال</Label><Input dir="ltr" value={local.phone} onChange={(e) => setLocal({ ...local, phone: e.target.value })} /></div>
+              <div className="md:col-span-2">
+                <AssetField label="الشعار" value={local.logo_url} onChange={(url) => setLocal({ ...local, logo_url: url ?? "" })} />
+              </div>
+              <div><Label>عنوان الواجهة</Label><Input value={local.hero_title} onChange={(e) => setLocal({ ...local, hero_title: e.target.value })} /></div>
+              <div><Label>عنوان فرعي</Label><Input value={local.hero_subtitle} onChange={(e) => setLocal({ ...local, hero_subtitle: e.target.value })} /></div>
+              <div className="md:col-span-2"><Label>الشروط والأحكام</Label><Textarea rows={4} value={local.terms_text ?? ""} onChange={(e) => setLocal({ ...local, terms_text: e.target.value })} /></div>
+            </div>
+            <Button onClick={save} className="btn-primary-glow rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ الإعدادات</Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
