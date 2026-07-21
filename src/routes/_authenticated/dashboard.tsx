@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { CalendarCheck, DollarSign, Bus, LogOut, Users, Hotel as HotelIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Layout, Images, FileText, Filter, Share2 } from "lucide-react";
+import { CalendarCheck, DollarSign, Bus, LogOut, Users, Hotel as HotelIcon, Ticket, Sparkles, Download, Save, Trash2, Plus, Archive, RotateCcw, IdCard, MessageCircle, CalendarClock, Layout, Images, FileText, Share2, Pencil, Search } from "lucide-react";
+import { AssetField } from "@/components/admin/AssetField";
+import { trackAssetUsage } from "@/lib/asset-usage";
 import { NotificationBell } from "@/components/site/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -146,9 +148,7 @@ function Dashboard() {
             {isAdmin && <Link to="/admin-trips"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><CalendarClock className="h-4 w-4 ml-1" /> الرحلات</Button></Link>}
             {isAdmin && <Link to="/admin-gallery"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> المعرض</Button></Link>}
             {isAdmin && <Link to="/admin-packages"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> الباقات</Button></Link>}
-            {isAdmin && <Link to="/admin-homepage"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Layout className="h-4 w-4 ml-1" /> الرئيسية</Button></Link>}
             {isAdmin && <Link to="/admin-users"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Users className="h-4 w-4 ml-1" /> المستخدمون</Button></Link>}
-            {isAdmin && <Link to="/admin-bookings"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Ticket className="h-4 w-4 ml-1" /> الحجوزات</Button></Link>}
             {isAdmin && <Link to="/admin-assets"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><Images className="h-4 w-4 ml-1" /> مكتبة الوسائط</Button></Link>}
             <Link to="/" className="text-sm text-white/80 hover:text-white">الموقع</Link>
             <Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={signOut}>
@@ -181,78 +181,197 @@ function Dashboard() {
 
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
-            <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> الحجوزات</TabsTrigger>
-            <TabsTrigger value="by-bus" className="rounded-xl"><Filter className="h-4 w-4 ml-1" /> رحلة / حافلة / ركاب</TabsTrigger>
+            <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات</TabsTrigger>
             <TabsTrigger value="packages" className="rounded-xl"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</TabsTrigger>
             <TabsTrigger value="pricing" className="rounded-xl"><DollarSign className="h-4 w-4 ml-1" /> الأسعار</TabsTrigger>
             <TabsTrigger value="wheel" className="rounded-xl"><Sparkles className="h-4 w-4 ml-1" /> السحب</TabsTrigger>
             <TabsTrigger value="coupons" className="rounded-xl"><Ticket className="h-4 w-4 ml-1" /> الكوبونات</TabsTrigger>
             <TabsTrigger value="social" className="rounded-xl"><Share2 className="h-4 w-4 ml-1" /> التواصل</TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-xl">الإعدادات</TabsTrigger>
+            <TabsTrigger value="site" className="rounded-xl"><Layout className="h-4 w-4 ml-1" /> إعدادات الموقع</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="mt-4">
-            <div className="surface-card p-6">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <h2 className="text-lg font-extrabold">{showArchived ? "الحجوزات المؤرشفة" : "الحجوزات"}</h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" onClick={() => setShowArchived((v) => !v)} className="rounded-full">
-                    <Archive className="h-4 w-4 ml-1" /> {showArchived ? "الحجوزات النشطة" : "المؤرشفة"}
-                  </Button>
-                  <Button onClick={exportBookingsExcel} className="rounded-full"><Download className="h-4 w-4 ml-1" /> تصدير Excel</Button>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader><TableRow>
-                    <TableHead>رقم الحجز</TableHead><TableHead>الاسم</TableHead><TableHead>الجوال</TableHead>
-                    <TableHead>الأفراد</TableHead><TableHead>المقاعد</TableHead><TableHead>الإجمالي</TableHead>
-                    <TableHead>الحالة</TableHead><TableHead>التاريخ</TableHead><TableHead>إجراءات</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
-                    {bookings.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">لا توجد حجوزات.</TableCell></TableRow>}
-                    {bookings.map((b) => (
-                      <TableRow key={b.id} className={b.deleted_at ? "opacity-60" : ""}>
-                        <TableCell className="font-bold" dir="ltr">{b.booking_code}</TableCell>
-                        <TableCell>{b.customer_name}</TableCell>
-                        <TableCell dir="ltr">{b.contact_phone}</TableCell>
-                        <TableCell>{b.passenger_count}</TableCell>
-                        <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
-                        <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
-                        <TableCell><Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(b.created_at)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Link to="/ticket/$code" params={{ code: b.booking_code }} className="text-primary text-sm font-semibold">عرض</Link>
-                            {b.whatsapp_phone && (
-                              <a href={`https://wa.me/${b.whatsapp_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`مرحباً ${b.customer_name}، بخصوص حجزك ${b.booking_code}`)}`} target="_blank" rel="noopener noreferrer" title="واتساب">
-                                <Button size="sm" variant="outline" className="text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"><MessageCircle className="h-3 w-3" /></Button>
-                              </a>
-                            )}
-                            {b.id_image_url && <Button size="sm" variant="outline" title="تنزيل صورة الهوية" onClick={() => downloadIdImage(b)}><IdCard className="h-3 w-3" /></Button>}
-                            {!b.deleted_at && <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}><Archive className="h-3 w-3" /></Button>}
-                            {b.deleted_at && <Button size="sm" variant="outline" title="استرجاع" onClick={() => restoreBooking(b.id)}><RotateCcw className="h-3 w-3" /></Button>}
-                            {b.deleted_at && <Button size="sm" variant="outline" title="حذف نهائي" onClick={() => permanentDelete(b.id)}><Trash2 className="h-3 w-3" /></Button>}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+            <UnifiedBookingsTab
+              bookings={bookings}
+              showArchived={showArchived}
+              setShowArchived={setShowArchived}
+              exportBookingsExcel={exportBookingsExcel}
+              archiveBooking={archiveBooking}
+              restoreBooking={restoreBooking}
+              permanentDelete={permanentDelete}
+              downloadIdImage={downloadIdImage}
+            />
           </TabsContent>
 
-
-          <TabsContent value="by-bus" className="mt-4"><ByBusTab /></TabsContent>
           <TabsContent value="packages" className="mt-4"><PackagesTab /></TabsContent>
           <TabsContent value="pricing" className="mt-4"><PricingTab /></TabsContent>
           <TabsContent value="wheel" className="mt-4"><WheelTab /></TabsContent>
           <TabsContent value="coupons" className="mt-4"><CouponsTab /></TabsContent>
           <TabsContent value="social" className="mt-4"><SocialTab /></TabsContent>
-          <TabsContent value="settings" className="mt-4"><SettingsTab /></TabsContent>
+          <TabsContent value="site" className="mt-4"><SiteTab /></TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+
+
+// ================== UNIFIED BOOKINGS (merges: main list + trip/bus filter + editor entry) ==================
+interface UBTripOpt { id: string; name: string; }
+interface UBBusOpt { id: string; name: string | null; bus_number: number; capacity: number; trip_id: string | null; }
+
+function UnifiedBookingsTab(props: {
+  bookings: BookingRow[];
+  showArchived: boolean;
+  setShowArchived: (v: boolean | ((p: boolean) => boolean)) => void;
+  exportBookingsExcel: () => void;
+  archiveBooking: (id: string) => void;
+  restoreBooking: (id: string) => void;
+  permanentDelete: (id: string) => void;
+  downloadIdImage: (b: BookingRow) => void;
+}) {
+  const { bookings, showArchived, setShowArchived, exportBookingsExcel, archiveBooking, restoreBooking, permanentDelete, downloadIdImage } = props;
+  const [tripId, setTripId] = useState<string>("");
+  const [busId, setBusId] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+
+  const { data: trips = [] } = useQuery({
+    queryKey: ["ub-trips"],
+    queryFn: async () => (await supabase.from("trips").select("id,name").eq("active", true).order("display_order")).data as UBTripOpt[] ?? [],
+  });
+  const { data: buses = [] } = useQuery({
+    queryKey: ["ub-buses", tripId],
+    enabled: !!tripId,
+    queryFn: async () => (await supabase.from("buses").select("id,name,bus_number,capacity,trip_id").eq("trip_id", tripId).order("bus_number")).data as UBBusOpt[] ?? [],
+  });
+
+  // Cross-reference bookings against filters. Trip / bus data live on joined
+  // tables in the row shape, but bus/trip ids are not selected here, so we
+  // filter by names to keep the request compact.
+  const tripName = trips.find((t) => t.id === tripId)?.name ?? "";
+  const busNumber = buses.find((b) => b.id === busId)?.bus_number;
+
+  const filtered = bookings.filter((b) => {
+    if (status && b.status !== status) return false;
+    if (tripName && (b.trips?.name ?? "") !== tripName) return false;
+    if (busNumber !== undefined && (b.buses?.bus_number ?? -1) !== busNumber) return false;
+    if (search) {
+      const q = search.trim().toLowerCase();
+      const hay = `${b.booking_code} ${b.customer_name} ${b.contact_phone} ${b.id_number}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const bus = buses.find((b) => b.id === busId);
+  const occupied = filtered.reduce((s, x) => s + (x.seat_numbers?.length ?? 0), 0);
+  const capacity = bus?.capacity ?? 0;
+
+  return (
+    <div className="surface-card p-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-lg font-extrabold">
+          {showArchived ? "الحجوزات المؤرشفة" : "إدارة الحجوزات"}
+          <span className="text-sm font-normal text-muted-foreground ms-2">({filtered.length})</span>
+        </h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowArchived((v: boolean) => !v)} className="rounded-full">
+            <Archive className="h-4 w-4 ml-1" /> {showArchived ? "الحجوزات النشطة" : "المؤرشفة"}
+          </Button>
+          <Link to="/admin-bookings">
+            <Button variant="outline" className="rounded-full"><Pencil className="h-4 w-4 ml-1" /> محرر تفصيلي</Button>
+          </Link>
+          <Button onClick={exportBookingsExcel} className="rounded-full"><Download className="h-4 w-4 ml-1" /> Excel</Button>
+        </div>
+      </div>
+
+      {/* Professional filter bar */}
+      <div className="grid gap-3 md:grid-cols-4 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
+        <div>
+          <Label className="text-xs mb-1 block">الرحلة</Label>
+          <select value={tripId} onChange={(e) => { setTripId(e.target.value); setBusId(""); }} className="h-10 w-full rounded-md border px-3 text-sm bg-white">
+            <option value="">— كل الرحلات —</option>
+            {trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">الحافلة</Label>
+          <select value={busId} onChange={(e) => setBusId(e.target.value)} disabled={!tripId} className="h-10 w-full rounded-md border px-3 text-sm disabled:opacity-50 bg-white">
+            <option value="">{tripId ? "— كل الحافلات —" : "اختر رحلة أولاً"}</option>
+            {buses.map((b) => <option key={b.id} value={b.id}>{b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">الحالة</Label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 w-full rounded-md border px-3 text-sm bg-white">
+            <option value="">— كل الحالات —</option>
+            <option value="confirmed">مؤكد</option>
+            <option value="pending">قيد المراجعة</option>
+            <option value="cancelled">ملغي</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">بحث</Label>
+          <div className="relative">
+            <Search className="h-4 w-4 absolute top-3 right-3 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="رقم الحجز، الاسم، الجوال..." className="ps-9" />
+          </div>
+        </div>
+      </div>
+
+      {bus && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard icon={Bus} label="الحافلة" value={bus.name || `#${bus.bus_number}`} />
+          <StatCard icon={Users} label="المحجوز" value={`${occupied}/${capacity}`} />
+          <StatCard icon={CalendarCheck} label="المتاح" value={String(Math.max(0, capacity - occupied))} />
+          <StatCard icon={DollarSign} label="نسبة الإشغال" value={`${capacity ? Math.round((occupied / capacity) * 100) : 0}%`} />
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>رقم الحجز</TableHead><TableHead>الاسم</TableHead><TableHead>الجوال</TableHead>
+            <TableHead>الرحلة</TableHead><TableHead>الحافلة</TableHead>
+            <TableHead>الأفراد</TableHead><TableHead>المقاعد</TableHead><TableHead>الإجمالي</TableHead>
+            <TableHead>الحالة</TableHead><TableHead>التاريخ</TableHead><TableHead>إجراءات</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {filtered.length === 0 && <TableRow><TableCell colSpan={11} className="text-center py-10 text-muted-foreground">لا توجد حجوزات مطابقة.</TableCell></TableRow>}
+            {filtered.map((b) => (
+              <TableRow key={b.id} className={b.deleted_at ? "opacity-60" : ""}>
+                <TableCell className="font-bold" dir="ltr">{b.booking_code}</TableCell>
+                <TableCell>{b.customer_name}</TableCell>
+                <TableCell dir="ltr">{b.contact_phone}</TableCell>
+                <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
+                <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
+                <TableCell>{b.passenger_count}</TableCell>
+                <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
+                <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
+                <TableCell><Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge></TableCell>
+                <TableCell className="text-xs text-muted-foreground">{formatDate(b.created_at)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <Link to="/ticket/$code" params={{ code: b.booking_code }} title="عرض"><Button size="sm" variant="outline"><Ticket className="h-3 w-3" /></Button></Link>
+                    <Link to="/admin-bookings" title="تعديل"><Button size="sm" variant="outline"><Pencil className="h-3 w-3" /></Button></Link>
+                    {b.whatsapp_phone && (
+                      <a href={`https://wa.me/${b.whatsapp_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`مرحباً ${b.customer_name}، بخصوص حجزك ${b.booking_code}`)}`} target="_blank" rel="noopener noreferrer" title="واتساب">
+                        <Button size="sm" variant="outline" className="text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"><MessageCircle className="h-3 w-3" /></Button>
+                      </a>
+                    )}
+                    {b.id_image_url && <Button size="sm" variant="outline" title="تنزيل الهوية" onClick={() => downloadIdImage(b)}><IdCard className="h-3 w-3" /></Button>}
+                    {!b.deleted_at && <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}><Archive className="h-3 w-3" /></Button>}
+                    {b.deleted_at && <Button size="sm" variant="outline" title="استرجاع" onClick={() => restoreBooking(b.id)}><RotateCcw className="h-3 w-3" /></Button>}
+                    {b.deleted_at && <Button size="sm" variant="outline" title="حذف نهائي" onClick={() => permanentDelete(b.id)}><Trash2 className="h-3 w-3" /></Button>}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
@@ -327,10 +446,18 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
   useEffect(() => setLocal(pkg), [pkg]);
   return (
     <div className="border-2 border-border rounded-2xl p-4 grid md:grid-cols-6 gap-3">
-      <div><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
-      <div className="md:col-span-2"><Label className="text-xs">الوصف</Label><Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} /></div>
-      <div className="md:col-span-2"><Label className="text-xs">صورة (URL)</Label><Input value={local.image_url} onChange={(e) => setLocal({ ...local, image_url: e.target.value })} /></div>
-      <div>
+      <div className="md:col-span-2 md:row-span-2">
+        <AssetField
+          label="صورة الفندق"
+          value={local.image_url}
+          onChange={async (url) => {
+            setLocal({ ...local, image_url: url ?? "" });
+            if (url) await trackAssetUsage(url, "hotel", local.id);
+          }}
+        />
+      </div>
+      <div className="md:col-span-2"><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
+      <div className="md:col-span-2">
         <Label className="text-xs">تصنيف النجوم (اختياري)</Label>
         <div className="flex gap-1 mt-2 items-center">
           <button type="button" onClick={() => setLocal({ ...local, stars: null })} className="text-[10px] text-muted-foreground underline">لا يوجد</button>
@@ -339,6 +466,7 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
           ))}
         </div>
       </div>
+      <div className="md:col-span-4"><Label className="text-xs">الوصف</Label><Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} /></div>
       <div className="flex items-center gap-2 md:col-span-6">
         <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّل</span></div>
         <div className="ms-auto flex gap-1">
@@ -346,7 +474,7 @@ function PackageEditor({ pkg, onSave, onDelete }: { pkg: PackageRow; onSave: (p:
           <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
-      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الأسعار تُدار من تبويب <strong>مصفوفة الأسعار</strong> (لا سعر داخل الفندق).</p>
+      <p className="md:col-span-6 text-xs text-muted-foreground">💡 الصور تُدار من مكتبة الوسائط المركزية. الأسعار من تبويب <strong>الأسعار</strong>.</p>
     </div>
   );
 }
@@ -906,7 +1034,7 @@ interface SettingsRow {
   phone: string; instagram_url: string; snapchat_url: string; maps_url: string; logo_url: string;
   hero_title: string; hero_subtitle: string; hero_cta: string; terms_text: string;
 }
-function SettingsTab() {
+function SiteTab() {
   const qc = useQueryClient();
   const { data: settings } = useQuery({
     queryKey: ["admin-settings"],
@@ -917,7 +1045,6 @@ function SettingsTab() {
   });
   const [local, setLocal] = useState<SettingsRow | null>(null);
   useEffect(() => { if (settings) setLocal(settings); }, [settings]);
-  if (!local) return null;
 
   async function save() {
     if (!local) return;
@@ -929,20 +1056,43 @@ function SettingsTab() {
   }
 
   return (
-    <div className="surface-card p-6 space-y-4">
-      <h2 className="text-lg font-extrabold">إعدادات الموقع</h2>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div><Label>اسم المؤسسة</Label><Input value={local.company_name} onChange={(e) => setLocal({ ...local, company_name: e.target.value })} /></div>
-        <div><Label>البريد</Label><Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} /></div>
-        <div><Label>الرقم الموحد</Label><Input value={local.national_number} onChange={(e) => setLocal({ ...local, national_number: e.target.value })} /></div>
-        <div><Label>واتساب</Label><Input dir="ltr" value={local.whatsapp} onChange={(e) => setLocal({ ...local, whatsapp: e.target.value })} /></div>
-        <div><Label>الجوال</Label><Input dir="ltr" value={local.phone} onChange={(e) => setLocal({ ...local, phone: e.target.value })} /></div>
-        <div><Label>الشعار (URL)</Label><Input value={local.logo_url} onChange={(e) => setLocal({ ...local, logo_url: e.target.value })} /></div>
-        <div><Label>عنوان الواجهة</Label><Input value={local.hero_title} onChange={(e) => setLocal({ ...local, hero_title: e.target.value })} /></div>
-        <div><Label>عنوان فرعي</Label><Input value={local.hero_subtitle} onChange={(e) => setLocal({ ...local, hero_subtitle: e.target.value })} /></div>
-        <div className="md:col-span-2"><Label>الشروط والأحكام</Label><Textarea rows={4} value={local.terms_text ?? ""} onChange={(e) => setLocal({ ...local, terms_text: e.target.value })} /></div>
+    <div className="space-y-4">
+      {/* Homepage builder callout */}
+      <div className="surface-card p-6 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-l from-primary/5 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-primary/10 text-primary"><Layout className="h-6 w-6" /></div>
+          <div>
+            <h3 className="font-extrabold">محرر أقسام الرئيسية</h3>
+            <p className="text-xs text-muted-foreground">أعد ترتيب وتحرير أقسام الصفحة الرئيسية.</p>
+          </div>
+        </div>
+        <Link to="/admin-homepage"><Button className="rounded-full"><Pencil className="h-4 w-4 ml-1" /> فتح المحرر</Button></Link>
       </div>
-      <Button onClick={save} className="btn-primary-glow rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ الإعدادات</Button>
+
+      <div className="surface-card p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-extrabold">إعدادات الموقع</h2>
+          <p className="text-xs text-muted-foreground">بيانات المؤسسة، الشعار، ونصوص الواجهة.</p>
+        </div>
+        {local && (
+          <>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div><Label>اسم المؤسسة</Label><Input value={local.company_name} onChange={(e) => setLocal({ ...local, company_name: e.target.value })} /></div>
+              <div><Label>البريد</Label><Input value={local.email} onChange={(e) => setLocal({ ...local, email: e.target.value })} /></div>
+              <div><Label>الرقم الموحد</Label><Input value={local.national_number} onChange={(e) => setLocal({ ...local, national_number: e.target.value })} /></div>
+              <div><Label>واتساب</Label><Input dir="ltr" value={local.whatsapp} onChange={(e) => setLocal({ ...local, whatsapp: e.target.value })} /></div>
+              <div><Label>الجوال</Label><Input dir="ltr" value={local.phone} onChange={(e) => setLocal({ ...local, phone: e.target.value })} /></div>
+              <div className="md:col-span-2">
+                <AssetField label="الشعار" value={local.logo_url} onChange={(url) => setLocal({ ...local, logo_url: url ?? "" })} />
+              </div>
+              <div><Label>عنوان الواجهة</Label><Input value={local.hero_title} onChange={(e) => setLocal({ ...local, hero_title: e.target.value })} /></div>
+              <div><Label>عنوان فرعي</Label><Input value={local.hero_subtitle} onChange={(e) => setLocal({ ...local, hero_subtitle: e.target.value })} /></div>
+              <div className="md:col-span-2"><Label>الشروط والأحكام</Label><Textarea rows={4} value={local.terms_text ?? ""} onChange={(e) => setLocal({ ...local, terms_text: e.target.value })} /></div>
+            </div>
+            <Button onClick={save} className="btn-primary-glow rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ الإعدادات</Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
