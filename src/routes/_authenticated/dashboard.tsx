@@ -181,81 +181,40 @@ function Dashboard() {
 
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
-            <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> الحجوزات</TabsTrigger>
-            <TabsTrigger value="by-bus" className="rounded-xl"><Filter className="h-4 w-4 ml-1" /> رحلة / حافلة / ركاب</TabsTrigger>
+            <TabsTrigger value="bookings" className="rounded-xl"><CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات</TabsTrigger>
             <TabsTrigger value="packages" className="rounded-xl"><HotelIcon className="h-4 w-4 ml-1" /> الفنادق</TabsTrigger>
             <TabsTrigger value="pricing" className="rounded-xl"><DollarSign className="h-4 w-4 ml-1" /> الأسعار</TabsTrigger>
             <TabsTrigger value="wheel" className="rounded-xl"><Sparkles className="h-4 w-4 ml-1" /> السحب</TabsTrigger>
             <TabsTrigger value="coupons" className="rounded-xl"><Ticket className="h-4 w-4 ml-1" /> الكوبونات</TabsTrigger>
             <TabsTrigger value="social" className="rounded-xl"><Share2 className="h-4 w-4 ml-1" /> التواصل</TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-xl">الإعدادات</TabsTrigger>
+            <TabsTrigger value="site" className="rounded-xl"><Layout className="h-4 w-4 ml-1" /> إعدادات الموقع</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="mt-4">
-            <div className="surface-card p-6">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <h2 className="text-lg font-extrabold">{showArchived ? "الحجوزات المؤرشفة" : "الحجوزات"}</h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" onClick={() => setShowArchived((v) => !v)} className="rounded-full">
-                    <Archive className="h-4 w-4 ml-1" /> {showArchived ? "الحجوزات النشطة" : "المؤرشفة"}
-                  </Button>
-                  <Button onClick={exportBookingsExcel} className="rounded-full"><Download className="h-4 w-4 ml-1" /> تصدير Excel</Button>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader><TableRow>
-                    <TableHead>رقم الحجز</TableHead><TableHead>الاسم</TableHead><TableHead>الجوال</TableHead>
-                    <TableHead>الأفراد</TableHead><TableHead>المقاعد</TableHead><TableHead>الإجمالي</TableHead>
-                    <TableHead>الحالة</TableHead><TableHead>التاريخ</TableHead><TableHead>إجراءات</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
-                    {bookings.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">لا توجد حجوزات.</TableCell></TableRow>}
-                    {bookings.map((b) => (
-                      <TableRow key={b.id} className={b.deleted_at ? "opacity-60" : ""}>
-                        <TableCell className="font-bold" dir="ltr">{b.booking_code}</TableCell>
-                        <TableCell>{b.customer_name}</TableCell>
-                        <TableCell dir="ltr">{b.contact_phone}</TableCell>
-                        <TableCell>{b.passenger_count}</TableCell>
-                        <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
-                        <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
-                        <TableCell><Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(b.created_at)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Link to="/ticket/$code" params={{ code: b.booking_code }} className="text-primary text-sm font-semibold">عرض</Link>
-                            {b.whatsapp_phone && (
-                              <a href={`https://wa.me/${b.whatsapp_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`مرحباً ${b.customer_name}، بخصوص حجزك ${b.booking_code}`)}`} target="_blank" rel="noopener noreferrer" title="واتساب">
-                                <Button size="sm" variant="outline" className="text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"><MessageCircle className="h-3 w-3" /></Button>
-                              </a>
-                            )}
-                            {b.id_image_url && <Button size="sm" variant="outline" title="تنزيل صورة الهوية" onClick={() => downloadIdImage(b)}><IdCard className="h-3 w-3" /></Button>}
-                            {!b.deleted_at && <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}><Archive className="h-3 w-3" /></Button>}
-                            {b.deleted_at && <Button size="sm" variant="outline" title="استرجاع" onClick={() => restoreBooking(b.id)}><RotateCcw className="h-3 w-3" /></Button>}
-                            {b.deleted_at && <Button size="sm" variant="outline" title="حذف نهائي" onClick={() => permanentDelete(b.id)}><Trash2 className="h-3 w-3" /></Button>}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+            <UnifiedBookingsTab
+              bookings={bookings}
+              showArchived={showArchived}
+              setShowArchived={setShowArchived}
+              exportBookingsExcel={exportBookingsExcel}
+              archiveBooking={archiveBooking}
+              restoreBooking={restoreBooking}
+              permanentDelete={permanentDelete}
+              downloadIdImage={downloadIdImage}
+            />
           </TabsContent>
 
-
-          <TabsContent value="by-bus" className="mt-4"><ByBusTab /></TabsContent>
           <TabsContent value="packages" className="mt-4"><PackagesTab /></TabsContent>
           <TabsContent value="pricing" className="mt-4"><PricingTab /></TabsContent>
           <TabsContent value="wheel" className="mt-4"><WheelTab /></TabsContent>
           <TabsContent value="coupons" className="mt-4"><CouponsTab /></TabsContent>
           <TabsContent value="social" className="mt-4"><SocialTab /></TabsContent>
-          <TabsContent value="settings" className="mt-4"><SettingsTab /></TabsContent>
+          <TabsContent value="site" className="mt-4"><SiteTab /></TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
+
 
 function StatCard({ icon: Icon, label, value }: { icon: typeof CalendarCheck; label: string; value: string }) {
   return (
