@@ -1,4 +1,3 @@
-```tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -25,8 +24,7 @@ export const Route = createFileRoute("/contact")({
       { title: `تواصل معنا | ${BRAND.name}` },
       {
         name: "description",
-        content:
-          "تواصل مع مؤسسة زهرة طيبة للعمرة عبر الواتساب أو الهاتف أو البريد الإلكتروني.",
+        content: "تواصل مع مؤسسة زهرة طيبة للعمرة عبر الواتساب أو الهاتف أو البريد الإلكتروني.",
       },
       {
         property: "og:title",
@@ -45,13 +43,7 @@ function ContactPage() {
   const { data: s } = useQuery({
     queryKey: ["app_settings"],
     queryFn: async () =>
-      (
-        await supabase
-          .from("app_settings")
-          .select("*")
-          .eq("id", 1)
-          .maybeSingle()
-      ).data as AppSettings | null,
+      (await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle()).data as AppSettings | null,
   });
 
   const s2 = s as
@@ -63,57 +55,25 @@ function ContactPage() {
       })
     | null;
 
-  /*
-   * تنظيف رقم الهاتف:
-   * - إزالة المسافات والرموز
-   * - تحويل 05xxxxxxxx إلى 9665xxxxxxxx
-   * - تحويل 009665xxxxxxxx إلى 9665xxxxxxxx
-   * - تحويل +9665xxxxxxxx إلى 9665xxxxxxxx
-   */
-  function normalizeSaudiPhone(phone: string | null | undefined) {
-    if (!phone) return "";
+  // تنظيف رقم الهاتف للاتصال
+  const cleanPhone = (s?.phone ?? "").replace(/[^\d+]/g, "");
 
-    let value = phone.replace(/\D/g, "");
-
-    if (value.startsWith("00966")) {
-      value = value.slice(2);
-    }
-
-    if (value.startsWith("966")) {
-      return value;
-    }
-
-    if (value.startsWith("05")) {
-      return `966${value.slice(1)}`;
-    }
-
-    if (value.startsWith("5") && value.length === 9) {
-      return `966${value}`;
-    }
-
-    return value;
-  }
-
-  const whatsappNumber = normalizeSaudiPhone(s?.whatsapp);
-  const phoneNumber = normalizeSaudiPhone(s?.phone);
+  // تجهيز رقم الواتساب بصيغة wa.me
+  const whatsappNumber = (s?.whatsapp ?? "").replace(/\D/g, "").replace(/^00/, "");
 
   const cards = [
     {
       icon: MessageCircle,
       label: "واتساب",
       value: s?.whatsapp ?? "",
-      href: whatsappNumber
-        ? `https://wa.me/${whatsappNumber}`
-        : "",
+      href: whatsappNumber ? `https://wa.me/${whatsappNumber}` : "",
       color: "bg-[#25D366]",
     },
     {
       icon: Phone,
       label: "هاتف",
       value: s?.phone ?? "",
-      href: phoneNumber
-        ? `tel:+${phoneNumber}`
-        : "",
+      href: cleanPhone ? `tel:${cleanPhone}` : "",
       color: "bg-[color:var(--color-navy)]",
     },
     {
@@ -127,74 +87,67 @@ function ContactPage() {
       icon: Send,
       label: "تيليغرام",
       value: "Telegram",
-      href: s2?.telegram_url || "",
+      href: s2?.telegram_url || "#",
       color: "bg-[#0088cc]",
     },
     {
       icon: Facebook,
       label: "فيسبوك",
       value: "Facebook",
-      href: s2?.facebook_url || "",
+      href: s2?.facebook_url || "#",
       color: "bg-[#1877F2]",
     },
     {
       icon: Twitter,
       label: "X (تويتر)",
       value: "X",
-      href: s2?.twitter_url || "",
+      href: s2?.twitter_url || "#",
       color: "bg-black",
     },
     {
       icon: Youtube,
       label: "يوتيوب",
       value: "YouTube",
-      href: s2?.youtube_url || "",
+      href: s2?.youtube_url || "#",
       color: "bg-[#FF0000]",
     },
     {
       icon: Music2,
       label: "تيك توك",
       value: "TikTok",
-      href: s?.tiktok_url || "",
+      href: s?.tiktok_url || "#",
       color: "bg-black",
     },
     {
       icon: Instagram,
       label: "إنستغرام",
       value: "Instagram",
-      href: s?.instagram_url || "",
+      href: s?.instagram_url || "#",
       color: "bg-gradient-to-tr from-pink-500 to-orange-400",
     },
     {
       icon: Camera,
       label: "سناب شات",
       value: "Snapchat",
-      href: s?.snapchat_url || "",
+      href: s?.snapchat_url || "#",
       color: "bg-yellow-400 text-black",
     },
     {
       icon: MapPin,
       label: "خرائط جوجل",
       value: "Maps",
-      href: s?.maps_url || "",
+      href: s?.maps_url || "#",
       color: "bg-emerald-600",
     },
-  ].filter((c) => c.href);
+  ].filter((c) => c.href && c.href !== "#");
 
   return (
     <SiteLayout>
-      <section
-        className="relative"
-        style={{ background: "var(--gradient-navy)" }}
-      >
+      <section className="relative" style={{ background: "var(--gradient-navy)" }}>
         <div className="container-luxe py-16 text-white text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold">
-            تواصل معنا
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold">تواصل معنا</h1>
 
-          <p className="mt-3 text-white/75 max-w-2xl mx-auto">
-            يسعدنا الرد على جميع استفساراتكم وخدمتكم في أي وقت.
-          </p>
+          <p className="mt-3 text-white/75 max-w-2xl mx-auto">يسعدنا الرد على جميع استفساراتكم وخدمتكم في أي وقت.</p>
         </div>
       </section>
 
@@ -204,30 +157,17 @@ function ContactPage() {
             <a
               key={c.label}
               href={c.href}
-              target={
-                c.href.startsWith("http") ? "_blank" : undefined
-              }
-              rel={
-                c.href.startsWith("http")
-                  ? "noopener noreferrer"
-                  : undefined
-              }
-              className="surface-card p-6 hover:shadow-[var(--shadow-elegant)] hover:-translate-y-1 transition-all group cursor-pointer"
+              target={c.href.startsWith("http") ? "_blank" : undefined}
+              rel={c.href.startsWith("http") ? "noopener noreferrer" : undefined}
+              className="surface-card p-6 hover:shadow-[var(--shadow-elegant)] hover:-translate-y-1 transition-all group"
             >
-              <div
-                className={`h-14 w-14 rounded-2xl text-white flex items-center justify-center ${c.color}`}
-              >
+              <div className={`h-14 w-14 rounded-2xl text-white flex items-center justify-center ${c.color}`}>
                 <c.icon className="h-7 w-7" />
               </div>
 
-              <h3 className="mt-4 font-extrabold text-lg">
-                {c.label}
-              </h3>
+              <h3 className="mt-4 font-extrabold text-lg">{c.label}</h3>
 
-              <p
-                className="text-sm text-muted-foreground mt-1 break-all"
-                dir="ltr"
-              >
+              <p className="text-sm text-muted-foreground mt-1 break-all" dir="ltr">
                 {c.value}
               </p>
             </a>
@@ -235,23 +175,15 @@ function ContactPage() {
         </div>
 
         <div className="surface-card mt-10 p-8 text-center">
-          <h2 className="text-2xl font-extrabold text-[color:var(--color-navy)]">
-            {BRAND.name}
-          </h2>
+          <h2 className="text-2xl font-extrabold text-[color:var(--color-navy)]">{BRAND.name}</h2>
 
           <p className="mt-2 text-muted-foreground">
-            الرقم الوطني الموحد:{" "}
-            <span className="font-bold text-foreground">
-              {BRAND.nationalNumber}
-            </span>
+            الرقم الوطني الموحد: <span className="font-bold text-foreground">{BRAND.nationalNumber}</span>
           </p>
 
           <p className="mt-1 text-muted-foreground">
             البريد الإلكتروني:{" "}
-            <span
-              className="font-bold text-foreground"
-              dir="ltr"
-            >
+            <span className="font-bold text-foreground" dir="ltr">
               {BRAND.email}
             </span>
           </p>
@@ -260,4 +192,3 @@ function ContactPage() {
     </SiteLayout>
   );
 }
-```
