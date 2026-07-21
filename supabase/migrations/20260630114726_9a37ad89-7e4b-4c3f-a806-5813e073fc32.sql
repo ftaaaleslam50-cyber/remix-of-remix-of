@@ -34,7 +34,7 @@ CREATE TABLE public.app_settings (
   company_name TEXT NOT NULL DEFAULT 'مؤسسة زهرة طيبة للعمرة',
   email TEXT NOT NULL DEFAULT 'zhrttybt888@gmail.com',
   national_number TEXT NOT NULL DEFAULT '7029663460',
-  whatsapp TEXT NOT NULL DEFAULT '966500000000',
+  whatsapp TEXT NOT NULL DEFAULT '966573890050',
   phone TEXT NOT NULL DEFAULT '966500000000',
   tiktok_url TEXT DEFAULT '',
   instagram_url TEXT DEFAULT '',
