@@ -129,7 +129,7 @@ ALTER TABLE public.app_settings
   ADD COLUMN IF NOT EXISTS terms_text TEXT DEFAULT '';
 
 -- Update whatsapp default
-UPDATE public.app_settings SET whatsapp = '966573890050' WHERE id = 1 AND (whatsapp IS NULL OR whatsapp = '' OR whatsapp = '966500000000');
+UPDATE public.app_settings SET whatsapp = '966573890050' WHERE id = 1 AND (whatsapp IS NULL OR whatsapp = '' OR whatsapp = '966573890050');
 
 -- Seed packages
 INSERT INTO public.packages (slug, name, description, tier, base_price, display_order) VALUES
