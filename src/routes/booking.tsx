@@ -106,13 +106,23 @@ function BookingPage() {
     },
   });
 
-  const { data: pricing = [] } = useQuery({
+  const {
+    data: pricing = [],
+    isLoading: pricingLoading,
+    error: pricingError,
+  } = useQuery({
     queryKey: ["pricing_matrix"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("pricing_matrix" as never)
         .select("*")
         .eq("active", true);
+
+      if (error) {
+        console.error("[pricing_matrix]", error);
+        throw error;
+      }
+
       return (data as unknown as PricingCell[]) ?? [];
     },
   });
