@@ -1379,6 +1379,38 @@ function StepCustomer({
         </div>
       )}
 
+      {hasMultipleReturns && (
+        <div className="mt-6 max-w-3xl">
+          <Label className="font-semibold">موعد العودة الفعلي</Label>
+          <select
+            value={actualReturnDay || defaultReturnDay}
+            onChange={(e) => setActualReturnDay(e.target.value)}
+            className="mt-2 h-12 w-full rounded-xl border px-3 text-sm bg-white"
+          >
+            {returnOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            تحتوي هذه الرحلة على أكثر من موعد للعودة، اختر الموعد المناسب لك.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 max-w-3xl">
+        <Label className="font-semibold">ملاحظات (اختياري)</Label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="أي طلبات أو ملاحظات خاصة بالحجز..."
+          className="mt-2 w-full rounded-xl border p-3 text-sm bg-white resize-y min-h-[80px]"
+        />
+      </div>
+
+
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">صورة الهوية</Label>
         {existingIdImageUrl && !idFile && (
