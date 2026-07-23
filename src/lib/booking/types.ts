@@ -59,6 +59,7 @@ export interface Trip {
   name: string;
   departure_day: string;
   return_day: string;
+  return_options?: string[];
   capacity: number;
   active: boolean;
   display_order: number;

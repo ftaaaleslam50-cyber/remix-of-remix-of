@@ -33,6 +33,8 @@ interface Booking {
   coupon_code?: string | null;
   id_image_url?: string | null;
   created_at: string;
+  notes?: string | null;
+  actual_return_day?: string | null;
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
@@ -54,7 +56,7 @@ function TicketPage() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)",
+          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)",
         )
         .eq("booking_code", code)
         .maybeSingle();
@@ -192,8 +194,20 @@ function TicketPage() {
             {booking.buses?.name && <TicketRow label="اسم الباص" value={booking.buses.name} />}
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
+            {booking.trips?.departure_day && <TicketRow label="الذهاب" value={booking.trips.departure_day} />}
+            {booking.trips?.return_day && <TicketRow label="العودة" value={booking.trips.return_day} />}
+            {booking.actual_return_day && (
+              <TicketRow label="العودة الفعلية" value={booking.actual_return_day} />
+            )}
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
+
+          {booking.notes && (
+            <div className="px-8 py-4 border-t border-dashed border-border">
+              <p className="text-xs text-muted-foreground mb-1">ملاحظات</p>
+              <p className="text-sm whitespace-pre-wrap">{booking.notes}</p>
+            </div>
+          )}
 
           {idImageUrl && (
             <div className="px-8 py-5 border-t border-dashed border-border">

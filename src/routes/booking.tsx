@@ -93,6 +93,8 @@ function BookingPage() {
   const [busId, setBusId] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<"customer" | "representative">("customer");
   const [repName, setRepName] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+  const [actualReturnDay, setActualReturnDay] = useState<string>("");
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
@@ -473,6 +475,9 @@ function BookingPage() {
         coupon_code: appliedCoupon?.code ?? null,
         discount_amount: discount,
         status: "confirmed",
+        notes: notes.trim() || null,
+        actual_return_day:
+          (actualReturnDay || selectedTrip?.return_day || null) as string | null,
       };
 
       if (editingCode) {
@@ -654,6 +659,12 @@ function BookingPage() {
                   repName={repName}
                   setRepName={setRepName}
                   existingIdImageUrl={profileIdImageSignedUrl}
+                  notes={notes}
+                  setNotes={setNotes}
+                  returnOptions={selectedTrip?.return_options ?? []}
+                  defaultReturnDay={selectedTrip?.return_day ?? ""}
+                  actualReturnDay={actualReturnDay}
+                  setActualReturnDay={setActualReturnDay}
                 />
               )}
 
@@ -1271,6 +1282,12 @@ function StepCustomer({
   repName,
   setRepName,
   existingIdImageUrl,
+  notes,
+  setNotes,
+  returnOptions,
+  defaultReturnDay,
+  actualReturnDay,
+  setActualReturnDay,
 }: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
@@ -1280,7 +1297,14 @@ function StepCustomer({
   repName: string;
   setRepName: React.Dispatch<React.SetStateAction<string>>;
   existingIdImageUrl?: string | null;
+  notes: string;
+  setNotes: React.Dispatch<React.SetStateAction<string>>;
+  returnOptions: string[];
+  defaultReturnDay: string;
+  actualReturnDay: string;
+  setActualReturnDay: React.Dispatch<React.SetStateAction<string>>;
 }) {
+  const hasMultipleReturns = returnOptions && returnOptions.length > 1;
   return (
     <div>
       <StepHeader title="بيانات الحجز" desc="أدخل بيانات صاحب الحجز" />
@@ -1354,6 +1378,38 @@ function StepCustomer({
           <p className="text-xs text-muted-foreground mt-1">يظهر هذا الاسم في تقارير الإدارة كمصدر للحجز.</p>
         </div>
       )}
+
+      {hasMultipleReturns && (
+        <div className="mt-6 max-w-3xl">
+          <Label className="font-semibold">موعد العودة الفعلي</Label>
+          <select
+            value={actualReturnDay || defaultReturnDay}
+            onChange={(e) => setActualReturnDay(e.target.value)}
+            className="mt-2 h-12 w-full rounded-xl border px-3 text-sm bg-white"
+          >
+            {returnOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            تحتوي هذه الرحلة على أكثر من موعد للعودة، اختر الموعد المناسب لك.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 max-w-3xl">
+        <Label className="font-semibold">ملاحظات (اختياري)</Label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="أي طلبات أو ملاحظات خاصة بالحجز..."
+          className="mt-2 w-full rounded-xl border p-3 text-sm bg-white resize-y min-h-[80px]"
+        />
+      </div>
+
 
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">صورة الهوية</Label>

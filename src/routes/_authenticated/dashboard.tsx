@@ -67,9 +67,14 @@ interface BookingRow {
   discount_amount?: number;
   coupon_code?: string | null;
   deleted_at?: string | null;
+  notes?: string | null;
+  actual_return_day?: string | null;
+  nationality?: string | null;
+  booking_source?: string | null;
+  bus_id?: string | null;
   packages?: { name: string } | null;
-  trips?: { name: string } | null;
-  buses?: { bus_number: number } | null;
+  trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
+  buses?: { id: string; name: string | null; bus_number: number; expenses: number | null } | null;
 }
 
 function Dashboard() {
@@ -117,7 +122,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,packages(name),trips(name),buses(bus_number)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -436,16 +441,17 @@ function UnifiedBookingsTab(props: {
       ).data as UBBusOpt[]) ?? [],
   });
 
-  // Cross-reference bookings against filters. Trip / bus data live on joined
-  // tables in the row shape, but bus/trip ids are not selected here, so we
-  // filter by names to keep the request compact.
+  // Filter bookings. When a specific bus is picked we filter by bus_id (stable
+  // across trips). Otherwise fall back to trip name matching for the loose filter.
   const tripName = trips.find((t) => t.id === tripId)?.name ?? "";
-  const busNumber = buses.find((b) => b.id === busId)?.bus_number;
 
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
-    if (tripName && (b.trips?.name ?? "") !== tripName) return false;
-    if (busNumber !== undefined && (b.buses?.bus_number ?? -1) !== busNumber) return false;
+    if (busId) {
+      if (b.bus_id !== busId) return false;
+    } else if (tripName && (b.trips?.name ?? "") !== tripName) {
+      return false;
+    }
     if (search) {
       const q = search.trim().toLowerCase();
       const hay = `${b.booking_code} ${b.customer_name} ${b.contact_phone} ${b.id_number}`.toLowerCase();
@@ -457,6 +463,59 @@ function UnifiedBookingsTab(props: {
   const bus = buses.find((b) => b.id === busId);
   const occupied = filtered.reduce((s, x) => s + (x.seat_numbers?.length ?? 0), 0);
   const capacity = bus?.capacity ?? 0;
+
+  // Per-bus finance: revenue from confirmed bookings for THIS bus only.
+  const busConfirmed = busId ? filtered.filter((b) => b.status === "confirmed" && !b.deleted_at) : [];
+  const busRevenue = busConfirmed.reduce((s, x) => s + Number(x.total_price || 0), 0);
+  const busRow = busId
+    ? (bookings.find((b) => b.bus_id === busId)?.buses ?? null)
+    : null;
+  const currentExpenses = Number(busRow?.expenses ?? 0);
+  const [expensesInput, setExpensesInput] = useState<string>("");
+  const [savingExpenses, setSavingExpenses] = useState(false);
+  useEffect(() => {
+    setExpensesInput(String(currentExpenses || 0));
+  }, [busId, currentExpenses]);
+  const parsedExpenses = Number(expensesInput || 0) || 0;
+  const netProfit = busRevenue - parsedExpenses;
+  const qcInner = useQueryClient();
+
+  async function saveExpenses() {
+    if (!busId) return;
+    setSavingExpenses(true);
+    const { error } = await supabase
+      .from("buses")
+      .update({ expenses: parsedExpenses } as never)
+      .eq("id", busId);
+    setSavingExpenses(false);
+    if (error) return toast.error(error.message);
+    toast.success("تم حفظ المصاريف");
+    qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+  }
+
+  function exportBusExcel() {
+    if (!busId) return exportBookingsExcel();
+    const rows = filtered.map((b) => ({
+      "رقم الحجز": b.booking_code,
+      "المندوب / مصدر الحجز": b.booking_source || "Website",
+      الاسم: b.customer_name,
+      "رقم الجوال": b.contact_phone,
+      "رقم الهوية": b.id_number,
+      الجنسية: b.nationality ?? "-",
+      "نوع الغرفة": b.room_type,
+      "اسم الفندق": b.packages?.name ?? "-",
+      الذهاب: b.trips?.departure_day ?? "-",
+      العودة: b.trips?.return_day ?? "-",
+      "العودة الفعلية": b.actual_return_day || b.trips?.return_day || "-",
+      "إجمالي المبلغ": Number(b.total_price),
+      ملاحظات: b.notes ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    const busLabel = bus?.name || `bus-${bus?.bus_number ?? busId}`;
+    XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+    XLSX.writeFile(wb, `${busLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
 
   return (
     <div className="surface-card p-6 space-y-4">
@@ -474,8 +533,8 @@ function UnifiedBookingsTab(props: {
               <Pencil className="h-4 w-4 ml-1" /> محرر تفصيلي
             </Button>
           </Link>
-          <Button onClick={exportBookingsExcel} className="rounded-full">
-            <Download className="h-4 w-4 ml-1" /> Excel
+          <Button onClick={exportBusExcel} className="rounded-full">
+            <Download className="h-4 w-4 ml-1" /> {busId ? "Excel (الحافلة)" : "Excel"}
           </Button>
         </div>
       </div>
@@ -553,6 +612,43 @@ function UnifiedBookingsTab(props: {
             label="نسبة الإشغال"
             value={`${capacity ? Math.round((occupied / capacity) * 100) : 0}%`}
           />
+        </div>
+      )}
+
+      {busId && (
+        <div className="rounded-2xl border-2 border-[color:var(--color-gold)]/40 bg-gradient-to-br from-amber-50 to-white p-4 space-y-3">
+          <h3 className="font-extrabold text-base flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-[color:var(--color-gold)]" />
+            حسابات الحافلة: {bus?.name || `#${bus?.bus_number}`}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-xl bg-white p-3 border">
+              <p className="text-xs text-muted-foreground">إجمالي الإيراد (مؤكد)</p>
+              <p className="text-xl font-extrabold text-primary">{sar(busRevenue)}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{busConfirmed.length} حجز</p>
+            </div>
+            <div className="rounded-xl bg-white p-3 border">
+              <Label className="text-xs mb-1 block">مصاريف الحافلة</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={expensesInput}
+                  onChange={(e) => setExpensesInput(e.target.value)}
+                  className="h-9"
+                />
+                <Button size="sm" onClick={saveExpenses} disabled={savingExpenses} className="rounded-full">
+                  {savingExpenses ? "..." : "حفظ"}
+                </Button>
+              </div>
+            </div>
+            <div className="rounded-xl bg-white p-3 border">
+              <p className="text-xs text-muted-foreground">صافي الربح</p>
+              <p className={`text-xl font-extrabold ${netProfit >= 0 ? "text-success" : "text-destructive"}`}>
+                {sar(netProfit)}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
