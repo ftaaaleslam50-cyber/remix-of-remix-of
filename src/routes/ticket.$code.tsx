@@ -194,8 +194,20 @@ function TicketPage() {
             {booking.buses?.name && <TicketRow label="اسم الباص" value={booking.buses.name} />}
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
+            {booking.trips?.departure_day && <TicketRow label="الذهاب" value={booking.trips.departure_day} />}
+            {booking.trips?.return_day && <TicketRow label="العودة" value={booking.trips.return_day} />}
+            {booking.actual_return_day && (
+              <TicketRow label="العودة الفعلية" value={booking.actual_return_day} />
+            )}
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
+
+          {booking.notes && (
+            <div className="px-8 py-4 border-t border-dashed border-border">
+              <p className="text-xs text-muted-foreground mb-1">ملاحظات</p>
+              <p className="text-sm whitespace-pre-wrap">{booking.notes}</p>
+            </div>
+          )}
 
           {idImageUrl && (
             <div className="px-8 py-5 border-t border-dashed border-border">
