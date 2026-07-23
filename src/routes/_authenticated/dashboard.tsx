@@ -122,7 +122,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,packages(name),trips(name),buses(bus_number)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
