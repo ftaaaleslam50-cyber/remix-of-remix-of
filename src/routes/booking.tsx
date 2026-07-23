@@ -1282,6 +1282,12 @@ function StepCustomer({
   repName,
   setRepName,
   existingIdImageUrl,
+  notes,
+  setNotes,
+  returnOptions,
+  defaultReturnDay,
+  actualReturnDay,
+  setActualReturnDay,
 }: {
   customer: CustomerState;
   setCustomer: React.Dispatch<React.SetStateAction<CustomerState>>;
@@ -1291,7 +1297,14 @@ function StepCustomer({
   repName: string;
   setRepName: React.Dispatch<React.SetStateAction<string>>;
   existingIdImageUrl?: string | null;
+  notes: string;
+  setNotes: React.Dispatch<React.SetStateAction<string>>;
+  returnOptions: string[];
+  defaultReturnDay: string;
+  actualReturnDay: string;
+  setActualReturnDay: React.Dispatch<React.SetStateAction<string>>;
 }) {
+  const hasMultipleReturns = returnOptions && returnOptions.length > 1;
   return (
     <div>
       <StepHeader title="بيانات الحجز" desc="أدخل بيانات صاحب الحجز" />
