@@ -615,6 +615,43 @@ function UnifiedBookingsTab(props: {
         </div>
       )}
 
+      {busId && (
+        <div className="rounded-2xl border-2 border-[color:var(--color-gold)]/40 bg-gradient-to-br from-amber-50 to-white p-4 space-y-3">
+          <h3 className="font-extrabold text-base flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-[color:var(--color-gold)]" />
+            حسابات الحافلة: {bus?.name || `#${bus?.bus_number}`}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-xl bg-white p-3 border">
+              <p className="text-xs text-muted-foreground">إجمالي الإيراد (مؤكد)</p>
+              <p className="text-xl font-extrabold text-primary">{sar(busRevenue)}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{busConfirmed.length} حجز</p>
+            </div>
+            <div className="rounded-xl bg-white p-3 border">
+              <Label className="text-xs mb-1 block">مصاريف الحافلة</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={expensesInput}
+                  onChange={(e) => setExpensesInput(e.target.value)}
+                  className="h-9"
+                />
+                <Button size="sm" onClick={saveExpenses} disabled={savingExpenses} className="rounded-full">
+                  {savingExpenses ? "..." : "حفظ"}
+                </Button>
+              </div>
+            </div>
+            <div className="rounded-xl bg-white p-3 border">
+              <p className="text-xs text-muted-foreground">صافي الربح</p>
+              <p className={`text-xl font-extrabold ${netProfit >= 0 ? "text-success" : "text-destructive"}`}>
+                {sar(netProfit)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
