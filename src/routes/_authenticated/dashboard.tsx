@@ -533,8 +533,8 @@ function UnifiedBookingsTab(props: {
               <Pencil className="h-4 w-4 ml-1" /> محرر تفصيلي
             </Button>
           </Link>
-          <Button onClick={exportBookingsExcel} className="rounded-full">
-            <Download className="h-4 w-4 ml-1" /> Excel
+          <Button onClick={exportBusExcel} className="rounded-full">
+            <Download className="h-4 w-4 ml-1" /> {busId ? "Excel (الحافلة)" : "Excel"}
           </Button>
         </div>
       </div>
