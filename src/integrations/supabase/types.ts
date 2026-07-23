@@ -18,24 +18,42 @@ export type Database = {
         Row: {
           about_body: string | null
           about_title: string | null
+          booking_button: string | null
+          booking_cancel: string | null
           booking_steps: Json | null
+          booking_success: string | null
+          booking_terms: string | null
+          bus_full_message: string | null
+          commercial_register: string | null
+          company_address: string | null
+          company_email: string | null
+          company_logo: string | null
           company_name: string
+          company_phone: string | null
+          company_whatsapp: string | null
           cta_body: string | null
           cta_button_label: string | null
           cta_title: string | null
+          currency: string | null
           email: string
+          enable_lucky_draw: boolean | null
+          enable_notifications: boolean | null
+          enable_register: boolean | null
           facebook_url: string | null
           faq: Json | null
           features: Json | null
+          google_maps: string | null
           hero_cta: string
           hero_image_url: string | null
           hero_subtitle: string
           hero_title: string
           id: number
+          instagram: string | null
           instagram_url: string | null
           logo_url: string
           maps_url: string | null
           national_number: string
+          notification_sound: boolean | null
           phone: string
           price_family_1: number
           price_family_2: number
@@ -44,38 +62,67 @@ export type Database = {
           price_family_5: number
           price_individual: number
           price_transport_only: number
+          seats_full_message: string | null
+          service_fee: number | null
+          show_packages: boolean | null
+          snapchat: string | null
           snapchat_url: string | null
           telegram_url: string | null
           terms_text: string | null
           testimonials: Json | null
+          ticket_footer: string | null
+          ticket_notes: string | null
           ticket_template: Json | null
+          ticket_terms: string | null
+          tiktok: string | null
           tiktok_url: string | null
+          twitter: string | null
           twitter_url: string | null
           updated_at: string
+          vat_percent: number | null
           whatsapp: string
+          youtube: string | null
           youtube_url: string | null
         }
         Insert: {
           about_body?: string | null
           about_title?: string | null
+          booking_button?: string | null
+          booking_cancel?: string | null
           booking_steps?: Json | null
+          booking_success?: string | null
+          booking_terms?: string | null
+          bus_full_message?: string | null
+          commercial_register?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_logo?: string | null
           company_name?: string
+          company_phone?: string | null
+          company_whatsapp?: string | null
           cta_body?: string | null
           cta_button_label?: string | null
           cta_title?: string | null
+          currency?: string | null
           email?: string
+          enable_lucky_draw?: boolean | null
+          enable_notifications?: boolean | null
+          enable_register?: boolean | null
           facebook_url?: string | null
           faq?: Json | null
           features?: Json | null
+          google_maps?: string | null
           hero_cta?: string
           hero_image_url?: string | null
           hero_subtitle?: string
           hero_title?: string
           id?: number
+          instagram?: string | null
           instagram_url?: string | null
           logo_url?: string
           maps_url?: string | null
           national_number?: string
+          notification_sound?: boolean | null
           phone?: string
           price_family_1?: number
           price_family_2?: number
@@ -84,38 +131,67 @@ export type Database = {
           price_family_5?: number
           price_individual?: number
           price_transport_only?: number
+          seats_full_message?: string | null
+          service_fee?: number | null
+          show_packages?: boolean | null
+          snapchat?: string | null
           snapchat_url?: string | null
           telegram_url?: string | null
           terms_text?: string | null
           testimonials?: Json | null
+          ticket_footer?: string | null
+          ticket_notes?: string | null
           ticket_template?: Json | null
+          ticket_terms?: string | null
+          tiktok?: string | null
           tiktok_url?: string | null
+          twitter?: string | null
           twitter_url?: string | null
           updated_at?: string
+          vat_percent?: number | null
           whatsapp?: string
+          youtube?: string | null
           youtube_url?: string | null
         }
         Update: {
           about_body?: string | null
           about_title?: string | null
+          booking_button?: string | null
+          booking_cancel?: string | null
           booking_steps?: Json | null
+          booking_success?: string | null
+          booking_terms?: string | null
+          bus_full_message?: string | null
+          commercial_register?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_logo?: string | null
           company_name?: string
+          company_phone?: string | null
+          company_whatsapp?: string | null
           cta_body?: string | null
           cta_button_label?: string | null
           cta_title?: string | null
+          currency?: string | null
           email?: string
+          enable_lucky_draw?: boolean | null
+          enable_notifications?: boolean | null
+          enable_register?: boolean | null
           facebook_url?: string | null
           faq?: Json | null
           features?: Json | null
+          google_maps?: string | null
           hero_cta?: string
           hero_image_url?: string | null
           hero_subtitle?: string
           hero_title?: string
           id?: number
+          instagram?: string | null
           instagram_url?: string | null
           logo_url?: string
           maps_url?: string | null
           national_number?: string
+          notification_sound?: boolean | null
           phone?: string
           price_family_1?: number
           price_family_2?: number
@@ -124,15 +200,26 @@ export type Database = {
           price_family_5?: number
           price_individual?: number
           price_transport_only?: number
+          seats_full_message?: string | null
+          service_fee?: number | null
+          show_packages?: boolean | null
+          snapchat?: string | null
           snapchat_url?: string | null
           telegram_url?: string | null
           terms_text?: string | null
           testimonials?: Json | null
+          ticket_footer?: string | null
+          ticket_notes?: string | null
           ticket_template?: Json | null
+          ticket_terms?: string | null
+          tiktok?: string | null
           tiktok_url?: string | null
+          twitter?: string | null
           twitter_url?: string | null
           updated_at?: string
+          vat_percent?: number | null
           whatsapp?: string
+          youtube?: string | null
           youtube_url?: string | null
         }
         Relationships: []
