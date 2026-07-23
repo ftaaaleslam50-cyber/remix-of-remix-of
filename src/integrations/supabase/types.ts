@@ -345,6 +345,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          actual_return_day: string | null
           booking_code: string
           booking_source: string | null
           booking_type: string
@@ -364,6 +365,7 @@ export type Database = {
           nationality: string | null
           no_bus: boolean
           no_hotel: boolean
+          notes: string | null
           package_id: string | null
           passenger_count: number
           pdf_url: string | null
@@ -381,6 +383,7 @@ export type Database = {
           whatsapp_phone: string
         }
         Insert: {
+          actual_return_day?: string | null
           booking_code: string
           booking_source?: string | null
           booking_type: string
@@ -400,6 +403,7 @@ export type Database = {
           nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
+          notes?: string | null
           package_id?: string | null
           passenger_count: number
           pdf_url?: string | null
@@ -417,6 +421,7 @@ export type Database = {
           whatsapp_phone: string
         }
         Update: {
+          actual_return_day?: string | null
           booking_code?: string
           booking_source?: string | null
           booking_type?: string
@@ -436,6 +441,7 @@ export type Database = {
           nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
+          notes?: string | null
           package_id?: string | null
           passenger_count?: number
           pdf_url?: string | null
@@ -519,6 +525,7 @@ export type Database = {
           capacity: number
           created_at: string
           details: string | null
+          expenses: number
           id: string
           image_url: string | null
           is_active_booking: boolean
@@ -541,6 +548,7 @@ export type Database = {
           capacity?: number
           created_at?: string
           details?: string | null
+          expenses?: number
           id?: string
           image_url?: string | null
           is_active_booking?: boolean
@@ -563,6 +571,7 @@ export type Database = {
           capacity?: number
           created_at?: string
           details?: string | null
+          expenses?: number
           id?: string
           image_url?: string | null
           is_active_booking?: boolean
@@ -1072,6 +1081,7 @@ export type Database = {
           id: string
           name: string
           return_day: string
+          return_options: string[]
           return_period: string | null
           return_time: string | null
         }
@@ -1086,6 +1096,7 @@ export type Database = {
           id?: string
           name: string
           return_day: string
+          return_options?: string[]
           return_period?: string | null
           return_time?: string | null
         }
@@ -1100,6 +1111,7 @@ export type Database = {
           id?: string
           name?: string
           return_day?: string
+          return_options?: string[]
           return_period?: string | null
           return_time?: string | null
         }
