@@ -441,16 +441,17 @@ function UnifiedBookingsTab(props: {
       ).data as UBBusOpt[]) ?? [],
   });
 
-  // Cross-reference bookings against filters. Trip / bus data live on joined
-  // tables in the row shape, but bus/trip ids are not selected here, so we
-  // filter by names to keep the request compact.
+  // Filter bookings. When a specific bus is picked we filter by bus_id (stable
+  // across trips). Otherwise fall back to trip name matching for the loose filter.
   const tripName = trips.find((t) => t.id === tripId)?.name ?? "";
-  const busNumber = buses.find((b) => b.id === busId)?.bus_number;
 
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
-    if (tripName && (b.trips?.name ?? "") !== tripName) return false;
-    if (busNumber !== undefined && (b.buses?.bus_number ?? -1) !== busNumber) return false;
+    if (busId) {
+      if (b.bus_id !== busId) return false;
+    } else if (tripName && (b.trips?.name ?? "") !== tripName) {
+      return false;
+    }
     if (search) {
       const q = search.trim().toLowerCase();
       const hay = `${b.booking_code} ${b.customer_name} ${b.contact_phone} ${b.id_number}`.toLowerCase();
@@ -462,6 +463,59 @@ function UnifiedBookingsTab(props: {
   const bus = buses.find((b) => b.id === busId);
   const occupied = filtered.reduce((s, x) => s + (x.seat_numbers?.length ?? 0), 0);
   const capacity = bus?.capacity ?? 0;
+
+  // Per-bus finance: revenue from confirmed bookings for THIS bus only.
+  const busConfirmed = busId ? filtered.filter((b) => b.status === "confirmed" && !b.deleted_at) : [];
+  const busRevenue = busConfirmed.reduce((s, x) => s + Number(x.total_price || 0), 0);
+  const busRow = busId
+    ? (bookings.find((b) => b.bus_id === busId)?.buses ?? null)
+    : null;
+  const currentExpenses = Number(busRow?.expenses ?? 0);
+  const [expensesInput, setExpensesInput] = useState<string>("");
+  const [savingExpenses, setSavingExpenses] = useState(false);
+  useEffect(() => {
+    setExpensesInput(String(currentExpenses || 0));
+  }, [busId, currentExpenses]);
+  const parsedExpenses = Number(expensesInput || 0) || 0;
+  const netProfit = busRevenue - parsedExpenses;
+  const qcInner = useQueryClient();
+
+  async function saveExpenses() {
+    if (!busId) return;
+    setSavingExpenses(true);
+    const { error } = await supabase
+      .from("buses")
+      .update({ expenses: parsedExpenses } as never)
+      .eq("id", busId);
+    setSavingExpenses(false);
+    if (error) return toast.error(error.message);
+    toast.success("تم حفظ المصاريف");
+    qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+  }
+
+  function exportBusExcel() {
+    if (!busId) return exportBookingsExcel();
+    const rows = filtered.map((b) => ({
+      "رقم الحجز": b.booking_code,
+      "المندوب / مصدر الحجز": b.booking_source || "Website",
+      الاسم: b.customer_name,
+      "رقم الجوال": b.contact_phone,
+      "رقم الهوية": b.id_number,
+      الجنسية: b.nationality ?? "-",
+      "نوع الغرفة": b.room_type,
+      "اسم الفندق": b.packages?.name ?? "-",
+      الذهاب: b.trips?.departure_day ?? "-",
+      العودة: b.trips?.return_day ?? "-",
+      "العودة الفعلية": b.actual_return_day || b.trips?.return_day || "-",
+      "إجمالي المبلغ": Number(b.total_price),
+      ملاحظات: b.notes ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    const busLabel = bus?.name || `bus-${bus?.bus_number ?? busId}`;
+    XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+    XLSX.writeFile(wb, `${busLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
 
   return (
     <div className="surface-card p-6 space-y-4">
