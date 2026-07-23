@@ -475,6 +475,9 @@ function BookingPage() {
         coupon_code: appliedCoupon?.code ?? null,
         discount_amount: discount,
         status: "confirmed",
+        notes: notes.trim() || null,
+        actual_return_day:
+          (actualReturnDay || selectedTrip?.return_day || null) as string | null,
       };
 
       if (editingCode) {
