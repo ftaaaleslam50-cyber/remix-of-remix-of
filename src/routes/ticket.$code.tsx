@@ -33,6 +33,8 @@ interface Booking {
   coupon_code?: string | null;
   id_image_url?: string | null;
   created_at: string;
+  notes?: string | null;
+  actual_return_day?: string | null;
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
