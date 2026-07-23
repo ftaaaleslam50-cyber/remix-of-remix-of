@@ -93,6 +93,8 @@ function BookingPage() {
   const [busId, setBusId] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<"customer" | "representative">("customer");
   const [repName, setRepName] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+  const [actualReturnDay, setActualReturnDay] = useState<string>("");
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
