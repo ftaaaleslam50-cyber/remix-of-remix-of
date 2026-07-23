@@ -659,6 +659,12 @@ function BookingPage() {
                   repName={repName}
                   setRepName={setRepName}
                   existingIdImageUrl={profileIdImageSignedUrl}
+                  notes={notes}
+                  setNotes={setNotes}
+                  returnOptions={selectedTrip?.return_options ?? []}
+                  defaultReturnDay={selectedTrip?.return_day ?? ""}
+                  actualReturnDay={actualReturnDay}
+                  setActualReturnDay={setActualReturnDay}
                 />
               )}
 
