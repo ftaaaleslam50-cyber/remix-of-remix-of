@@ -45,7 +45,7 @@ function identifierToEmail(raw: string): string {
 function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [bootstrapped, setBootstrapped] = useState(false);
+  
 
   const [loginId, setLoginId] = useState("");
   const [loginPass, setLoginPass] = useState("");
@@ -58,11 +58,7 @@ function AuthPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) routeAfterAuth(navigate, data.session.user.id);
     });
-    if (!bootstrapped) {
-      fetch("/api/public/bootstrap-admin", { method: "POST" }).catch(() => {});
-      setBootstrapped(true);
-    }
-  }, [navigate, bootstrapped]);
+  }, [navigate]);
 
   async function signIn() {
     if (!loginId || !loginPass) return toast.error("أدخل رقم الجوال أو اسم المستخدم وكلمة المرور");
