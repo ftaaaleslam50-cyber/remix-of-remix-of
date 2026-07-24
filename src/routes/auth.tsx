@@ -57,6 +57,7 @@ function AuthPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) routeAfterAuth(navigate, data.session.user.id);
+    });
   }, [navigate]);
 
   async function signIn() {
