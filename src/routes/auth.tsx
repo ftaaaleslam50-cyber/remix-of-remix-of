@@ -45,7 +45,7 @@ function identifierToEmail(raw: string): string {
 function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [bootstrapped, setBootstrapped] = useState(false);
+  
 
   const [loginId, setLoginId] = useState("");
   const [loginPass, setLoginPass] = useState("");
