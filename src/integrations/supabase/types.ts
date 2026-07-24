@@ -377,7 +377,7 @@ export type Database = {
           seat_numbers: string[]
           status: string
           total_price: number
-          trip_id: string
+          trip_id: string | null
           updated_at: string
           updated_by: string | null
           whatsapp_phone: string
@@ -415,7 +415,7 @@ export type Database = {
           seat_numbers?: string[]
           status?: string
           total_price: number
-          trip_id: string
+          trip_id?: string | null
           updated_at?: string
           updated_by?: string | null
           whatsapp_phone: string
@@ -453,7 +453,7 @@ export type Database = {
           seat_numbers?: string[]
           status?: string
           total_price?: number
-          trip_id?: string
+          trip_id?: string | null
           updated_at?: string
           updated_by?: string | null
           whatsapp_phone?: string
