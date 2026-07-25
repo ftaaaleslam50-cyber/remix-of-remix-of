@@ -102,6 +102,7 @@ function AdminTrips() {
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
+      return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
       capacity: t.capacity, active: t.active, display_order: t.display_order,
     } as never).eq("id", t.id);
     if (error) return toast.error(error.message);
