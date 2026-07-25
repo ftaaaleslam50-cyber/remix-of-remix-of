@@ -24,6 +24,7 @@ interface TripRow {
   return_time: string | null;
   departure_period: string | null;
   return_period: string | null;
+  return_options: string[] | null;
   capacity: number;
   active: boolean;
   display_order: number;
