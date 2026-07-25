@@ -400,9 +400,13 @@ function BookingPage() {
         return !!bookingType;
       case "عدد الأفراد":
         return passengerCount > 0;
-      case "الرحلة والحافلة":
-        // "No bus" = valid on its own; otherwise both a trip and a bus must be picked.
-        return noBus || (!!tripId && !!busId);
+      case "الرحلة والحافلة": {
+        if (noBus) return true;
+        if (!tripId || !busId) return false;
+        const ro = selectedTrip?.return_options ?? [];
+        if (ro.length > 1 && !actualReturnDay) return false;
+        return true;
+      }
       case "المقاعد":
         return seats.length === passengerCount;
       case "الفندق":
