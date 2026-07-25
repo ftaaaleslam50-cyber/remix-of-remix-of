@@ -477,10 +477,15 @@ function UnifiedBookingsTab(props: {
   // Per-bus finance: revenue from confirmed bookings for THIS bus only.
   const busConfirmed = busId ? filtered.filter((b) => b.status === "confirmed" && !b.deleted_at) : [];
   const busRevenue = busConfirmed.reduce((s, x) => s + Number(x.total_price || 0), 0);
-  const busRow = busId
-    ? (bookings.find((b) => b.bus_id === busId)?.buses ?? null)
-    : null;
-  const currentExpenses = Number(busRow?.expenses ?? 0);
+  const { data: busExpensesRow } = useQuery({
+    queryKey: ["ub-bus-expenses", busId],
+    enabled: !!busId,
+    queryFn: async () =>
+      (await supabase.from("buses").select("expenses").eq("id", busId).maybeSingle()).data as {
+        expenses: number | null;
+      } | null,
+  });
+  const currentExpenses = Number(busExpensesRow?.expenses ?? 0);
   const [expensesInput, setExpensesInput] = useState<string>("");
   const [savingExpenses, setSavingExpenses] = useState(false);
   useEffect(() => {
