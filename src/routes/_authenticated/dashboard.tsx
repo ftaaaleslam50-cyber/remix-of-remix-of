@@ -614,7 +614,35 @@ function UnifiedBookingsTab(props: {
             label="نسبة الإشغال"
             value={`${capacity ? Math.round((occupied / capacity) * 100) : 0}%`}
           />
-        </div>
+      </div>
+
+      {/* Filter-scoped stats: react to Trip / Bus / Status / Search */}
+      {(() => {
+        const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
+        const returnCount = tripId
+          ? Math.max(1, 1 + ((selectedTrip as unknown as { return_options?: string[] } | null)?.return_options?.length ?? 0))
+          : 0;
+        const busesInScope = tripId ? buses.length : buses.length;
+        const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
+        const rooms = filtered.length;
+        const revenue = filtered
+          .filter((b) => b.status === "confirmed")
+          .reduce((s, b) => s + Number(b.total_price || 0), 0);
+        const todayCount = filtered.filter(
+          (b) => new Date(b.created_at).toDateString() === new Date().toDateString(),
+        ).length;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
+            <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
+            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} />
+            <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
+            <StatCard icon={CalendarClock} label="حجوزات اليوم" value={String(todayCount)} />
+            {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
+            <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
+          </div>
+        );
+      })()}
       )}
 
       {busId && (
