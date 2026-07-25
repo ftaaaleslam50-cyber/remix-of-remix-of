@@ -199,10 +199,10 @@ function TripEditor({ trip, buses, assigned, occupancy, onSave, onDelete, onTogg
       <div>
         <Label className="text-xs">مواعيد العودة الإضافية (اختياري — للرحلات ذات أكثر من عودة)</Label>
         <Input
-          placeholder="افصل بين المواعيد بفاصلة، مثال: السبت 17/8, الأحد 18/8"
-          value={(local.return_options ?? []).join(", ")}
+          placeholder="افصل بين المواعيد بفاصلة، مثال: السبت 17/8، الأحد 18/8"
+          value={(local.return_options ?? []).join("، ")}
           onChange={(e) =>
-            setLocal({ ...local, return_options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+            setLocal({ ...local, return_options: e.target.value.split(/[,،]/).map((s) => s.trim()).filter(Boolean) })
           }
         />
         <p className="text-[11px] text-muted-foreground mt-1">

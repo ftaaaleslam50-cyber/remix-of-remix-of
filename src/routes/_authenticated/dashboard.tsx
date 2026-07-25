@@ -166,8 +166,6 @@ function Dashboard() {
     navigate({ to: "/auth" });
   }
 
-  const totalRevenue = bookings.filter((b) => b.status === "confirmed").reduce((s, b) => s + Number(b.total_price), 0);
-  const totalPassengers = bookings.reduce((s, b) => s + b.passenger_count, 0);
 
   function exportBookingsExcel() {
     const rows = bookings.map((b) => ({
@@ -310,18 +308,7 @@ function Dashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard icon={CalendarCheck} label="إجمالي الحجوزات" value={String(bookings.length)} />
-          <StatCard icon={Users} label="عدد المعتمرين" value={String(totalPassengers)} />
-          <StatCard icon={DollarSign} label="الإيرادات" value={sar(totalRevenue)} />
-          <StatCard
-            icon={Bus}
-            label="حجوزات اليوم"
-            value={String(
-              bookings.filter((b) => new Date(b.created_at).toDateString() === new Date().toDateString()).length,
-            )}
-          />
-        </div>
+        {/* Global stats moved into UnifiedBookingsTab so they respond to the trip/bus filter */}
 
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
@@ -629,6 +616,34 @@ function UnifiedBookingsTab(props: {
           />
         </div>
       )}
+
+      {/* Filter-scoped stats: react to Trip / Bus / Status / Search */}
+      {(() => {
+        const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
+        const returnCount = tripId
+          ? Math.max(1, 1 + ((selectedTrip as unknown as { return_options?: string[] } | null)?.return_options?.length ?? 0))
+          : 0;
+        const busesInScope = buses.length;
+        const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
+        const rooms = filtered.length;
+        const revenue = filtered
+          .filter((b) => b.status === "confirmed")
+          .reduce((s, b) => s + Number(b.total_price || 0), 0);
+        const todayCount = filtered.filter(
+          (b) => new Date(b.created_at).toDateString() === new Date().toDateString(),
+        ).length;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
+            <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
+            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} />
+            <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
+            <StatCard icon={CalendarClock} label="حجوزات اليوم" value={String(todayCount)} />
+            {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
+            <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
+          </div>
+        );
+      })()}
 
       {busId && (
         <div className="rounded-2xl border-2 border-[color:var(--color-gold)]/40 bg-gradient-to-br from-amber-50 to-white p-4 space-y-3">
