@@ -574,10 +574,9 @@ function UnifiedBookingsTab(props: {
           <select
             value={busId}
             onChange={(e) => setBusId(e.target.value)}
-            disabled={!tripId}
-            className="h-10 w-full rounded-md border px-3 text-sm disabled:opacity-50 bg-white"
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
           >
-            <option value="">{tripId ? "— كل الحافلات —" : "اختر رحلة أولاً"}</option>
+            <option value="">— كل الحافلات —</option>
             {buses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}
