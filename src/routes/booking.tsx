@@ -588,6 +588,7 @@ function BookingPage() {
                     setTripId(id);
                     setBusId(null);
                     setSeats([]);
+                    setActualReturnDay("");
                   }}
                   buses={buses}
                   busReserved={busReserved}
@@ -602,7 +603,11 @@ function BookingPage() {
                     setBusId(null);
                     setTripId(null);
                     setSeats([]);
+                    setActualReturnDay("");
                   }}
+                  returnOptions={selectedTrip?.return_options ?? []}
+                  actualReturnDay={actualReturnDay}
+                  setActualReturnDay={setActualReturnDay}
                 />
               )}
               {stepName === "الفندق" && (
