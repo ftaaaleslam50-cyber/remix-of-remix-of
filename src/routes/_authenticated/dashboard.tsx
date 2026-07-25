@@ -430,28 +430,37 @@ function UnifiedBookingsTab(props: {
         .data as UBTripOpt[]) ?? [],
   });
   const { data: buses = [] } = useQuery({
-    queryKey: ["ub-buses", tripId],
-    enabled: !!tripId,
-    queryFn: async () =>
-      ((
-        await supabase
-          .from("buses")
-          .select("id,name,bus_number,capacity,trip_id")
-          .eq("trip_id", tripId)
-          .order("bus_number")
-      ).data as UBBusOpt[]) ?? [],
+    queryKey: ["ub-buses-all", tripId],
+    queryFn: async () => {
+      // If a trip is selected, prefer buses linked via trip_buses; fall back to
+      // legacy buses.trip_id column. When no trip: return all active buses so
+      // the admin can filter/report on any bus independently.
+      if (tripId) {
+        const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
+        const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
+        let q = supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number");
+        if (ids.length > 0) {
+          q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
+        } else {
+          q = q.eq("trip_id", tripId);
+        }
+        return ((await q).data as UBBusOpt[]) ?? [];
+      }
+      return (
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number"))
+          .data as UBBusOpt[]) ?? []
+      );
+    },
   });
 
-  // Filter bookings. When a specific bus is picked we filter by bus_id (stable
-  // across trips). Otherwise fall back to trip name matching for the loose filter.
-  const tripName = trips.find((t) => t.id === tripId)?.name ?? "";
-
+  // Filter bookings by bus_id when set (works across trips). When only a trip is
+  // selected, match on the booking's own trip_id (stable) rather than trip name.
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
     if (busId) {
       if (b.bus_id !== busId) return false;
-    } else if (tripName && (b.trips?.name ?? "") !== tripName) {
-      return false;
+    } else if (tripId) {
+      if (b.trip_id !== tripId) return false;
     }
     if (search) {
       const q = search.trim().toLowerCase();
