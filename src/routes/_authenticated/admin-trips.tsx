@@ -197,6 +197,20 @@ function TripEditor({ trip, buses, assigned, occupancy, onSave, onDelete, onTogg
       </div>
 
       <div>
+        <Label className="text-xs">مواعيد العودة الإضافية (اختياري — للرحلات ذات أكثر من عودة)</Label>
+        <Input
+          placeholder="افصل بين المواعيد بفاصلة، مثال: السبت 17/8, الأحد 18/8"
+          value={(local.return_options ?? []).join(", ")}
+          onChange={(e) =>
+            setLocal({ ...local, return_options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+          }
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          إذا كانت الرحلة لها أكثر من موعد للعودة، أضفها هنا. سيظهر للعميل خيار الاختيار بينها قبل إتمام الحجز.
+        </p>
+      </div>
+
+      <div>
         <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> الحافلات المتاحة والإشغال</div>
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
           {buses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات مسجلة.</div>}
