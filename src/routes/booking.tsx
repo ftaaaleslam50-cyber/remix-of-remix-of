@@ -1179,6 +1179,37 @@ function StepTripBus({
           );
         })}
       </div>
+
+      {tripId && hasMultipleReturns && !noBus && (
+        <div className="mt-5 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
+          <p className="text-sm font-extrabold text-[color:var(--color-navy)] mb-2">
+            اختر موعد العودة
+          </p>
+          <p className="text-xs text-muted-foreground mb-3">
+            هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {returnOptions.map((d) => {
+              const sel = actualReturnDay === d;
+              return (
+                <button
+                  type="button"
+                  key={d}
+                  onClick={() => setActualReturnDay(d)}
+                  className={`rounded-xl border-2 p-3 text-right transition-all bg-white ${
+                    sel ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm">{d}</span>
+                    {sel && <Check className="h-4 w-4 text-primary" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
