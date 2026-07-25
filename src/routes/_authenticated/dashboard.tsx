@@ -166,8 +166,6 @@ function Dashboard() {
     navigate({ to: "/auth" });
   }
 
-  const totalRevenue = bookings.filter((b) => b.status === "confirmed").reduce((s, b) => s + Number(b.total_price), 0);
-  const totalPassengers = bookings.reduce((s, b) => s + b.passenger_count, 0);
 
   function exportBookingsExcel() {
     const rows = bookings.map((b) => ({
