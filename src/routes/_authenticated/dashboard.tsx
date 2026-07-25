@@ -506,6 +506,7 @@ function UnifiedBookingsTab(props: {
     if (error) return toast.error(error.message);
     toast.success("تم حفظ المصاريف");
     qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+    qcInner.invalidateQueries({ queryKey: ["ub-bus-expenses", busId] });
   }
 
   function exportBusExcel() {
