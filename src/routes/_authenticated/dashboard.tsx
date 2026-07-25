@@ -310,18 +310,7 @@ function Dashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard icon={CalendarCheck} label="إجمالي الحجوزات" value={String(bookings.length)} />
-          <StatCard icon={Users} label="عدد المعتمرين" value={String(totalPassengers)} />
-          <StatCard icon={DollarSign} label="الإيرادات" value={sar(totalRevenue)} />
-          <StatCard
-            icon={Bus}
-            label="حجوزات اليوم"
-            value={String(
-              bookings.filter((b) => new Date(b.created_at).toDateString() === new Date().toDateString()).length,
-            )}
-          />
-        </div>
+        {/* Global stats moved into UnifiedBookingsTab so they respond to the trip/bus filter */}
 
         <Tabs defaultValue="bookings" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto justify-start bg-white rounded-2xl p-1.5">
