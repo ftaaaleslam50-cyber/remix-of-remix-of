@@ -72,6 +72,7 @@ interface BookingRow {
   nationality?: string | null;
   booking_source?: string | null;
   bus_id?: string | null;
+  trip_id?: string | null;
   packages?: { name: string } | null;
   trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses?: { id: string; name: string | null; bus_number: number; expenses: number | null } | null;
