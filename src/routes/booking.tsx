@@ -317,7 +317,16 @@ function BookingPage() {
   }, []);
 
   const selectedPackage = packages.find((p) => p.id === packageId) ?? null;
-  const selectedTrip = trips.find((t) => t.id === tripId) ?? null;
+  const selectedTripRaw = trips.find((t) => t.id === tripId) ?? null;
+  const selectedTrip = selectedTripRaw
+    ? {
+        ...selectedTripRaw,
+        return_options: (selectedTripRaw.return_options ?? [])
+          .flatMap((s: string) => String(s).split(/[,،]/))
+          .map((s: string) => s.trim())
+          .filter(Boolean),
+      }
+    : null;
   const transportOnly = noHotel;
   const STEPS: readonly string[] = noBus ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
