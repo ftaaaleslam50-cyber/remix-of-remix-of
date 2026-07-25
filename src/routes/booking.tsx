@@ -400,9 +400,13 @@ function BookingPage() {
         return !!bookingType;
       case "عدد الأفراد":
         return passengerCount > 0;
-      case "الرحلة والحافلة":
-        // "No bus" = valid on its own; otherwise both a trip and a bus must be picked.
-        return noBus || (!!tripId && !!busId);
+      case "الرحلة والحافلة": {
+        if (noBus) return true;
+        if (!tripId || !busId) return false;
+        const ro = selectedTrip?.return_options ?? [];
+        if (ro.length > 1 && !actualReturnDay) return false;
+        return true;
+      }
       case "المقاعد":
         return seats.length === passengerCount;
       case "الفندق":
@@ -588,6 +592,7 @@ function BookingPage() {
                     setTripId(id);
                     setBusId(null);
                     setSeats([]);
+                    setActualReturnDay("");
                   }}
                   buses={buses}
                   busReserved={busReserved}
@@ -602,7 +607,11 @@ function BookingPage() {
                     setBusId(null);
                     setTripId(null);
                     setSeats([]);
+                    setActualReturnDay("");
                   }}
+                  returnOptions={selectedTrip?.return_options ?? []}
+                  actualReturnDay={actualReturnDay}
+                  setActualReturnDay={setActualReturnDay}
                 />
               )}
               {stepName === "الفندق" && (
@@ -1039,6 +1048,9 @@ function StepTripBus({
   onSelectBus,
   noBus,
   onSelectNoBus,
+  returnOptions,
+  actualReturnDay,
+  setActualReturnDay,
 }: {
   trips: Trip[];
   tripId: string | null;
@@ -1049,7 +1061,11 @@ function StepTripBus({
   onSelectBus: (id: string) => void;
   noBus: boolean;
   onSelectNoBus: () => void;
+  returnOptions: string[];
+  actualReturnDay: string;
+  setActualReturnDay: (v: string) => void;
 }) {
+  const hasMultipleReturns = returnOptions && returnOptions.length > 1;
   return (
     <div>
       <StepHeader title="اختر الرحلة والحافلة" desc="حدد موعد الرحلة، ثم اختر الحافلة المتاحة" />
@@ -1167,6 +1183,37 @@ function StepTripBus({
           );
         })}
       </div>
+
+      {tripId && hasMultipleReturns && !noBus && (
+        <div className="mt-5 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
+          <p className="text-sm font-extrabold text-[color:var(--color-navy)] mb-2">
+            اختر موعد العودة
+          </p>
+          <p className="text-xs text-muted-foreground mb-3">
+            هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {returnOptions.map((d) => {
+              const sel = actualReturnDay === d;
+              return (
+                <button
+                  type="button"
+                  key={d}
+                  onClick={() => setActualReturnDay(d)}
+                  className={`rounded-xl border-2 p-3 text-right transition-all bg-white ${
+                    sel ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm">{d}</span>
+                    {sel && <Check className="h-4 w-4 text-primary" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

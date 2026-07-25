@@ -24,6 +24,7 @@ interface TripRow {
   return_time: string | null;
   departure_period: string | null;
   return_period: string | null;
+  return_options: string[] | null;
   capacity: number;
   active: boolean;
   display_order: number;
@@ -101,6 +102,7 @@ function AdminTrips() {
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
+      return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
       capacity: t.capacity, active: t.active, display_order: t.display_order,
     } as never).eq("id", t.id);
     if (error) return toast.error(error.message);
@@ -192,6 +194,20 @@ function TripEditor({ trip, buses, assigned, occupancy, onSave, onDelete, onTogg
         <div className="flex items-end gap-2">
           <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّلة</span></div>
         </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">مواعيد العودة الإضافية (اختياري — للرحلات ذات أكثر من عودة)</Label>
+        <Input
+          placeholder="افصل بين المواعيد بفاصلة، مثال: السبت 17/8, الأحد 18/8"
+          value={(local.return_options ?? []).join(", ")}
+          onChange={(e) =>
+            setLocal({ ...local, return_options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+          }
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          إذا كانت الرحلة لها أكثر من موعد للعودة، أضفها هنا. سيظهر للعميل خيار الاختيار بينها قبل إتمام الحجز.
+        </p>
       </div>
 
       <div>

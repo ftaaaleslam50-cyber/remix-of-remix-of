@@ -72,6 +72,7 @@ interface BookingRow {
   nationality?: string | null;
   booking_source?: string | null;
   bus_id?: string | null;
+  trip_id?: string | null;
   packages?: { name: string } | null;
   trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses?: { id: string; name: string | null; bus_number: number; expenses: number | null } | null;
@@ -122,7 +123,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -429,28 +430,37 @@ function UnifiedBookingsTab(props: {
         .data as UBTripOpt[]) ?? [],
   });
   const { data: buses = [] } = useQuery({
-    queryKey: ["ub-buses", tripId],
-    enabled: !!tripId,
-    queryFn: async () =>
-      ((
-        await supabase
-          .from("buses")
-          .select("id,name,bus_number,capacity,trip_id")
-          .eq("trip_id", tripId)
-          .order("bus_number")
-      ).data as UBBusOpt[]) ?? [],
+    queryKey: ["ub-buses-all", tripId],
+    queryFn: async () => {
+      // If a trip is selected, prefer buses linked via trip_buses; fall back to
+      // legacy buses.trip_id column. When no trip: return all active buses so
+      // the admin can filter/report on any bus independently.
+      if (tripId) {
+        const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
+        const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
+        let q = supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number");
+        if (ids.length > 0) {
+          q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
+        } else {
+          q = q.eq("trip_id", tripId);
+        }
+        return ((await q).data as UBBusOpt[]) ?? [];
+      }
+      return (
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number"))
+          .data as UBBusOpt[]) ?? []
+      );
+    },
   });
 
-  // Filter bookings. When a specific bus is picked we filter by bus_id (stable
-  // across trips). Otherwise fall back to trip name matching for the loose filter.
-  const tripName = trips.find((t) => t.id === tripId)?.name ?? "";
-
+  // Filter bookings by bus_id when set (works across trips). When only a trip is
+  // selected, match on the booking's own trip_id (stable) rather than trip name.
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
     if (busId) {
       if (b.bus_id !== busId) return false;
-    } else if (tripName && (b.trips?.name ?? "") !== tripName) {
-      return false;
+    } else if (tripId) {
+      if (b.trip_id !== tripId) return false;
     }
     if (search) {
       const q = search.trim().toLowerCase();
@@ -467,10 +477,15 @@ function UnifiedBookingsTab(props: {
   // Per-bus finance: revenue from confirmed bookings for THIS bus only.
   const busConfirmed = busId ? filtered.filter((b) => b.status === "confirmed" && !b.deleted_at) : [];
   const busRevenue = busConfirmed.reduce((s, x) => s + Number(x.total_price || 0), 0);
-  const busRow = busId
-    ? (bookings.find((b) => b.bus_id === busId)?.buses ?? null)
-    : null;
-  const currentExpenses = Number(busRow?.expenses ?? 0);
+  const { data: busExpensesRow } = useQuery({
+    queryKey: ["ub-bus-expenses", busId],
+    enabled: !!busId,
+    queryFn: async () =>
+      (await supabase.from("buses").select("expenses").eq("id", busId).maybeSingle()).data as {
+        expenses: number | null;
+      } | null,
+  });
+  const currentExpenses = Number(busExpensesRow?.expenses ?? 0);
   const [expensesInput, setExpensesInput] = useState<string>("");
   const [savingExpenses, setSavingExpenses] = useState(false);
   useEffect(() => {
@@ -491,6 +506,7 @@ function UnifiedBookingsTab(props: {
     if (error) return toast.error(error.message);
     toast.success("تم حفظ المصاريف");
     qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+    qcInner.invalidateQueries({ queryKey: ["ub-bus-expenses", busId] });
   }
 
   function exportBusExcel() {
@@ -564,10 +580,9 @@ function UnifiedBookingsTab(props: {
           <select
             value={busId}
             onChange={(e) => setBusId(e.target.value)}
-            disabled={!tripId}
-            className="h-10 w-full rounded-md border px-3 text-sm disabled:opacity-50 bg-white"
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
           >
-            <option value="">{tripId ? "— كل الحافلات —" : "اختر رحلة أولاً"}</option>
+            <option value="">— كل الحافلات —</option>
             {buses.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}
