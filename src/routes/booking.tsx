@@ -1044,6 +1044,9 @@ function StepTripBus({
   onSelectBus,
   noBus,
   onSelectNoBus,
+  returnOptions,
+  actualReturnDay,
+  setActualReturnDay,
 }: {
   trips: Trip[];
   tripId: string | null;
@@ -1054,7 +1057,11 @@ function StepTripBus({
   onSelectBus: (id: string) => void;
   noBus: boolean;
   onSelectNoBus: () => void;
+  returnOptions: string[];
+  actualReturnDay: string;
+  setActualReturnDay: (v: string) => void;
 }) {
+  const hasMultipleReturns = returnOptions && returnOptions.length > 1;
   return (
     <div>
       <StepHeader title="اختر الرحلة والحافلة" desc="حدد موعد الرحلة، ثم اختر الحافلة المتاحة" />
