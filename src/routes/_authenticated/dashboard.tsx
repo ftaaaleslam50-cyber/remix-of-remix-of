@@ -614,7 +614,8 @@ function UnifiedBookingsTab(props: {
             label="نسبة الإشغال"
             value={`${capacity ? Math.round((occupied / capacity) * 100) : 0}%`}
           />
-      </div>
+        </div>
+      )}
 
       {/* Filter-scoped stats: react to Trip / Bus / Status / Search */}
       {(() => {
@@ -622,7 +623,7 @@ function UnifiedBookingsTab(props: {
         const returnCount = tripId
           ? Math.max(1, 1 + ((selectedTrip as unknown as { return_options?: string[] } | null)?.return_options?.length ?? 0))
           : 0;
-        const busesInScope = tripId ? buses.length : buses.length;
+        const busesInScope = buses.length;
         const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
         const rooms = filtered.length;
         const revenue = filtered
@@ -643,7 +644,6 @@ function UnifiedBookingsTab(props: {
           </div>
         );
       })()}
-      )}
 
       {busId && (
         <div className="rounded-2xl border-2 border-[color:var(--color-gold)]/40 bg-gradient-to-br from-amber-50 to-white p-4 space-y-3">
