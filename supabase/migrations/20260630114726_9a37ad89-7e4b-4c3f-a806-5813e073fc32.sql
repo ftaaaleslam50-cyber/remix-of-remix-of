@@ -31,7 +31,7 @@ BEGIN NEW.updated_at = now(); RETURN NEW; END $$;
 -- =========== APP SETTINGS (singleton) ===========
 CREATE TABLE public.app_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
-  company_name TEXT NOT NULL DEFAULT 'مؤسسة زهرة طيبة للعمرة',
+  company_name TEXT NOT NULL DEFAULT 'مؤسسة زهرة طيبة',
   email TEXT NOT NULL DEFAULT 'zhrttybt888@gmail.com',
   national_number TEXT NOT NULL DEFAULT '7029663460',
   whatsapp TEXT NOT NULL DEFAULT '966573890050',
