@@ -34,7 +34,7 @@ export function Logo({
       {withText && (
         <div className="flex flex-col leading-tight">
           <span className={`text-sm font-extrabold ${light ? "text-white" : "text-navy"}`}>{BRAND.shortName}</span>
-          <span className={`text-[11px] ${light ? "text-white/70" : "text-muted-foreground"}`}>للعمرة والرحلات</span>
+          <span className={`text-[11px] ${light ? "text-white/70" : "text-muted-foreground"}`}>لتنظيم الرحلات</span>
         </div>
       )}
     </div>
