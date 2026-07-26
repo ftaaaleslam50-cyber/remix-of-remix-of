@@ -24,7 +24,7 @@ export const Route = createFileRoute("/contact")({
       { title: `تواصل معنا | ${BRAND.name}` },
       {
         name: "description",
-        content: "تواصل مع مؤسسة زهرة طيبة للعمرة عبر الواتساب أو الهاتف أو البريد الإلكتروني.",
+        content: "تواصل مع مؤسسة زهرة طيبة عبر الواتساب أو الهاتف أو البريد الإلكتروني.",
       },
       {
         property: "og:title",
