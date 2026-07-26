@@ -1,5 +1,5 @@
 export const BRAND = {
-  name: "مؤسسة زهرة طيبة للعمرة",
+  name: "مؤسسة زهرة طيبة لتنظيم الرحلات",
   shortName: "زهرة طيبة",
   email: "zhrttybt888@gmail.com",
   nationalNumber: "7029663460",
