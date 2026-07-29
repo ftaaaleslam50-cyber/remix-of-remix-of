@@ -188,6 +188,8 @@ function Legend() {
     { color: "bg-primary", label: "مختار" },
     { color: "bg-muted border-2 border-border", label: "محجوز" },
     { color: "bg-[color:var(--color-navy)]", label: "المشرف" },
+    { color: "bg-sky-600", label: "ذكر" },
+    { color: "bg-pink-500", label: "أنثى" },
   ];
   return (
     <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
