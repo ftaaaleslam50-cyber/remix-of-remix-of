@@ -1,5 +1,8 @@
 // Renders seat map from a bus_layouts.layout_json template.
 import { toast } from "sonner";
+import { Mars, Venus } from "lucide-react";
+
+export type SeatGender = "male" | "female";
 
 export type LayoutCellKind = "seat" | "empty" | "driver" | "door" | "restroom";
 export interface LayoutCell { row: number; col: number; kind: LayoutCellKind; label?: string; disabled?: boolean }
@@ -34,9 +37,11 @@ interface Props {
   reserved: string[];
   maxSelectable: number;
   onChange: (seats: string[]) => void;
+  /** Optional gender per selected seat — drives colour + icon. */
+  genders?: Record<string, SeatGender>;
 }
 
-export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onChange }: Props) {
+export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onChange, genders = {} }: Props) {
   const rows = Math.max(1, layout.rows || 1);
   const cols = Math.max(1, layout.cols || 1);
   const map = new Map<string, LayoutCell>();
@@ -84,7 +89,12 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
           const isReserved = reserved.includes(id);
           const isSelected = selected.includes(id);
           const isDisabled = cell.disabled;
-          const cls = isDisabled
+          const g = isSelected ? genders[id] : undefined;
+          const cls = g === "male"
+            ? "bg-sky-600 text-white border-sky-700 shadow scale-105"
+            : g === "female"
+            ? "bg-pink-500 text-white border-pink-600 shadow scale-105"
+            : isDisabled
             ? "bg-neutral-200 text-neutral-400 border-neutral-300 cursor-not-allowed"
             : isReserved
             ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-70"
@@ -96,9 +106,11 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
               key={i}
               type="button"
               onClick={() => toggle(cell)}
-              className={`aspect-square rounded-lg border-2 text-[11px] font-bold flex items-center justify-center transition-all ${cls}`}
+              className={`aspect-square rounded-lg border-2 text-[11px] font-bold flex flex-col items-center justify-center leading-none transition-all ${cls}`}
               title={id}
             >
+              {g === "male" && <Mars className="h-3 w-3 mb-0.5" />}
+              {g === "female" && <Venus className="h-3 w-3 mb-0.5" />}
               {id}
             </button>
           );
@@ -110,6 +122,8 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-primary" /><span className="text-muted-foreground">مختار</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-muted border-2 border-border" /><span className="text-muted-foreground">محجوز</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-neutral-200 border-2 border-neutral-300" /><span className="text-muted-foreground">معطّل</span></div>
+        <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-sky-600" /><span className="text-muted-foreground">ذكر</span></div>
+        <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-pink-500" /><span className="text-muted-foreground">أنثى</span></div>
       </div>
     </div>
   );

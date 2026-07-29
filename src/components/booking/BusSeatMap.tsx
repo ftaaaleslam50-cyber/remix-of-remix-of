@@ -8,10 +8,11 @@
 //                  in both). The rendered grid has 53 buttons in Layout B; capacity
 //                  math uses allSeats(layout).length.
 
-import { Bus as BusIcon, DoorOpen, Droplets, User } from "lucide-react";
+import { Bus as BusIcon, DoorOpen, Droplets, User, Mars, Venus } from "lucide-react";
 
 export type SeatStatus = "available" | "selected" | "reserved" | "supervisor" | "blocked";
 export type BusLayout = "A" | "B";
+export type SeatGender = "male" | "female";
 
 const NORMAL_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"] as const;
 
@@ -30,9 +31,19 @@ interface Props {
   onChange: (seats: string[]) => void;
   blocked?: string[];
   layout?: BusLayout;
+  /** Optional gender per selected seat — drives colour + icon. */
+  genders?: Record<string, SeatGender>;
 }
 
-export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocked = ["A2"], layout = "A" }: Props) {
+export function BusSeatMap({
+  selected,
+  reserved,
+  maxSelectable,
+  onChange,
+  blocked = ["A2"],
+  layout = "A",
+  genders = {},
+}: Props) {
   const isReserved = (id: string) => reserved.includes(id);
   const isBlocked = (id: string) => blocked.includes(id) && id !== "A2";
   const isSupervisor = (id: string) => id === "A2";
@@ -58,25 +69,35 @@ export function BusSeatMap({ selected, reserved, maxSelectable, onChange, blocke
 
   function Seat({ id }: { id: string }) {
     const status = seatStatus(id);
-    const cls = {
+    const g = status === "selected" ? genders[id] : undefined;
+    const base = {
       available: "bg-white border-border hover:border-primary hover:shadow-md",
       selected: "bg-primary text-primary-foreground border-primary shadow-[var(--shadow-red)] scale-105",
       reserved: "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-70",
       supervisor: "bg-[color:var(--color-navy)] text-white border-[color:var(--color-navy)] cursor-not-allowed",
       blocked: "bg-neutral-200 text-neutral-400 border-neutral-300 cursor-not-allowed",
     }[status];
+    const cls =
+      g === "male"
+        ? "bg-sky-600 text-white border-sky-700 shadow scale-105"
+        : g === "female"
+          ? "bg-pink-500 text-white border-pink-600 shadow scale-105"
+          : base;
 
     return (
       <button
         type="button"
         onClick={() => toggle(id)}
         title={status === "supervisor" ? "مقعد المشرف" : id}
-        className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-xl border-2 text-[11px] font-bold transition-all flex items-center justify-center ${cls}`}
+        className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-xl border-2 text-[11px] font-bold transition-all flex flex-col items-center justify-center leading-none ${cls}`}
       >
+        {g === "male" && <Mars className="h-3 w-3 mb-0.5" />}
+        {g === "female" && <Venus className="h-3 w-3 mb-0.5" />}
         {id}
       </button>
     );
   }
+
 
   function Row({ row }: { row: string }) {
     return (
@@ -167,6 +188,8 @@ function Legend() {
     { color: "bg-primary", label: "مختار" },
     { color: "bg-muted border-2 border-border", label: "محجوز" },
     { color: "bg-[color:var(--color-navy)]", label: "المشرف" },
+    { color: "bg-sky-600", label: "ذكر" },
+    { color: "bg-pink-500", label: "أنثى" },
   ];
   return (
     <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

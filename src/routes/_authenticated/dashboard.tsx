@@ -690,6 +690,7 @@ function UnifiedBookingsTab(props: {
               <TableHead>الاسم</TableHead>
               <TableHead>الجوال</TableHead>
               <TableHead>الرحلة</TableHead>
+              <TableHead>العودة</TableHead>
               <TableHead>الحافلة</TableHead>
               <TableHead>الأفراد</TableHead>
               <TableHead>المقاعد</TableHead>
@@ -702,7 +703,7 @@ function UnifiedBookingsTab(props: {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center py-10 text-muted-foreground">
                   لا توجد حجوزات مطابقة.
                 </TableCell>
               </TableRow>
@@ -715,6 +716,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
+                <TableCell className="text-xs">{b.actual_return_day ?? b.trips?.return_day ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
                 <TableCell>{b.passenger_count}</TableCell>
                 <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>

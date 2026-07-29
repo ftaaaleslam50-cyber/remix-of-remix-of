@@ -23,6 +23,8 @@ import {
   Ticket,
   Shuffle,
   MousePointerClick,
+  Mars,
+  Venus,
 } from "lucide-react";
 
 import { Link } from "@tanstack/react-router";
@@ -63,6 +65,10 @@ function BookingPage() {
 
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [passengerCount, setPassengerCount] = useState(1);
+  const [maleCount, setMaleCount] = useState(1);
+  const [femaleCount, setFemaleCount] = useState(0);
+  const [seatGenders, setSeatGenders] = useState<Record<string, "male" | "female">>({});
+  const [activeGender, setActiveGender] = useState<"male" | "female">("male");
   const [packageId, setPackageId] = useState<string | null>(null);
   const [roomType, setRoomType] = useState<RoomType>("5");
   const [tripId, setTripId] = useState<string | null>(null);
@@ -230,6 +236,15 @@ function BookingPage() {
   }, [bookingType, passengerCount]);
   useEffect(() => {
     if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
+  }, [passengerCount]);
+
+  // Keep the gender split consistent with the total headcount.
+  useEffect(() => {
+    if (maleCount + femaleCount !== passengerCount) {
+      const m = Math.min(maleCount, passengerCount);
+      setMaleCount(m);
+      setFemaleCount(passengerCount - m);
+    }
   }, [passengerCount]);
   useEffect(() => {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
@@ -408,7 +423,7 @@ function BookingPage() {
       case "نوع الحجز":
         return !!bookingType;
       case "عدد الأفراد":
-        return passengerCount > 0;
+        return passengerCount > 0 && maleCount + femaleCount === passengerCount;
       case "الرحلة والحافلة": {
         if (noBus) return true;
         if (!tripId || !busId) return false;
@@ -468,6 +483,9 @@ function BookingPage() {
         booking_code: code,
         booking_type: bookingType!,
         passenger_count: passengerCount,
+        male_count: maleCount,
+        female_count: femaleCount,
+        seat_genders: seatGenders,
         room_type: roomType,
         package_id: noHotel ? null : selectedPackage!.id,
         trip_id: tripId,
@@ -591,7 +609,16 @@ function BookingPage() {
               transition={{ duration: 0.25 }}
             >
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
-              {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
+              {stepName === "عدد الأفراد" && (
+                <StepCount
+                  value={passengerCount}
+                  onChange={setPassengerCount}
+                  maleCount={maleCount}
+                  femaleCount={femaleCount}
+                  setMaleCount={setMaleCount}
+                  setFemaleCount={setFemaleCount}
+                />
+              )}
               {stepName === "الرحلة والحافلة" && (
                 <StepTripBus
                   trips={trips}
@@ -646,7 +673,33 @@ function BookingPage() {
                   count={passengerCount}
                   seats={seats}
                   reserved={bookedSeats}
-                  onChange={setSeats}
+                  genders={seatGenders}
+                  activeGender={activeGender}
+                  onActiveGenderChange={setActiveGender}
+                  maleCount={maleCount}
+                  femaleCount={femaleCount}
+                  onChange={(next) => {
+                    const added = next.filter((s) => !seats.includes(s));
+                    const removed = seats.filter((s) => !next.includes(s));
+                    const g = { ...seatGenders };
+                    for (const r of removed) delete g[r];
+                    for (const a of added) {
+                      const usedMale = Object.values(g).filter((v) => v === "male").length;
+                      const usedFemale = Object.values(g).filter((v) => v === "female").length;
+                      let pick: "male" | "female" | null = null;
+                      if (activeGender === "male" && usedMale < maleCount) pick = "male";
+                      else if (activeGender === "female" && usedFemale < femaleCount) pick = "female";
+                      else if (usedMale < maleCount) pick = "male";
+                      else if (usedFemale < femaleCount) pick = "female";
+                      if (!pick) {
+                        toast.warning("اكتمل عدد المقاعد لهذا الجنس. عدّل التوزيع في خطوة عدد الأفراد.");
+                        return;
+                      }
+                      g[a] = pick;
+                    }
+                    setSeatGenders(g);
+                    setSeats(next);
+                  }}
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
@@ -662,6 +715,11 @@ function BookingPage() {
                             activeBus?.blocked_seats ?? ["A2"],
                             ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A",
                           );
+                      const g: Record<string, "male" | "female"> = {};
+                      auto.forEach((sid, i) => {
+                        g[sid] = i < maleCount ? "male" : "female";
+                      });
+                      setSeatGenders(g);
                       setSeats(auto);
                     }
                   }}
@@ -690,6 +748,8 @@ function BookingPage() {
                 <StepConfirm
                   bookingType={bookingType}
                   passengerCount={passengerCount}
+                  maleCount={maleCount}
+                  femaleCount={femaleCount}
                   roomType={roomType}
                   transportOnly={transportOnly}
                   noBus={noBus}
@@ -843,10 +903,26 @@ function StepBookingType({ value, onChange }: { value: BookingType | null; onCha
   );
 }
 
-function StepCount({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+function StepCount({
+  value,
+  onChange,
+  maleCount,
+  femaleCount,
+  setMaleCount,
+  setFemaleCount,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  maleCount: number;
+  femaleCount: number;
+  setMaleCount: (n: number) => void;
+  setFemaleCount: (n: number) => void;
+}) {
+  const sum = maleCount + femaleCount;
+  const ok = sum === value;
   return (
     <div>
-      <StepHeader title="عدد الأفراد" desc="يرجى تحديد عدد الأفراد" />
+      <StepHeader title="عدد الأفراد" desc="يرجى تحديد عدد الأفراد وتوزيعهم" />
       <div className="mx-auto max-w-sm surface-card p-6 flex items-center justify-between">
         <Button
           size="icon"
@@ -868,6 +944,40 @@ function StepCount({ value, onChange }: { value: number; onChange: (n: number) =
           <Plus className="h-5 w-5" />
         </Button>
       </div>
+
+      <div className="mx-auto max-w-sm mt-4 grid grid-cols-2 gap-3">
+        <div className="surface-card p-4 text-center">
+          <p className="text-xs font-bold text-sky-700 flex items-center justify-center gap-1">
+            <Mars className="h-4 w-4" /> عدد الذكور
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setMaleCount(Math.max(0, maleCount - 1))}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-2xl font-extrabold">{maleCount}</span>
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setMaleCount(Math.min(value, maleCount + 1))}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="surface-card p-4 text-center">
+          <p className="text-xs font-bold text-pink-600 flex items-center justify-center gap-1">
+            <Venus className="h-4 w-4" /> عدد الإناث
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setFemaleCount(Math.max(0, femaleCount - 1))}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-2xl font-extrabold">{femaleCount}</span>
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setFemaleCount(Math.min(value, femaleCount + 1))}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+      <p className={`mt-3 text-center text-xs font-bold ${ok ? "text-success" : "text-destructive"}`}>
+        {ok ? "المجموع مطابق للعدد الإجمالي ✅" : `مجموع الذكور والإناث (${sum}) يجب أن يساوي العدد الإجمالي (${value})`}
+      </p>
     </div>
   );
 }
@@ -1237,11 +1347,21 @@ function StepSeats({
   remainingSeats,
   mode,
   onModeChange,
+  genders,
+  activeGender,
+  onActiveGenderChange,
+  maleCount,
+  femaleCount,
 }: {
   count: number;
   seats: string[];
   reserved: string[];
   onChange: (s: string[]) => void;
+  genders: Record<string, "male" | "female">;
+  activeGender: "male" | "female";
+  onActiveGenderChange: (g: "male" | "female") => void;
+  maleCount: number;
+  femaleCount: number;
   bus: (Bus & { name?: string | null }) | null;
   layout: LayoutJson | null;
   remainingSeats: number;
@@ -1274,6 +1394,21 @@ function StepSeats({
         </button>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-4">
+        <button
+          onClick={() => onActiveGenderChange("male")}
+          className={`rounded-2xl border-2 p-3 text-sm font-bold flex items-center justify-center gap-2 ${activeGender === "male" ? "border-sky-600 bg-sky-50 text-sky-700" : "border-border"}`}
+        >
+          <Mars className="h-4 w-4" /> ذكر ({Object.values(genders).filter((g) => g === "male").length}/{maleCount})
+        </button>
+        <button
+          onClick={() => onActiveGenderChange("female")}
+          className={`rounded-2xl border-2 p-3 text-sm font-bold flex items-center justify-center gap-2 ${activeGender === "female" ? "border-pink-500 bg-pink-50 text-pink-600" : "border-border"}`}
+        >
+          <Venus className="h-4 w-4" /> أنثى ({Object.values(genders).filter((g) => g === "female").length}/{femaleCount})
+        </button>
+      </div>
+
       <div className="rounded-2xl bg-accent/40 border border-border p-4 mb-6 flex items-center justify-between">
         <div className="font-semibold">
           المقاعد المختارة:{" "}
@@ -1283,7 +1418,11 @@ function StepSeats({
         </div>
         <div className="flex gap-2 flex-wrap">
           {seats.map((s) => (
-            <Badge key={s} variant="secondary" className="font-bold">
+            <Badge
+              key={s}
+              variant="secondary"
+              className={`font-bold ${genders[s] === "male" ? "bg-sky-600 text-white" : genders[s] === "female" ? "bg-pink-500 text-white" : ""}`}
+            >
               {s}
             </Badge>
           ))}
@@ -1296,6 +1435,7 @@ function StepSeats({
             selected={seats}
             reserved={reserved}
             maxSelectable={count}
+            genders={genders}
             onChange={onChange}
           />
         ) : (
@@ -1312,6 +1452,7 @@ function StepSeats({
               }
               onChange(next);
             }}
+            genders={genders}
             blocked={bus?.blocked_seats ?? ["A2"]}
             layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
           />
@@ -1541,6 +1682,8 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
 function StepConfirm(props: {
   bookingType: BookingType | null;
   passengerCount: number;
+  maleCount: number;
+  femaleCount: number;
   roomType: RoomType;
   transportOnly: boolean;
   noBus: boolean;
@@ -1564,6 +1707,7 @@ function StepConfirm(props: {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["عدد الأفراد", String(props.passengerCount)],
+    ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
     ["الرحلة", props.trip?.name ?? "—"],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
