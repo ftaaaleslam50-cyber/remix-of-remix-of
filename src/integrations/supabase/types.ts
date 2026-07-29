@@ -358,10 +358,12 @@ export type Database = {
           customer_name: string
           deleted_at: string | null
           discount_amount: number
+          female_count: number
           hotel_id: string | null
           id: string
           id_image_url: string | null
           id_number: string
+          male_count: number
           nationality: string | null
           no_bus: boolean
           no_hotel: boolean
@@ -374,6 +376,7 @@ export type Database = {
           rep_phone: string | null
           rep_whatsapp: string | null
           room_type: string
+          seat_genders: Json
           seat_numbers: string[]
           status: string
           total_price: number
@@ -396,10 +399,12 @@ export type Database = {
           customer_name: string
           deleted_at?: string | null
           discount_amount?: number
+          female_count?: number
           hotel_id?: string | null
           id?: string
           id_image_url?: string | null
           id_number: string
+          male_count?: number
           nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
@@ -412,6 +417,7 @@ export type Database = {
           rep_phone?: string | null
           rep_whatsapp?: string | null
           room_type: string
+          seat_genders?: Json
           seat_numbers?: string[]
           status?: string
           total_price: number
@@ -434,10 +440,12 @@ export type Database = {
           customer_name?: string
           deleted_at?: string | null
           discount_amount?: number
+          female_count?: number
           hotel_id?: string | null
           id?: string
           id_image_url?: string | null
           id_number?: string
+          male_count?: number
           nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
@@ -450,6 +458,7 @@ export type Database = {
           rep_phone?: string | null
           rep_whatsapp?: string | null
           room_type?: string
+          seat_genders?: Json
           seat_numbers?: string[]
           status?: string
           total_price?: number
@@ -603,6 +612,33 @@ export type Database = {
           },
         ]
       }
+      coupon_redemptions: {
+        Row: {
+          booking_code: string | null
+          coupon_code: string
+          created_at: string
+          id: string
+          phone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          booking_code?: string | null
+          coupon_code: string
+          created_at?: string
+          id?: string
+          phone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          booking_code?: string | null
+          coupon_code?: string
+          created_at?: string
+          id?: string
+          phone?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           active: boolean
@@ -615,10 +651,14 @@ export type Database = {
           issue_date: string
           label: string | null
           max_uses: number | null
+          min_booking_amount: number
+          per_user_limit: number | null
           phone: string | null
           prize_type: string
           prize_value: number
+          qr_url: string | null
           source: string
+          start_date: string | null
           usage_count: number
           used: boolean
           used_in_booking_id: string | null
@@ -635,10 +675,14 @@ export type Database = {
           issue_date?: string
           label?: string | null
           max_uses?: number | null
+          min_booking_amount?: number
+          per_user_limit?: number | null
           phone?: string | null
           prize_type: string
           prize_value: number
+          qr_url?: string | null
           source?: string
+          start_date?: string | null
           usage_count?: number
           used?: boolean
           used_in_booking_id?: string | null
@@ -655,10 +699,14 @@ export type Database = {
           issue_date?: string
           label?: string | null
           max_uses?: number | null
+          min_booking_amount?: number
+          per_user_limit?: number | null
           phone?: string | null
           prize_type?: string
           prize_value?: number
+          qr_url?: string | null
           source?: string
+          start_date?: string | null
           usage_count?: number
           used?: boolean
           used_in_booking_id?: string | null
@@ -833,10 +881,74 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          bell_animation: boolean
+          browser_enabled: boolean
+          cat_bookings: boolean
+          cat_buses: boolean
+          cat_coupons: boolean
+          cat_hotels: boolean
+          cat_system: boolean
+          created_at: string
+          dnd_enabled: boolean
+          dnd_end: string
+          dnd_start: string
+          id: number
+          show_counter: boolean
+          sound_enabled: boolean
+          sound_url: string | null
+          toast_enabled: boolean
+          updated_at: string
+          vibrate_enabled: boolean
+        }
+        Insert: {
+          bell_animation?: boolean
+          browser_enabled?: boolean
+          cat_bookings?: boolean
+          cat_buses?: boolean
+          cat_coupons?: boolean
+          cat_hotels?: boolean
+          cat_system?: boolean
+          created_at?: string
+          dnd_enabled?: boolean
+          dnd_end?: string
+          dnd_start?: string
+          id?: number
+          show_counter?: boolean
+          sound_enabled?: boolean
+          sound_url?: string | null
+          toast_enabled?: boolean
+          updated_at?: string
+          vibrate_enabled?: boolean
+        }
+        Update: {
+          bell_animation?: boolean
+          browser_enabled?: boolean
+          cat_bookings?: boolean
+          cat_buses?: boolean
+          cat_coupons?: boolean
+          cat_hotels?: boolean
+          cat_system?: boolean
+          created_at?: string
+          dnd_enabled?: boolean
+          dnd_end?: string
+          dnd_start?: string
+          id?: number
+          show_counter?: boolean
+          sound_enabled?: boolean
+          sound_url?: string | null
+          toast_enabled?: boolean
+          updated_at?: string
+          vibrate_enabled?: boolean
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           archived: boolean
           body: string | null
+          category: string
           created_at: string
           id: string
           link: string | null
@@ -848,6 +960,7 @@ export type Database = {
         Insert: {
           archived?: boolean
           body?: string | null
+          category?: string
           created_at?: string
           id?: string
           link?: string | null
@@ -859,6 +972,7 @@ export type Database = {
         Update: {
           archived?: boolean
           body?: string | null
+          category?: string
           created_at?: string
           id?: string
           link?: string | null
@@ -1280,8 +1394,11 @@ export type Database = {
           expiry_date: string
           label: string
           max_uses: number
+          min_booking_amount: number
+          per_user_limit: number
           prize_type: string
           prize_value: number
+          start_date: string
           usage_count: number
           used: boolean
         }[]
