@@ -1347,11 +1347,21 @@ function StepSeats({
   remainingSeats,
   mode,
   onModeChange,
+  genders,
+  activeGender,
+  onActiveGenderChange,
+  maleCount,
+  femaleCount,
 }: {
   count: number;
   seats: string[];
   reserved: string[];
   onChange: (s: string[]) => void;
+  genders: Record<string, "male" | "female">;
+  activeGender: "male" | "female";
+  onActiveGenderChange: (g: "male" | "female") => void;
+  maleCount: number;
+  femaleCount: number;
   bus: (Bus & { name?: string | null }) | null;
   layout: LayoutJson | null;
   remainingSeats: number;
@@ -1384,6 +1394,21 @@ function StepSeats({
         </button>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-4">
+        <button
+          onClick={() => onActiveGenderChange("male")}
+          className={`rounded-2xl border-2 p-3 text-sm font-bold flex items-center justify-center gap-2 ${activeGender === "male" ? "border-sky-600 bg-sky-50 text-sky-700" : "border-border"}`}
+        >
+          <Mars className="h-4 w-4" /> ذكر ({Object.values(genders).filter((g) => g === "male").length}/{maleCount})
+        </button>
+        <button
+          onClick={() => onActiveGenderChange("female")}
+          className={`rounded-2xl border-2 p-3 text-sm font-bold flex items-center justify-center gap-2 ${activeGender === "female" ? "border-pink-500 bg-pink-50 text-pink-600" : "border-border"}`}
+        >
+          <Venus className="h-4 w-4" /> أنثى ({Object.values(genders).filter((g) => g === "female").length}/{femaleCount})
+        </button>
+      </div>
+
       <div className="rounded-2xl bg-accent/40 border border-border p-4 mb-6 flex items-center justify-between">
         <div className="font-semibold">
           المقاعد المختارة:{" "}
@@ -1393,7 +1418,11 @@ function StepSeats({
         </div>
         <div className="flex gap-2 flex-wrap">
           {seats.map((s) => (
-            <Badge key={s} variant="secondary" className="font-bold">
+            <Badge
+              key={s}
+              variant="secondary"
+              className={`font-bold ${genders[s] === "male" ? "bg-sky-600 text-white" : genders[s] === "female" ? "bg-pink-500 text-white" : ""}`}
+            >
               {s}
             </Badge>
           ))}
@@ -1406,6 +1435,7 @@ function StepSeats({
             selected={seats}
             reserved={reserved}
             maxSelectable={count}
+            genders={genders}
             onChange={onChange}
           />
         ) : (
@@ -1422,6 +1452,7 @@ function StepSeats({
               }
               onChange(next);
             }}
+            genders={genders}
             blocked={bus?.blocked_seats ?? ["A2"]}
             layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
           />
