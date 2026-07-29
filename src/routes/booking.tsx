@@ -23,6 +23,8 @@ import {
   Ticket,
   Shuffle,
   MousePointerClick,
+  Mars,
+  Venus,
 } from "lucide-react";
 
 import { Link } from "@tanstack/react-router";
@@ -481,6 +483,9 @@ function BookingPage() {
         booking_code: code,
         booking_type: bookingType!,
         passenger_count: passengerCount,
+        male_count: maleCount,
+        female_count: femaleCount,
+        seat_genders: seatGenders,
         room_type: roomType,
         package_id: noHotel ? null : selectedPackage!.id,
         trip_id: tripId,
@@ -668,7 +673,33 @@ function BookingPage() {
                   count={passengerCount}
                   seats={seats}
                   reserved={bookedSeats}
-                  onChange={setSeats}
+                  genders={seatGenders}
+                  activeGender={activeGender}
+                  onActiveGenderChange={setActiveGender}
+                  maleCount={maleCount}
+                  femaleCount={femaleCount}
+                  onChange={(next) => {
+                    const added = next.filter((s) => !seats.includes(s));
+                    const removed = seats.filter((s) => !next.includes(s));
+                    const g = { ...seatGenders };
+                    for (const r of removed) delete g[r];
+                    for (const a of added) {
+                      const usedMale = Object.values(g).filter((v) => v === "male").length;
+                      const usedFemale = Object.values(g).filter((v) => v === "female").length;
+                      let pick: "male" | "female" | null = null;
+                      if (activeGender === "male" && usedMale < maleCount) pick = "male";
+                      else if (activeGender === "female" && usedFemale < femaleCount) pick = "female";
+                      else if (usedMale < maleCount) pick = "male";
+                      else if (usedFemale < femaleCount) pick = "female";
+                      if (!pick) {
+                        toast.warning("اكتمل عدد المقاعد لهذا الجنس. عدّل التوزيع في خطوة عدد الأفراد.");
+                        return;
+                      }
+                      g[a] = pick;
+                    }
+                    setSeatGenders(g);
+                    setSeats(next);
+                  }}
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
@@ -684,6 +715,11 @@ function BookingPage() {
                             activeBus?.blocked_seats ?? ["A2"],
                             ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A",
                           );
+                      const g: Record<string, "male" | "female"> = {};
+                      auto.forEach((sid, i) => {
+                        g[sid] = i < maleCount ? "male" : "female";
+                      });
+                      setSeatGenders(g);
                       setSeats(auto);
                     }
                   }}
@@ -712,6 +748,8 @@ function BookingPage() {
                 <StepConfirm
                   bookingType={bookingType}
                   passengerCount={passengerCount}
+                  maleCount={maleCount}
+                  femaleCount={femaleCount}
                   roomType={roomType}
                   transportOnly={transportOnly}
                   noBus={noBus}
@@ -1613,6 +1651,8 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
 function StepConfirm(props: {
   bookingType: BookingType | null;
   passengerCount: number;
+  maleCount: number;
+  femaleCount: number;
   roomType: RoomType;
   transportOnly: boolean;
   noBus: boolean;
@@ -1636,6 +1676,7 @@ function StepConfirm(props: {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["عدد الأفراد", String(props.passengerCount)],
+    ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
     ["الرحلة", props.trip?.name ?? "—"],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
