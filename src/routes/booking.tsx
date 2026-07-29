@@ -63,6 +63,10 @@ function BookingPage() {
 
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [passengerCount, setPassengerCount] = useState(1);
+  const [maleCount, setMaleCount] = useState(1);
+  const [femaleCount, setFemaleCount] = useState(0);
+  const [seatGenders, setSeatGenders] = useState<Record<string, "male" | "female">>({});
+  const [activeGender, setActiveGender] = useState<"male" | "female">("male");
   const [packageId, setPackageId] = useState<string | null>(null);
   const [roomType, setRoomType] = useState<RoomType>("5");
   const [tripId, setTripId] = useState<string | null>(null);
@@ -230,6 +234,15 @@ function BookingPage() {
   }, [bookingType, passengerCount]);
   useEffect(() => {
     if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
+  }, [passengerCount]);
+
+  // Keep the gender split consistent with the total headcount.
+  useEffect(() => {
+    if (maleCount + femaleCount !== passengerCount) {
+      const m = Math.min(maleCount, passengerCount);
+      setMaleCount(m);
+      setFemaleCount(passengerCount - m);
+    }
   }, [passengerCount]);
   useEffect(() => {
     if (customer.same_whatsapp) setCustomer((c) => ({ ...c, whatsapp_phone: c.contact_phone }));
@@ -408,7 +421,7 @@ function BookingPage() {
       case "نوع الحجز":
         return !!bookingType;
       case "عدد الأفراد":
-        return passengerCount > 0;
+        return passengerCount > 0 && maleCount + femaleCount === passengerCount;
       case "الرحلة والحافلة": {
         if (noBus) return true;
         if (!tripId || !busId) return false;
@@ -591,7 +604,16 @@ function BookingPage() {
               transition={{ duration: 0.25 }}
             >
               {stepName === "نوع الحجز" && <StepBookingType value={bookingType} onChange={setBookingType} />}
-              {stepName === "عدد الأفراد" && <StepCount value={passengerCount} onChange={setPassengerCount} />}
+              {stepName === "عدد الأفراد" && (
+                <StepCount
+                  value={passengerCount}
+                  onChange={setPassengerCount}
+                  maleCount={maleCount}
+                  femaleCount={femaleCount}
+                  setMaleCount={setMaleCount}
+                  setFemaleCount={setFemaleCount}
+                />
+              )}
               {stepName === "الرحلة والحافلة" && (
                 <StepTripBus
                   trips={trips}
@@ -843,10 +865,26 @@ function StepBookingType({ value, onChange }: { value: BookingType | null; onCha
   );
 }
 
-function StepCount({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+function StepCount({
+  value,
+  onChange,
+  maleCount,
+  femaleCount,
+  setMaleCount,
+  setFemaleCount,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  maleCount: number;
+  femaleCount: number;
+  setMaleCount: (n: number) => void;
+  setFemaleCount: (n: number) => void;
+}) {
+  const sum = maleCount + femaleCount;
+  const ok = sum === value;
   return (
     <div>
-      <StepHeader title="عدد الأفراد" desc="يرجى تحديد عدد الأفراد" />
+      <StepHeader title="عدد الأفراد" desc="يرجى تحديد عدد الأفراد وتوزيعهم" />
       <div className="mx-auto max-w-sm surface-card p-6 flex items-center justify-between">
         <Button
           size="icon"
@@ -868,6 +906,40 @@ function StepCount({ value, onChange }: { value: number; onChange: (n: number) =
           <Plus className="h-5 w-5" />
         </Button>
       </div>
+
+      <div className="mx-auto max-w-sm mt-4 grid grid-cols-2 gap-3">
+        <div className="surface-card p-4 text-center">
+          <p className="text-xs font-bold text-sky-700 flex items-center justify-center gap-1">
+            <Mars className="h-4 w-4" /> عدد الذكور
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setMaleCount(Math.max(0, maleCount - 1))}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-2xl font-extrabold">{maleCount}</span>
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setMaleCount(Math.min(value, maleCount + 1))}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="surface-card p-4 text-center">
+          <p className="text-xs font-bold text-pink-600 flex items-center justify-center gap-1">
+            <Venus className="h-4 w-4" /> عدد الإناث
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setFemaleCount(Math.max(0, femaleCount - 1))}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-2xl font-extrabold">{femaleCount}</span>
+            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setFemaleCount(Math.min(value, femaleCount + 1))}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+      <p className={`mt-3 text-center text-xs font-bold ${ok ? "text-success" : "text-destructive"}`}>
+        {ok ? "المجموع مطابق للعدد الإجمالي ✅" : `مجموع الذكور والإناث (${sum}) يجب أن يساوي العدد الإجمالي (${value})`}
+      </p>
     </div>
   );
 }
