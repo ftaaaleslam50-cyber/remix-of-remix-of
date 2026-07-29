@@ -522,9 +522,10 @@ function SettingsPanel({
   }
 
   function onPick(a: AssetSelection) {
-    if (a.mime_type && !/^audio\//.test(a.mime_type) && !/\.(mp3|wav|ogg|m4a)$/i.test(a.url)) {
+    if (!/\.(mp3|wav|ogg|m4a)$/i.test(a.storage_path || a.url)) {
       return toast.error("اختر ملف صوت (mp3, wav, ogg, m4a)");
     }
+
     onChange({ sound_url: a.url });
     toast.success("تم تعيين نغمة الإشعار");
   }
