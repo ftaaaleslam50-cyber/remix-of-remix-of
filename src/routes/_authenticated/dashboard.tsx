@@ -1621,6 +1621,124 @@ function WheelTab() {
           ))}
         </div>
       </div>
+
+      <SpinsLog />
+    </div>
+  );
+}
+
+interface SpinRow {
+  id: string;
+  phone: string;
+  ip: string | null;
+  device_id: string | null;
+  spun_at: string;
+  wheel_segments: { label: string; prize_type: string; prize_value: number } | null;
+  coupons: { code: string; used: boolean } | null;
+}
+
+function SpinsLog() {
+  const [search, setSearch] = useState("");
+  const { data: spins = [] } = useQuery({
+    queryKey: ["admin-wheel-spins"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wheel_spins" as never)
+        .select("id,phone,ip,device_id,spun_at,wheel_segments(label,prize_type,prize_value),coupons(code,used)")
+        .order("spun_at", { ascending: false })
+        .limit(500);
+      return (data as unknown as SpinRow[]) ?? [];
+    },
+  });
+
+  const filtered = spins.filter((s) =>
+    search ? `${s.phone} ${s.coupons?.code ?? ""}`.toLowerCase().includes(search.trim().toLowerCase()) : true,
+  );
+  const wins = filtered.filter((s) => !!s.coupons).length;
+  const redeemed = filtered.filter((s) => s.coupons?.used).length;
+
+  function exportSpins() {
+    const rows = filtered.map((s) => ({
+      التاريخ: new Date(s.spun_at).toLocaleString("ar"),
+      الجوال: s.phone,
+      الجائزة: s.wheel_segments?.label ?? "-",
+      الكوبون: s.coupons?.code ?? "-",
+      "تم الاستخدام": s.coupons?.used ? "نعم" : "لا",
+      IP: s.ip ?? "-",
+      الجهاز: s.device_id ?? "-",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Spins");
+    XLSX.writeFile(wb, `wheel-spins-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  return (
+    <div className="surface-card p-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-lg font-extrabold">سجل عمليات السحب</h2>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            placeholder="بحث بالجوال أو الكوبون..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-56"
+          />
+          <Button onClick={exportSpins} className="rounded-full">
+            <Download className="h-4 w-4 ml-1" /> Excel
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <StatCard icon={Sparkles} label="عدد السحوبات" value={String(filtered.length)} />
+        <StatCard icon={Ticket} label="كوبونات فائزة" value={String(wins)} />
+        <StatCard icon={CalendarCheck} label="كوبونات مستخدمة" value={String(redeemed)} />
+      </div>
+
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>التاريخ</TableHead>
+              <TableHead>الجوال</TableHead>
+              <TableHead>الجائزة</TableHead>
+              <TableHead>الكوبون</TableHead>
+              <TableHead>الحالة</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  لا توجد عمليات سحب.
+                </TableCell>
+              </TableRow>
+            )}
+            {filtered.map((s) => (
+              <TableRow key={s.id}>
+                <TableCell className="text-xs">{new Date(s.spun_at).toLocaleString("ar")}</TableCell>
+                <TableCell dir="ltr" className="text-xs">
+                  {s.phone}
+                </TableCell>
+                <TableCell>{s.wheel_segments?.label ?? "-"}</TableCell>
+                <TableCell dir="ltr" className="font-bold text-xs">
+                  {s.coupons?.code ?? "-"}
+                </TableCell>
+                <TableCell>
+                  {s.coupons ? (
+                    <Badge variant={s.coupons.used ? "secondary" : "default"}>
+                      {s.coupons.used ? "مستخدم" : "متاح"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">بدون جائزة</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
