@@ -84,7 +84,7 @@ function Hero({ cms }: { cms: HomeCms | null | undefined }) {
           transition={{ duration: 0.6 }}
           className="flex flex-col items-center text-center"
         >
-          <div className="inline-flex items-center gap-2 rounded-full glass-bar !border-white/15 !bg-white/10 px-4 py-1.5 text-xs font-semibold text-white">
+          <div className="inline-flex items-center gap-2 rounded-full glass-bar !border-white/15 !bg-white/10 px-4 py-1.5 text-xs font-bold text-white">
             <Sparkles className="h-3.5 w-3.5 text-[color:var(--color-gold)]" />
             تجربة عمرة فاخرة وموثوقة
           </div>
@@ -109,7 +109,7 @@ function Hero({ cms }: { cms: HomeCms | null | undefined }) {
               </Button>
             </Link>
           </div>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-white/70">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm font-bold text-white/70">
             <span className="inline-flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-[color:var(--color-gold)]" /> مرخّصة رسمياً
             </span>
@@ -139,7 +139,7 @@ function Stats() {
         {stats.map((s) => (
           <div key={s.label} className="text-center">
             <p className="text-3xl md:text-4xl font-extrabold text-[color:var(--color-navy)]">{s.value}</p>
-            <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
+            <p className="text-sm font-bold text-muted-foreground mt-1">{s.label}</p>
           </div>
         ))}
       </div>
