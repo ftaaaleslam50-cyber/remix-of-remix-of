@@ -8,7 +8,7 @@ const SPRAY_COUNT = 14;
 function LuxuryLogoLoader({ size, glowScale = 1 }: { size: number; glowScale?: number }) {
   const coreSize = size * 0.42;
   const glowSize = size * 0.78 * glowScale;
-  const blurPx = Math.max(2, size * 0.05 * glowScale);
+  const blurPx = Math.max(1.5, size * 0.05 * glowScale);
 
   return (
     <motion.div
@@ -41,7 +41,7 @@ function LuxuryLogoLoader({ size, glowScale = 1 }: { size: number; glowScale?: n
         .luxury-loader-root * { will-change: transform, opacity; }
       `}</style>
 
-      {/* Outer soft glow — now proportional to size, not fixed px */}
+      {/* Outer soft glow — proportional to size */}
       <div
         className="absolute rounded-full"
         style={{
@@ -58,7 +58,7 @@ function LuxuryLogoLoader({ size, glowScale = 1 }: { size: number; glowScale?: n
       {Array.from({ length: SPRAY_COUNT }).map((_, i) => {
         const angle = (360 / SPRAY_COUNT) * i;
         const dist = size * (0.42 + (i % 3) * 0.06) * glowScale;
-        const dotSize = Math.max(2, size * (0.03 + (i % 3) * 0.008));
+        const dotSize = Math.max(1.5, size * (0.03 + (i % 3) * 0.008) * Math.max(glowScale, 0.6));
         const duration = 1.8;
         const delay = (i / SPRAY_COUNT) * duration * 0.4;
         return (
@@ -119,9 +119,13 @@ export function Logo({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Smaller navbar-scale logos get a tighter glow by default so the halo
-  // never reads bigger than the logo circle itself.
-  const resolvedGlowScale = glowScale ?? (size <= 40 ? 0.75 : 1);
+  // Small navbar-scale logos get a much tighter halo so it never reads
+  // bigger than the logo circle itself — half the previous small-size scale.
+  const resolvedGlowScale = glowScale ?? (size <= 40 ? 0.375 : 1);
+
+  // Padding scales down for small sizes so the image fills the circle
+  // instead of floating inside a fixed 12px (p-3) gutter.
+  const imgPadding = Math.max(1, Math.round(size * (size <= 40 ? 0.06 : 0.14)));
 
   return (
     <div className="flex items-center gap-4">
@@ -145,7 +149,6 @@ export function Logo({
               from-white
               to-gray-100
               object-contain
-              p-3
               ring-4
               ring-[color:var(--color-gold)]/60
               border
@@ -158,6 +161,7 @@ export function Logo({
             style={{
               width: size,
               height: size,
+              padding: imgPadding,
             }}
           />
         ) : (
