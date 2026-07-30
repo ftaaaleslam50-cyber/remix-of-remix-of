@@ -23,33 +23,57 @@ export function Logo({
 
   return (
     <div className="flex items-center gap-4">
-      <img
-        src={logoUrl || BRAND.logoUrl}
-        alt={BRAND.name}
-        width={size}
-        height={size}
-        loading="eager"
-        className="
-          rounded-full
-          bg-gradient-to-br
-          from-white
-          to-gray-100
-          object-contain
-          p-3
-          ring-4
-          ring-[color:var(--color-gold)]/60
-          border
-          border-white/40
-          shadow-2xl
-          transition-all
-          duration-300
-          hover:scale-105
-        "
-        style={{
-          width: size,
-          height: size,
-        }}
-      />
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={BRAND.name}
+          width={size}
+          height={size}
+          loading="eager"
+          className="
+            rounded-full
+            bg-gradient-to-br
+            from-white
+            to-gray-100
+            object-contain
+            p-3
+            ring-4
+            ring-[color:var(--color-gold)]/60
+            border
+            border-white/40
+            shadow-2xl
+            transition-all
+            duration-300
+            hover:scale-105
+          "
+          style={{
+            width: size,
+            height: size,
+          }}
+        />
+      ) : (
+        <div
+          className="
+            rounded-full
+            bg-muted
+            border-2
+            border-dashed
+            border-muted-foreground/30
+            flex
+            items-center
+            justify-center
+            text-muted-foreground
+            font-bold
+            shadow
+          "
+          style={{
+            width: size,
+            height: size,
+          }}
+        >
+          Logo
+        </div>
+      )}
 
       {withText && (
         <div className="flex flex-col leading-tight">
