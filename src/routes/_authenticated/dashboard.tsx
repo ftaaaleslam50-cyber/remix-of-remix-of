@@ -387,6 +387,8 @@ interface UBBusOpt {
   bus_number: number;
   capacity: number;
   trip_id: string | null;
+  layout?: string | null;
+  layout_id?: string | null;
 }
 
 function UnifiedBookingsTab(props: {
@@ -429,7 +431,10 @@ function UnifiedBookingsTab(props: {
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
-        let q = supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number");
+        let q = supabase
+          .from("buses")
+          .select("id,name,bus_number,capacity,trip_id,layout,layout_id")
+          .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
         } else {
@@ -438,7 +443,7 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number"))
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id").order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
