@@ -3,11 +3,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 
-const PARTICLE_COUNT = 8;
+const SPRAY_COUNT = 14;
 
 function LuxuryLogoLoader({ size }: { size: number }) {
-  const radius = size / 2 - 4;
-  const dotSize = Math.max(3, size * 0.045);
+  const coreSize = size * 0.42;
 
   return (
     <motion.div
@@ -20,97 +19,80 @@ function LuxuryLogoLoader({ size }: { size: number }) {
       style={{ width: size, height: size }}
     >
       <style>{`
-        @keyframes luxuryGlowPulse {
-          0%, 100% { opacity: 0.4; transform: scale(0.85); }
-          50% { opacity: 0.9; transform: scale(1.08); }
+        @keyframes luxuryCorePulse {
+          0%   { transform: scale(0.72); opacity: 0.55; }
+          45%  { transform: scale(1.05); opacity: 1; }
+          70%  { transform: scale(1); opacity: 0.9; }
+          100% { transform: scale(0.72); opacity: 0.55; }
         }
-        @keyframes luxuryRingBreathe {
-          0%, 100% { opacity: 0.5; transform: scale(1); }
-          50% { opacity: 0.95; transform: scale(1.07); }
+        @keyframes luxuryCoreGlow {
+          0%   { transform: scale(0.6); opacity: 0.25; }
+          45%  { transform: scale(1.3); opacity: 0.55; }
+          100% { transform: scale(0.6); opacity: 0.25; }
         }
-        @keyframes luxuryOrbit {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes luxuryParticleFade {
-          0%, 100% { opacity: 0.2; }
-          50% { opacity: 1; }
-        }
-        @keyframes luxuryShineSweep {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes luxurySpray {
+          0%   { transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(0.3); opacity: 0; }
+          15%  { opacity: 1; }
+          35%  { opacity: 0.9; }
+          100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateX(var(--dist)) scale(0.15); opacity: 0; }
         }
         .luxury-loader-root * { will-change: transform, opacity; }
       `}</style>
 
-      {/* Soft golden glow */}
+      {/* Outer soft glow, synced with the core pulse */}
       <div
-        className="absolute inset-0 rounded-full"
+        className="absolute rounded-full"
         style={{
+          width: size,
+          height: size,
           background:
-            "radial-gradient(circle, color-mix(in srgb, var(--color-gold) 55%, transparent) 0%, transparent 70%)",
-          filter: "blur(6px)",
-          animation: "luxuryGlowPulse 2.4s ease-in-out infinite",
+            "radial-gradient(circle, color-mix(in srgb, var(--color-gold) 60%, transparent) 0%, transparent 70%)",
+          filter: "blur(8px)",
+          animation: "luxuryCoreGlow 1.8s ease-in-out infinite",
         }}
       />
 
-      {/* Orbiting golden particles */}
-      {Array.from({ length: PARTICLE_COUNT }).map((_, i) => {
-        const angle = (360 / PARTICLE_COUNT) * i;
-        const orbitDuration = 2.6 + i * 0.22;
+      {/* Golden spray particles bursting outward on every pulse */}
+      {Array.from({ length: SPRAY_COUNT }).map((_, i) => {
+        const angle = (360 / SPRAY_COUNT) * i;
+        const dist = size * (0.55 + (i % 3) * 0.08);
+        const dotSize = Math.max(2, size * (0.03 + (i % 3) * 0.008));
+        const duration = 1.8;
+        const delay = (i / SPRAY_COUNT) * duration * 0.4;
         return (
-          <div
+          <span
             key={i}
-            className="absolute inset-0"
-            style={{
-              animation: `luxuryOrbit ${orbitDuration}s linear infinite`,
-              transform: `rotate(${angle}deg)`,
-            }}
-          >
-            <span
-              className="absolute rounded-full"
-              style={{
-                width: dotSize,
-                height: dotSize,
+            className="absolute rounded-full"
+            style={
+              {
                 left: "50%",
                 top: "50%",
-                marginLeft: -dotSize / 2,
-                marginTop: -radius - dotSize / 2,
+                width: dotSize,
+                height: dotSize,
                 background: "var(--color-gold)",
-                boxShadow: "0 0 6px 1px color-mix(in srgb, var(--color-gold) 80%, transparent)",
-                animation: `luxuryParticleFade ${1.6 + i * 0.15}s ease-in-out infinite`,
-                animationDelay: `${i * 0.12}s`,
-              }}
-            />
-          </div>
+                boxShadow: "0 0 5px 1px color-mix(in srgb, var(--color-gold) 85%, transparent)",
+                "--angle": `${angle}deg`,
+                "--dist": `${dist}px`,
+                animation: `luxurySpray ${duration}s ease-out infinite`,
+                animationDelay: `${delay}s`,
+              } as React.CSSProperties
+            }
+          />
         );
       })}
 
-      {/* Breathing core ring */}
+      {/* Breathing golden core */}
       <div
-        className="absolute rounded-full border"
+        className="absolute rounded-full"
         style={{
-          width: size * 0.62,
-          height: size * 0.62,
-          borderColor: "color-mix(in srgb, var(--color-gold) 60%, transparent)",
-          animation: "luxuryRingBreathe 2s ease-in-out infinite",
+          width: coreSize,
+          height: coreSize,
+          background:
+            "radial-gradient(circle, white 0%, var(--color-gold) 55%, color-mix(in srgb, var(--color-gold) 60%, transparent) 100%)",
+          boxShadow: "0 0 16px 2px color-mix(in srgb, var(--color-gold) 70%, transparent)",
+          animation: "luxuryCorePulse 1.8s ease-in-out infinite",
         }}
       />
-
-      {/* Luxury shine sweep */}
-      <div
-        className="absolute inset-0 overflow-hidden rounded-full"
-        style={{ WebkitMaskImage: "radial-gradient(circle, black 100%, transparent 100%)" }}
-      >
-        <div
-          className="absolute inset-[-50%]"
-          style={{
-            background:
-              "conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--color-gold) 90%, white) 8deg, transparent 20deg, transparent 360deg)",
-            animation: "luxuryShineSweep 1s linear infinite",
-          }}
-        />
-      </div>
     </motion.div>
   );
 }
