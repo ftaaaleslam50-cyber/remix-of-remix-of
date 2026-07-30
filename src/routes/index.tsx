@@ -89,7 +89,7 @@ function Hero({ cms }: { cms: HomeCms | null | undefined }) {
             تجربة عمرة فاخرة وموثوقة
           </div>
           <div className="my-6">
-            <Logo size={96} />
+            <Logo size={200} />
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold leading-[1.15] max-w-4xl">{title}</h1>
           <p className="mt-5 max-w-2xl text-white/80 text-lg leading-relaxed">{subtitle}</p>
