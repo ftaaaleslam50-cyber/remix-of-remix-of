@@ -28,7 +28,16 @@ import {
   Share2,
   Pencil,
   Search,
+  Image as ImageIcon,
 } from "lucide-react";
+import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
+import {
+  buildDefaultLayout,
+  downloadSeatChartPdf,
+  downloadSeatChartPng,
+  renderSeatChartCanvas,
+  type SeatOccupant,
+} from "@/lib/bus-seat-chart";
 import { AssetField } from "@/components/admin/AssetField";
 import { trackAssetUsage } from "@/lib/asset-usage";
 import { NotificationBell } from "@/components/site/NotificationBell";
@@ -505,6 +514,57 @@ function UnifiedBookingsTab(props: {
     qcInner.invalidateQueries({ queryKey: ["ub-bus-expenses", busId] });
   }
 
+  // ---- Bus seat chart (PNG / PDF) ----
+  const { data: busLayout } = useQuery({
+    queryKey: ["ub-bus-layout", bus?.layout_id ?? null],
+    enabled: !!bus?.layout_id,
+    queryFn: async () =>
+      (await supabase.from("bus_layouts").select("layout_json").eq("id", bus!.layout_id!).maybeSingle())
+        .data as { layout_json: LayoutJson } | null,
+  });
+
+  function buildChart() {
+    if (!busId || !bus) {
+      toast.error("اختر حافلة أولاً لعرض مخطط المقاعد");
+      return null;
+    }
+    const occupants: SeatOccupant[] = [];
+    for (const b of filtered) {
+      if (b.deleted_at || b.status === "cancelled") continue;
+      const genders = (b.seat_genders ?? {}) as Record<string, "male" | "female">;
+      for (const seat of b.seat_numbers ?? []) {
+        occupants.push({
+          seat,
+          name: b.customer_name,
+          gender: genders[seat],
+          bookingCode: b.booking_code,
+          phone: b.contact_phone,
+        });
+      }
+    }
+    occupants.sort((a, z) => a.seat.localeCompare(z.seat, "en", { numeric: true }));
+    const layout = busLayout?.layout_json ?? buildDefaultLayout((bus.layout as "A" | "B") ?? "A");
+    return renderSeatChartCanvas(layout, occupants, {
+      busLabel: bus.name || `حافلة ${bus.bus_number}`,
+      tripLabel: trips.find((t) => t.id === tripId)?.name,
+      capacity: bus.capacity,
+    });
+  }
+
+  function chartFilename() {
+    const label = bus?.name || `bus-${bus?.bus_number ?? ""}`;
+    return `seat-chart-${label}-${new Date().toISOString().slice(0, 10)}`;
+  }
+
+  function exportSeatChartPng() {
+    const c = buildChart();
+    if (c) downloadSeatChartPng(c, chartFilename());
+  }
+  function exportSeatChartPdf() {
+    const c = buildChart();
+    if (c) downloadSeatChartPdf(c, chartFilename());
+  }
+
   function exportBusExcel() {
     if (!busId) return exportBookingsExcel();
     const rows = filtered.map((b) => ({
@@ -515,6 +575,9 @@ function UnifiedBookingsTab(props: {
       "رقم الهوية": b.id_number,
       الجنسية: b.nationality ?? "-",
       "نوع الغرفة": b.room_type,
+      الذكور: Number(b.male_count ?? 0),
+      الإناث: Number(b.female_count ?? 0),
+      المقاعد: (b.seat_numbers ?? []).join(", "),
       "اسم الفندق": b.packages?.name ?? "-",
       الذهاب: b.trips?.departure_day ?? "-",
       العودة: b.trips?.return_day ?? "-",
@@ -547,6 +610,24 @@ function UnifiedBookingsTab(props: {
           </Link>
           <Button onClick={exportBusExcel} className="rounded-full">
             <Download className="h-4 w-4 ml-1" /> {busId ? "Excel (الحافلة)" : "Excel"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={exportSeatChartPng}
+            disabled={!busId}
+            title={busId ? "" : "اختر حافلة أولاً"}
+            className="rounded-full"
+          >
+            <ImageIcon className="h-4 w-4 ml-1" /> مخطط المقاعد PNG
+          </Button>
+          <Button
+            variant="outline"
+            onClick={exportSeatChartPdf}
+            disabled={!busId}
+            title={busId ? "" : "اختر حافلة أولاً"}
+            className="rounded-full"
+          >
+            <FileText className="h-4 w-4 ml-1" /> مخطط المقاعد PDF
           </Button>
         </div>
       </div>
@@ -634,7 +715,34 @@ function UnifiedBookingsTab(props: {
           : 0;
         const busesInScope = buses.length;
         const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
-        const rooms = filtered.length;
+        // Rooms breakdown: individual (shared 5-bed) bookings count people, not rooms.
+        const roomLabels: Record<string, string> = {
+          "1": "فردي",
+          "2": "ثنائي",
+          "3": "ثلاثي",
+          "4": "رباعي",
+          "5": "خماسي",
+        };
+        const roomCounts: Record<string, number> = {};
+        let sharedPeople = 0;
+        for (const b of filtered) {
+          if (b.booking_type === "individual") {
+            sharedPeople += b.passenger_count || 0;
+            continue;
+          }
+          const key = String(b.room_type ?? "-");
+          roomCounts[key] = (roomCounts[key] ?? 0) + 1;
+        }
+        const rooms = Object.values(roomCounts).reduce((s, n) => s + n, 0);
+        const roomsSub = [
+          Object.entries(roomCounts)
+            .sort((a, z) => Number(a[0]) - Number(z[0]))
+            .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`)
+            .join(" • "),
+          sharedPeople ? `+ ${sharedPeople} أفراد مشترك` : "",
+        ]
+          .filter(Boolean)
+          .join("  ");
         const revenue = filtered
           .filter((b) => b.status === "confirmed")
           .reduce((s, b) => s + Number(b.total_price || 0), 0);
@@ -645,7 +753,7 @@ function UnifiedBookingsTab(props: {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
             <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
-            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} />
+            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} sub={roomsSub} />
             <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
             <StatCard icon={CalendarClock} label="حجوزات اليوم" value={String(todayCount)} />
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
