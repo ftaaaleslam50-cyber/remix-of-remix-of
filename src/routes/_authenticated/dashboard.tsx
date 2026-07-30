@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
+import QRCode from "qrcode";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -28,7 +29,16 @@ import {
   Share2,
   Pencil,
   Search,
+  Image as ImageIcon,
 } from "lucide-react";
+import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
+import {
+  buildDefaultLayout,
+  downloadSeatChartPdf,
+  downloadSeatChartPng,
+  renderSeatChartCanvas,
+  type SeatOccupant,
+} from "@/lib/bus-seat-chart";
 import { AssetField } from "@/components/admin/AssetField";
 import { trackAssetUsage } from "@/lib/asset-usage";
 import { NotificationBell } from "@/components/site/NotificationBell";
@@ -64,6 +74,10 @@ interface BookingRow {
   created_at: string;
   seat_numbers: string[];
   room_type: string;
+  booking_type?: string | null;
+  male_count?: number | null;
+  female_count?: number | null;
+  seat_genders?: Record<string, "male" | "female"> | null;
   discount_amount?: number;
   coupon_code?: string | null;
   deleted_at?: string | null;
@@ -123,7 +137,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -179,6 +193,9 @@ function Dashboard() {
       الرحلة: b.trips?.name ?? "-",
       الباص: b.buses?.bus_number ?? "-",
       المقاعد: b.seat_numbers.join(", "),
+      الذكور: Number(b.male_count ?? 0),
+      الإناث: Number(b.female_count ?? 0),
+      "العودة الفعلية": b.actual_return_day || b.trips?.return_day || "-",
       الخصم: Number(b.discount_amount ?? 0),
       الكود: b.coupon_code ?? "",
       السعر: Number(b.total_price),
@@ -383,6 +400,8 @@ interface UBBusOpt {
   bus_number: number;
   capacity: number;
   trip_id: string | null;
+  layout?: string | null;
+  layout_id?: string | null;
 }
 
 function UnifiedBookingsTab(props: {
@@ -425,7 +444,10 @@ function UnifiedBookingsTab(props: {
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
-        let q = supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number");
+        let q = supabase
+          .from("buses")
+          .select("id,name,bus_number,capacity,trip_id,layout,layout_id")
+          .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
         } else {
@@ -434,7 +456,7 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id").order("bus_number"))
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id").order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
@@ -496,6 +518,57 @@ function UnifiedBookingsTab(props: {
     qcInner.invalidateQueries({ queryKey: ["ub-bus-expenses", busId] });
   }
 
+  // ---- Bus seat chart (PNG / PDF) ----
+  const { data: busLayout } = useQuery({
+    queryKey: ["ub-bus-layout", bus?.layout_id ?? null],
+    enabled: !!bus?.layout_id,
+    queryFn: async () =>
+      (await supabase.from("bus_layouts").select("layout_json").eq("id", bus!.layout_id!).maybeSingle())
+        .data as { layout_json: LayoutJson } | null,
+  });
+
+  function buildChart() {
+    if (!busId || !bus) {
+      toast.error("اختر حافلة أولاً لعرض مخطط المقاعد");
+      return null;
+    }
+    const occupants: SeatOccupant[] = [];
+    for (const b of filtered) {
+      if (b.deleted_at || b.status === "cancelled") continue;
+      const genders = (b.seat_genders ?? {}) as Record<string, "male" | "female">;
+      for (const seat of b.seat_numbers ?? []) {
+        occupants.push({
+          seat,
+          name: b.customer_name,
+          gender: genders[seat],
+          bookingCode: b.booking_code,
+          phone: b.contact_phone,
+        });
+      }
+    }
+    occupants.sort((a, z) => a.seat.localeCompare(z.seat, "en", { numeric: true }));
+    const layout = busLayout?.layout_json ?? buildDefaultLayout((bus.layout as "A" | "B") ?? "A");
+    return renderSeatChartCanvas(layout, occupants, {
+      busLabel: bus.name || `حافلة ${bus.bus_number}`,
+      tripLabel: trips.find((t) => t.id === tripId)?.name,
+      capacity: bus.capacity,
+    });
+  }
+
+  function chartFilename() {
+    const label = bus?.name || `bus-${bus?.bus_number ?? ""}`;
+    return `seat-chart-${label}-${new Date().toISOString().slice(0, 10)}`;
+  }
+
+  function exportSeatChartPng() {
+    const c = buildChart();
+    if (c) downloadSeatChartPng(c, chartFilename());
+  }
+  function exportSeatChartPdf() {
+    const c = buildChart();
+    if (c) downloadSeatChartPdf(c, chartFilename());
+  }
+
   function exportBusExcel() {
     if (!busId) return exportBookingsExcel();
     const rows = filtered.map((b) => ({
@@ -506,6 +579,9 @@ function UnifiedBookingsTab(props: {
       "رقم الهوية": b.id_number,
       الجنسية: b.nationality ?? "-",
       "نوع الغرفة": b.room_type,
+      الذكور: Number(b.male_count ?? 0),
+      الإناث: Number(b.female_count ?? 0),
+      المقاعد: (b.seat_numbers ?? []).join(", "),
       "اسم الفندق": b.packages?.name ?? "-",
       الذهاب: b.trips?.departure_day ?? "-",
       العودة: b.trips?.return_day ?? "-",
@@ -538,6 +614,24 @@ function UnifiedBookingsTab(props: {
           </Link>
           <Button onClick={exportBusExcel} className="rounded-full">
             <Download className="h-4 w-4 ml-1" /> {busId ? "Excel (الحافلة)" : "Excel"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={exportSeatChartPng}
+            disabled={!busId}
+            title={busId ? "" : "اختر حافلة أولاً"}
+            className="rounded-full"
+          >
+            <ImageIcon className="h-4 w-4 ml-1" /> مخطط المقاعد PNG
+          </Button>
+          <Button
+            variant="outline"
+            onClick={exportSeatChartPdf}
+            disabled={!busId}
+            title={busId ? "" : "اختر حافلة أولاً"}
+            className="rounded-full"
+          >
+            <FileText className="h-4 w-4 ml-1" /> مخطط المقاعد PDF
           </Button>
         </div>
       </div>
@@ -625,7 +719,34 @@ function UnifiedBookingsTab(props: {
           : 0;
         const busesInScope = buses.length;
         const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
-        const rooms = filtered.length;
+        // Rooms breakdown: individual (shared 5-bed) bookings count people, not rooms.
+        const roomLabels: Record<string, string> = {
+          "1": "فردي",
+          "2": "ثنائي",
+          "3": "ثلاثي",
+          "4": "رباعي",
+          "5": "خماسي",
+        };
+        const roomCounts: Record<string, number> = {};
+        let sharedPeople = 0;
+        for (const b of filtered) {
+          if (b.booking_type === "individual") {
+            sharedPeople += b.passenger_count || 0;
+            continue;
+          }
+          const key = String(b.room_type ?? "-");
+          roomCounts[key] = (roomCounts[key] ?? 0) + 1;
+        }
+        const rooms = Object.values(roomCounts).reduce((s, n) => s + n, 0);
+        const roomsSub = [
+          Object.entries(roomCounts)
+            .sort((a, z) => Number(a[0]) - Number(z[0]))
+            .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`)
+            .join(" • "),
+          sharedPeople ? `+ ${sharedPeople} أفراد مشترك` : "",
+        ]
+          .filter(Boolean)
+          .join("  ");
         const revenue = filtered
           .filter((b) => b.status === "confirmed")
           .reduce((s, b) => s + Number(b.total_price || 0), 0);
@@ -636,7 +757,7 @@ function UnifiedBookingsTab(props: {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
             <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
-            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} />
+            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} sub={roomsSub} />
             <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
             <StatCard icon={CalendarClock} label="حجوزات اليوم" value={String(todayCount)} />
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
@@ -784,14 +905,27 @@ function UnifiedBookingsTab(props: {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof CalendarCheck; label: string; value: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: typeof CalendarCheck;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div className="surface-card p-5">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{label}</span>
         <Icon className="h-5 w-5 text-primary" />
       </div>
-      <p className="mt-2 text-2xl font-extrabold text-[color:var(--color-navy)]">{value}</p>
+      <div className="mt-2 flex items-end gap-2 flex-wrap">
+        <p className="text-2xl font-extrabold text-[color:var(--color-navy)]">{value}</p>
+        {sub && <p className="text-[11px] leading-tight text-muted-foreground pb-1">{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -1487,6 +1621,124 @@ function WheelTab() {
           ))}
         </div>
       </div>
+
+      <SpinsLog />
+    </div>
+  );
+}
+
+interface SpinRow {
+  id: string;
+  phone: string;
+  ip: string | null;
+  device_id: string | null;
+  spun_at: string;
+  wheel_segments: { label: string; prize_type: string; prize_value: number } | null;
+  coupons: { code: string; used: boolean } | null;
+}
+
+function SpinsLog() {
+  const [search, setSearch] = useState("");
+  const { data: spins = [] } = useQuery({
+    queryKey: ["admin-wheel-spins"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("wheel_spins" as never)
+        .select("id,phone,ip,device_id,spun_at,wheel_segments(label,prize_type,prize_value),coupons(code,used)")
+        .order("spun_at", { ascending: false })
+        .limit(500);
+      return (data as unknown as SpinRow[]) ?? [];
+    },
+  });
+
+  const filtered = spins.filter((s) =>
+    search ? `${s.phone} ${s.coupons?.code ?? ""}`.toLowerCase().includes(search.trim().toLowerCase()) : true,
+  );
+  const wins = filtered.filter((s) => !!s.coupons).length;
+  const redeemed = filtered.filter((s) => s.coupons?.used).length;
+
+  function exportSpins() {
+    const rows = filtered.map((s) => ({
+      التاريخ: new Date(s.spun_at).toLocaleString("ar"),
+      الجوال: s.phone,
+      الجائزة: s.wheel_segments?.label ?? "-",
+      الكوبون: s.coupons?.code ?? "-",
+      "تم الاستخدام": s.coupons?.used ? "نعم" : "لا",
+      IP: s.ip ?? "-",
+      الجهاز: s.device_id ?? "-",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Spins");
+    XLSX.writeFile(wb, `wheel-spins-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  return (
+    <div className="surface-card p-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-lg font-extrabold">سجل عمليات السحب</h2>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            placeholder="بحث بالجوال أو الكوبون..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-56"
+          />
+          <Button onClick={exportSpins} className="rounded-full">
+            <Download className="h-4 w-4 ml-1" /> Excel
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <StatCard icon={Sparkles} label="عدد السحوبات" value={String(filtered.length)} />
+        <StatCard icon={Ticket} label="كوبونات فائزة" value={String(wins)} />
+        <StatCard icon={CalendarCheck} label="كوبونات مستخدمة" value={String(redeemed)} />
+      </div>
+
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>التاريخ</TableHead>
+              <TableHead>الجوال</TableHead>
+              <TableHead>الجائزة</TableHead>
+              <TableHead>الكوبون</TableHead>
+              <TableHead>الحالة</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  لا توجد عمليات سحب.
+                </TableCell>
+              </TableRow>
+            )}
+            {filtered.map((s) => (
+              <TableRow key={s.id}>
+                <TableCell className="text-xs">{new Date(s.spun_at).toLocaleString("ar")}</TableCell>
+                <TableCell dir="ltr" className="text-xs">
+                  {s.phone}
+                </TableCell>
+                <TableCell>{s.wheel_segments?.label ?? "-"}</TableCell>
+                <TableCell dir="ltr" className="font-bold text-xs">
+                  {s.coupons?.code ?? "-"}
+                </TableCell>
+                <TableCell>
+                  {s.coupons ? (
+                    <Badge variant={s.coupons.used ? "secondary" : "default"}>
+                      {s.coupons.used ? "مستخدم" : "متاح"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">بدون جائزة</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
@@ -1572,6 +1824,10 @@ interface CouponRow {
   usage_count: number;
   source: string;
   label: string | null;
+  start_date?: string | null;
+  min_booking_amount?: number | null;
+  per_user_limit?: number | null;
+  qr_url?: string | null;
 }
 
 type FilterMode = "all" | "active" | "disabled" | "used" | "expired";
@@ -1634,6 +1890,23 @@ function CouponsTab() {
     if (error) return toast.error(error.message);
     toast.success("تم حذف الكوبون");
     qc.invalidateQueries({ queryKey: ["admin-coupons"] });
+  }
+
+  async function shareCoupon(c: CouponRow) {
+    const url = `${window.location.origin}/booking?coupon=${encodeURIComponent(c.code)}`;
+    const qr = c.qr_url || (await makeQr(c.code));
+    if (qr) {
+      const a = document.createElement("a");
+      a.href = qr;
+      a.download = `coupon-${c.code}.png`;
+      a.click();
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("تم نسخ رابط الكوبون وتنزيل رمز QR");
+    } catch {
+      toast.success("تم تنزيل رمز QR");
+    }
   }
 
   function newCoupon() {
@@ -1744,6 +2017,9 @@ function CouponsTab() {
                       <Button size="sm" variant="outline" onClick={() => toggleActive(c)}>
                         {c.active ? "تعطيل" : "تفعيل"}
                       </Button>
+                      <Button size="sm" variant="outline" title="QR / مشاركة" onClick={() => shareCoupon(c)}>
+                        <Share2 className="h-4 w-4" />
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => deleteCoupon(c.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1768,6 +2044,15 @@ function CouponsTab() {
       )}
     </div>
   );
+}
+
+async function makeQr(code: string): Promise<string | null> {
+  try {
+    const url = `${window.location.origin}/booking?coupon=${encodeURIComponent(code)}`;
+    return await QRCode.toDataURL(url, { width: 320, margin: 1 });
+  } catch {
+    return null;
+  }
 }
 
 function CouponEditor({
@@ -1795,6 +2080,10 @@ function CouponEditor({
       max_uses: c.max_uses ? Number(c.max_uses) : null,
       source: c.source ?? "manual",
       label: c.label ?? null,
+      start_date: c.start_date || null,
+      min_booking_amount: Number(c.min_booking_amount ?? 0),
+      per_user_limit: c.per_user_limit ? Number(c.per_user_limit) : null,
+      qr_url: await makeQr(c.code.trim().toUpperCase()),
     };
     if (isNew) {
       const { error } = await supabase.from("coupons" as never).insert(payload as never);
@@ -1859,6 +2148,35 @@ function CouponEditor({
               value={c.max_uses ?? ""}
               placeholder="بدون حد"
               onChange={(e) => setC({ ...c, max_uses: e.target.value ? Number(e.target.value) : null })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">تاريخ البداية (اختياري)</Label>
+            <Input
+              type="date"
+              value={c.start_date ? new Date(c.start_date).toISOString().slice(0, 10) : ""}
+              onChange={(e) =>
+                setC({ ...c, start_date: e.target.value ? new Date(e.target.value).toISOString() : null })
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs">أقل مبلغ حجز</Label>
+            <Input
+              type="number"
+              min={0}
+              value={c.min_booking_amount ?? 0}
+              onChange={(e) => setC({ ...c, min_booking_amount: Number(e.target.value) })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">حد الاستخدام لكل مستخدم</Label>
+            <Input
+              type="number"
+              min={1}
+              value={c.per_user_limit ?? ""}
+              placeholder="بدون حد"
+              onChange={(e) => setC({ ...c, per_user_limit: e.target.value ? Number(e.target.value) : null })}
             />
           </div>
           <div className="col-span-2">
