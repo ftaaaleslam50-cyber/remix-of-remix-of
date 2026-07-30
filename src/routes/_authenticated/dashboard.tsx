@@ -192,6 +192,9 @@ function Dashboard() {
       الرحلة: b.trips?.name ?? "-",
       الباص: b.buses?.bus_number ?? "-",
       المقاعد: b.seat_numbers.join(", "),
+      الذكور: Number(b.male_count ?? 0),
+      الإناث: Number(b.female_count ?? 0),
+      "العودة الفعلية": b.actual_return_day || b.trips?.return_day || "-",
       الخصم: Number(b.discount_amount ?? 0),
       الكود: b.coupon_code ?? "",
       السعر: Number(b.total_price),
@@ -1702,6 +1705,10 @@ interface CouponRow {
   usage_count: number;
   source: string;
   label: string | null;
+  start_date?: string | null;
+  min_booking_amount?: number | null;
+  per_user_limit?: number | null;
+  qr_url?: string | null;
 }
 
 type FilterMode = "all" | "active" | "disabled" | "used" | "expired";
@@ -1925,6 +1932,10 @@ function CouponEditor({
       max_uses: c.max_uses ? Number(c.max_uses) : null,
       source: c.source ?? "manual",
       label: c.label ?? null,
+      start_date: c.start_date || null,
+      min_booking_amount: Number(c.min_booking_amount ?? 0),
+      per_user_limit: c.per_user_limit ? Number(c.per_user_limit) : null,
+      qr_url: await makeQr(c.code.trim().toUpperCase()),
     };
     if (isNew) {
       const { error } = await supabase.from("coupons" as never).insert(payload as never);
@@ -1989,6 +2000,35 @@ function CouponEditor({
               value={c.max_uses ?? ""}
               placeholder="بدون حد"
               onChange={(e) => setC({ ...c, max_uses: e.target.value ? Number(e.target.value) : null })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">تاريخ البداية (اختياري)</Label>
+            <Input
+              type="date"
+              value={c.start_date ? new Date(c.start_date).toISOString().slice(0, 10) : ""}
+              onChange={(e) =>
+                setC({ ...c, start_date: e.target.value ? new Date(e.target.value).toISOString() : null })
+              }
+            />
+          </div>
+          <div>
+            <Label className="text-xs">أقل مبلغ حجز</Label>
+            <Input
+              type="number"
+              min={0}
+              value={c.min_booking_amount ?? 0}
+              onChange={(e) => setC({ ...c, min_booking_amount: Number(e.target.value) })}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">حد الاستخدام لكل مستخدم</Label>
+            <Input
+              type="number"
+              min={1}
+              value={c.per_user_limit ?? ""}
+              placeholder="بدون حد"
+              onChange={(e) => setC({ ...c, per_user_limit: e.target.value ? Number(e.target.value) : null })}
             />
           </div>
           <div className="col-span-2">
