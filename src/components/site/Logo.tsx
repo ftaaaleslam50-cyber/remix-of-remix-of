@@ -5,8 +5,10 @@ import { BRAND } from "@/lib/brand";
 
 const SPRAY_COUNT = 14;
 
-function LuxuryLogoLoader({ size }: { size: number }) {
+function LuxuryLogoLoader({ size, glowScale = 1 }: { size: number; glowScale?: number }) {
   const coreSize = size * 0.42;
+  const glowSize = size * 0.78 * glowScale;
+  const blurPx = Math.max(2, size * 0.05 * glowScale);
 
   return (
     <motion.div
@@ -39,15 +41,15 @@ function LuxuryLogoLoader({ size }: { size: number }) {
         .luxury-loader-root * { will-change: transform, opacity; }
       `}</style>
 
-      {/* Outer soft glow, synced with the core pulse */}
+      {/* Outer soft glow — now proportional to size, not fixed px */}
       <div
         className="absolute rounded-full"
         style={{
-          width: size,
-          height: size,
+          width: glowSize,
+          height: glowSize,
           background:
             "radial-gradient(circle, color-mix(in srgb, var(--color-gold) 60%, transparent) 0%, transparent 70%)",
-          filter: "blur(8px)",
+          filter: `blur(${blurPx}px)`,
           animation: "luxuryCoreGlow 1.8s ease-in-out infinite",
         }}
       />
@@ -55,7 +57,7 @@ function LuxuryLogoLoader({ size }: { size: number }) {
       {/* Golden spray particles bursting outward on every pulse */}
       {Array.from({ length: SPRAY_COUNT }).map((_, i) => {
         const angle = (360 / SPRAY_COUNT) * i;
-        const dist = size * (0.55 + (i % 3) * 0.08);
+        const dist = size * (0.42 + (i % 3) * 0.06) * glowScale;
         const dotSize = Math.max(2, size * (0.03 + (i % 3) * 0.008));
         const duration = 1.8;
         const delay = (i / SPRAY_COUNT) * duration * 0.4;
@@ -101,10 +103,12 @@ export function Logo({
   size = 48,
   withText = false,
   light = false,
+  glowScale,
 }: {
   size?: number;
   withText?: boolean;
   light?: boolean;
+  glowScale?: number;
 }) {
   const { data: logoUrl, isLoading } = useQuery({
     queryKey: ["app_settings_logo"],
@@ -115,11 +119,15 @@ export function Logo({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Smaller navbar-scale logos get a tighter glow by default so the halo
+  // never reads bigger than the logo circle itself.
+  const resolvedGlowScale = glowScale ?? (size <= 40 ? 0.75 : 1);
+
   return (
     <div className="flex items-center gap-4">
       <AnimatePresence mode="wait" initial={false}>
         {isLoading ? (
-          <LuxuryLogoLoader size={size} />
+          <LuxuryLogoLoader size={size} glowScale={resolvedGlowScale} />
         ) : logoUrl ? (
           <motion.img
             key="logo-image"
