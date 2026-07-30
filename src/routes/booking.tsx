@@ -507,8 +507,7 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
         notes: notes.trim() || null,
-        actual_return_day:
-          (actualReturnDay || selectedTrip?.return_day || null) as string | null,
+        actual_return_day: (actualReturnDay || selectedTrip?.return_day || null) as string | null,
       };
 
       if (editingCode) {
@@ -951,11 +950,21 @@ function StepCount({
             <Mars className="h-4 w-4" /> عدد الذكور
           </p>
           <div className="mt-2 flex items-center justify-between">
-            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setMaleCount(Math.max(0, maleCount - 1))}>
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setMaleCount(Math.max(0, maleCount - 1))}
+            >
               <Minus className="h-4 w-4" />
             </Button>
             <span className="text-2xl font-extrabold">{maleCount}</span>
-            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setMaleCount(Math.min(value, maleCount + 1))}>
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setMaleCount(Math.min(value, maleCount + 1))}
+            >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -965,18 +974,28 @@ function StepCount({
             <Venus className="h-4 w-4" /> عدد الإناث
           </p>
           <div className="mt-2 flex items-center justify-between">
-            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setFemaleCount(Math.max(0, femaleCount - 1))}>
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setFemaleCount(Math.max(0, femaleCount - 1))}
+            >
               <Minus className="h-4 w-4" />
             </Button>
             <span className="text-2xl font-extrabold">{femaleCount}</span>
-            <Button size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setFemaleCount(Math.min(value, femaleCount + 1))}>
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setFemaleCount(Math.min(value, femaleCount + 1))}
+            >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
       <p className={`mt-3 text-center text-xs font-bold ${ok ? "text-success" : "text-destructive"}`}>
-        {ok ? "المجموع مطابق للعدد الإجمالي ✅" : `مجموع الذكور والإناث (${sum}) يجب أن يساوي العدد الإجمالي (${value})`}
+        {ok ? "المجموع مطابق للعدد الإجمالي" : `مجموع الذكور والإناث (${sum}) يجب أن يساوي العدد الإجمالي (${value})`}
       </p>
     </div>
   );
@@ -1305,9 +1324,7 @@ function StepTripBus({
 
       {tripId && hasMultipleReturns && !noBus && (
         <div className="mt-5 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-extrabold text-[color:var(--color-navy)] mb-2">
-            اختر موعد العودة
-          </p>
+          <p className="text-sm font-extrabold text-[color:var(--color-navy)] mb-2">اختر موعد العودة</p>
           <p className="text-xs text-muted-foreground mb-3">
             هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
           </p>
@@ -1405,7 +1422,8 @@ function StepSeats({
           onClick={() => onActiveGenderChange("female")}
           className={`rounded-2xl border-2 p-3 text-sm font-bold flex items-center justify-center gap-2 ${activeGender === "female" ? "border-pink-500 bg-pink-50 text-pink-600" : "border-border"}`}
         >
-          <Venus className="h-4 w-4" /> أنثى ({Object.values(genders).filter((g) => g === "female").length}/{femaleCount})
+          <Venus className="h-4 w-4" /> أنثى ({Object.values(genders).filter((g) => g === "female").length}/
+          {femaleCount})
         </button>
       </div>
 
@@ -1606,7 +1624,6 @@ function StepCustomer({
           className="mt-2 w-full rounded-xl border p-3 text-sm bg-white resize-y min-h-[80px]"
         />
       </div>
-
 
       <div className="mt-6 max-w-3xl">
         <Label className="font-semibold">صورة الهوية</Label>
