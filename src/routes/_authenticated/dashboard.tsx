@@ -784,14 +784,27 @@ function UnifiedBookingsTab(props: {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof CalendarCheck; label: string; value: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: typeof CalendarCheck;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div className="surface-card p-5">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{label}</span>
         <Icon className="h-5 w-5 text-primary" />
       </div>
-      <p className="mt-2 text-2xl font-extrabold text-[color:var(--color-navy)]">{value}</p>
+      <div className="mt-2 flex items-end gap-2 flex-wrap">
+        <p className="text-2xl font-extrabold text-[color:var(--color-navy)]">{value}</p>
+        {sub && <p className="text-[11px] leading-tight text-muted-foreground pb-1">{sub}</p>}
+      </div>
     </div>
   );
 }
