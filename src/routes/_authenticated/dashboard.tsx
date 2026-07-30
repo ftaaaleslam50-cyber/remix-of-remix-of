@@ -64,6 +64,10 @@ interface BookingRow {
   created_at: string;
   seat_numbers: string[];
   room_type: string;
+  booking_type?: string | null;
+  male_count?: number | null;
+  female_count?: number | null;
+  seat_genders?: Record<string, "male" | "female"> | null;
   discount_amount?: number;
   coupon_code?: string | null;
   deleted_at?: string | null;
