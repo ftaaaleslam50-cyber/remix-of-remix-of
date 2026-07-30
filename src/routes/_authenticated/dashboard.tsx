@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
+import QRCode from "qrcode";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -1773,6 +1774,23 @@ function CouponsTab() {
     qc.invalidateQueries({ queryKey: ["admin-coupons"] });
   }
 
+  async function shareCoupon(c: CouponRow) {
+    const url = `${window.location.origin}/booking?coupon=${encodeURIComponent(c.code)}`;
+    const qr = c.qr_url || (await makeQr(c.code));
+    if (qr) {
+      const a = document.createElement("a");
+      a.href = qr;
+      a.download = `coupon-${c.code}.png`;
+      a.click();
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("تم نسخ رابط الكوبون وتنزيل رمز QR");
+    } catch {
+      toast.success("تم تنزيل رمز QR");
+    }
+  }
+
   function newCoupon() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let s = "";
@@ -1881,6 +1899,9 @@ function CouponsTab() {
                       <Button size="sm" variant="outline" onClick={() => toggleActive(c)}>
                         {c.active ? "تعطيل" : "تفعيل"}
                       </Button>
+                      <Button size="sm" variant="outline" title="QR / مشاركة" onClick={() => shareCoupon(c)}>
+                        <Share2 className="h-4 w-4" />
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => deleteCoupon(c.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1905,6 +1926,15 @@ function CouponsTab() {
       )}
     </div>
   );
+}
+
+async function makeQr(code: string): Promise<string | null> {
+  try {
+    const url = `${window.location.origin}/booking?coupon=${encodeURIComponent(code)}`;
+    return await QRCode.toDataURL(url, { width: 320, margin: 1 });
+  } catch {
+    return null;
+  }
 }
 
 function CouponEditor({
