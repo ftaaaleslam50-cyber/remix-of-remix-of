@@ -25,7 +25,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AssetPicker, type AssetSelection, assetKind } from "@/components/admin/AssetPicker";
-import defaultTone from "@/assets/notification-default.mp3";
+// النغمة الافتراضية من رابط عام في Supabase
+const DEFAULT_SOUND =
+  "https://nsivywimeztraqnselou.supabase.co/storage/v1/object/public/assets//1785397157778-hi5k1r-avast.mpeg";
 
 import { resolveDisplayUrl } from "@/lib/asset-url";
 import { formatDate } from "@/lib/format";
@@ -101,9 +103,6 @@ const BUCKET_LABELS: Record<string, string> = {
   week: "هذا الأسبوع",
   older: "أقدم",
 };
-
-/** Bundled default notification tone. */
-const DEFAULT_SOUND = defaultTone;
 
 /** true when "now" falls inside the configured do-not-disturb window (can wrap midnight). */
 function inDnd(s: NotifSettings): boolean {
