@@ -180,8 +180,9 @@ export function AssetPicker({
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث..." className="pr-10" />
           </div>
           <label className="inline-flex">
-            <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+            <input type="file" accept={accept} multiple className="hidden" disabled={uploading}
               onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
+
             <span className={`cursor-pointer inline-flex items-center h-10 px-4 rounded-full bg-[color:var(--color-navy)] text-white text-sm font-bold hover:opacity-90 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
               {uploading ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <Upload className="h-4 w-4 ml-1" />}
               {uploading ? "جاري الرفع..." : "رفع جديد"}
