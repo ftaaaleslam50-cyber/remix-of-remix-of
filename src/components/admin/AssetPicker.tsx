@@ -21,7 +21,21 @@ interface Asset {
   name: string;
   storage_path: string;
   public_url: string;
+  mime_type?: string | null;
 }
+
+/** Rough media kind from mime type / file extension. */
+export function assetKind(a: { mime_type?: string | null; name?: string; storage_path?: string }): "image" | "audio" | "video" {
+  const m = (a.mime_type ?? "").toLowerCase();
+  if (m.startsWith("audio/")) return "audio";
+  if (m.startsWith("video/")) return "video";
+  if (m.startsWith("image/")) return "image";
+  const src = `${a.storage_path ?? ""} ${a.name ?? ""}`.toLowerCase();
+  if (/\.(mp3|wav|ogg|m4a|aac|flac)(\?|$|\s)/.test(src)) return "audio";
+  if (/\.(mp4|webm|mov|m4v|ogv)(\?|$|\s)/.test(src)) return "video";
+  return "image";
+}
+
 
 async function compressImage(file: File, maxDim = 1920, quality = 0.85): Promise<Blob> {
   if (!file.type.startsWith("image/") || file.type === "image/svg+xml" || file.type === "image/gif") return file;
