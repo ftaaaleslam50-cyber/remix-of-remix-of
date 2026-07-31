@@ -376,6 +376,8 @@ function Dashboard() {
               archiveBooking={archiveBooking}
               restoreBooking={restoreBooking}
               permanentDelete={permanentDelete}
+              setBookingStatus={setBookingStatus}
+
               downloadIdImage={downloadIdImage}
             />
           </TabsContent>
