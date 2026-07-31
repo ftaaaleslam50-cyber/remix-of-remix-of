@@ -610,7 +610,7 @@ function SettingsPanel({
             </>
           )}
         </div>
-        <AssetPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={onPick} />
+        <AssetPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={onPick} kinds={["audio"]} />
       </section>
     </div>
   );
