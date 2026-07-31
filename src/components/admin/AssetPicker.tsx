@@ -14,7 +14,9 @@ export interface AssetSelection {
   url: string;
   name: string;
   storage_path: string;
+  mime_type?: string | null;
 }
+
 
 interface Asset {
   id: string;
