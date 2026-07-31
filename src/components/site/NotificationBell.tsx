@@ -100,8 +100,9 @@ const BUCKET_LABELS: Record<string, string> = {
   older: "أقدم",
 };
 
-const DEFAULT_SOUND =
-  "data:audio/wav;base64,UklGRoQDAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YWADAAA=";
+/** Bundled default notification tone. */
+const DEFAULT_SOUND = defaultTone;
+
 
 /** true when "now" falls inside the configured do-not-disturb window (can wrap midnight). */
 function inDnd(s: NotifSettings): boolean {
