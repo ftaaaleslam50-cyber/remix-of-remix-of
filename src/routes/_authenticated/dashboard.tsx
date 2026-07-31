@@ -429,6 +429,7 @@ function UnifiedBookingsTab(props: {
   archiveBooking: (id: string) => void;
   restoreBooking: (id: string) => void;
   permanentDelete: (id: string) => void;
+  setBookingStatus: (id: string, status: string) => void;
   downloadIdImage: (b: BookingRow) => void;
 }) {
   const {
@@ -439,7 +440,9 @@ function UnifiedBookingsTab(props: {
     archiveBooking,
     restoreBooking,
     permanentDelete,
+    setBookingStatus,
     downloadIdImage,
+
   } = props;
   const [tripId, setTripId] = useState<string>("");
   const [busId, setBusId] = useState<string>("");
