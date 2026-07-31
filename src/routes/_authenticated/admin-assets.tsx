@@ -215,7 +215,7 @@ function AdminAssets() {
           <label className="inline-flex">
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,audio/*,video/*"
               multiple
               className="hidden"
               disabled={uploading}
@@ -223,9 +223,10 @@ function AdminAssets() {
             />
             <span className={`cursor-pointer inline-flex items-center h-10 px-5 rounded-full bg-[color:var(--color-navy)] text-white text-sm font-bold hover:opacity-90 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
               {uploading ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <Upload className="h-4 w-4 ml-1" />}
-              {uploading ? "جاري الرفع..." : "رفع صور"}
+              {uploading ? "جاري الرفع..." : "رفع ملفات (صور / صوت / فيديو)"}
             </span>
           </label>
+
         </div>
 
         {isLoading ? (
