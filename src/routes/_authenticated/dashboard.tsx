@@ -149,16 +149,30 @@ function Dashboard() {
   });
 
   async function archiveBooking(id: string) {
-    if (!confirm("أرشفة الحجز؟")) return;
-    const { error } = await supabase.from("bookings").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    if (!confirm("حذف الحجز؟ سيتم نقله للأرشفة وإلغاء تأكيده.")) return;
+    // Deleting a booking always un-confirms it so seats/finance stop counting it.
+    const { error } = await supabase
+      .from("bookings")
+      .update({ deleted_at: new Date().toISOString(), status: "cancelled" })
+      .eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("تمت الأرشفة");
+    toast.success("تم الحذف وإلغاء التأكيد");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
   async function restoreBooking(id: string) {
-    const { error } = await supabase.from("bookings").update({ deleted_at: null }).eq("id", id);
+    // Restoring re-activates the booking automatically.
+    const { error } = await supabase
+      .from("bookings")
+      .update({ deleted_at: null, status: "confirmed" })
+      .eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("تم الاسترجاع");
+    toast.success("تم الاسترجاع والتفعيل");
+    qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+  }
+  async function setBookingStatus(id: string, status: string) {
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(status === "confirmed" ? "تم تأكيد الحجز" : "تم إلغاء التأكيد");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
   async function permanentDelete(id: string) {
@@ -168,6 +182,7 @@ function Dashboard() {
     toast.success("تم الحذف");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
+
   async function downloadIdImage(b: BookingRow) {
     if (!b.id_image_url) return toast.error("لا توجد صورة هوية");
     const { data, error } = await supabase.storage.from("id-uploads").createSignedUrl(b.id_image_url, 3600);
