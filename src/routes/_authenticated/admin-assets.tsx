@@ -157,8 +157,9 @@ function AdminAssets() {
           name: file.name,
           storage_path: path,
           public_url: pub.publicUrl,
-          mime_type: blob.type,
+          mime_type: blob.type || file.type,
           size_bytes: blob.size,
+
           width: dims?.w ?? null,
           height: dims?.h ?? null,
         } as never);
