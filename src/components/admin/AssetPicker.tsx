@@ -66,15 +66,20 @@ export function AssetPicker({
   open,
   onOpenChange,
   onSelect,
+  kinds,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSelect: (a: AssetSelection) => void;
+  /** Restrict the library to certain media kinds (defaults to all). */
+  kinds?: Array<"image" | "audio" | "video">;
 }) {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [uploading, setUploading] = useState(false);
   const [signed, setSigned] = useState<Record<string, string>>({});
+
+  const accept = kinds?.length ? kinds.map((k) => `${k}/*`).join(",") : "image/*,audio/*,video/*";
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["admin-assets"],
@@ -82,7 +87,7 @@ export function AssetPicker({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assets" as never)
-        .select("id,name,storage_path,public_url")
+        .select("id,name,storage_path,public_url,mime_type")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as Asset[]) ?? [];
@@ -105,8 +110,11 @@ export function AssetPicker({
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return t ? assets.filter((a) => a.name.toLowerCase().includes(t)) : assets;
-  }, [assets, q]);
+    let list = assets;
+    if (kinds?.length) list = list.filter((a) => kinds.includes(assetKind(a)));
+    return t ? list.filter((a) => a.name.toLowerCase().includes(t)) : list;
+  }, [assets, q, kinds]);
+
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
