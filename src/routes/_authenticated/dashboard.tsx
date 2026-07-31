@@ -30,8 +30,13 @@ import {
   Pencil,
   Search,
   Image as ImageIcon,
+  XCircle,
+  CheckCircle2,
 } from "lucide-react";
 import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
+import { ROOM_LABEL } from "@/lib/booking/pricing";
+import type { RoomType } from "@/lib/booking/types";
 import {
   buildDefaultLayout,
   downloadSeatChartPdf,
@@ -446,6 +451,7 @@ function UnifiedBookingsTab(props: {
   } = props;
   const [tripId, setTripId] = useState<string>("");
   const [busId, setBusId] = useState<string>("");
+  const [manualOpen, setManualOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
 
@@ -901,7 +907,7 @@ function UnifiedBookingsTab(props: {
                 onClose={() => setManualOpen(false)}
                 onSaved={() => {
                   setManualOpen(false);
-                  onRefresh();
+                  qc.invalidateQueries({ queryKey: ["admin-bookings"] });
                 }}
               />
             )}
