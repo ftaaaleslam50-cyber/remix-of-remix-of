@@ -141,9 +141,12 @@ function AdminAssets() {
       for (const file of Array.from(files)) {
         const blob = await compressImage(file);
         const dims = await getImageDims(blob);
-        const ext = (blob.type.split("/")[1] || "bin").split(";")[0];
+        const origExt = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const isImage = (blob.type || file.type).startsWith("image/");
+        const ext = isImage ? (blob.type.split("/")[1] || "bin").split(";")[0] : origExt || "bin";
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName.replace(/\.[^.]+$/, "")}.${ext}`;
+
         const { error: upErr } = await supabase.storage.from("assets").upload(path, blob, {
           contentType: blob.type,
           upsert: false,
