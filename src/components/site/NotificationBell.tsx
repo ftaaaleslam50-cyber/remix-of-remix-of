@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AssetPicker, type AssetSelection, assetKind } from "@/components/admin/AssetPicker";
-import defaultTone from "@/assets/notification-default.mp3";
+import defaultTone from "@/assets/notification-default--.mp3";
 
 import { resolveDisplayUrl } from "@/lib/asset-url";
 import { formatDate } from "@/lib/format";
@@ -104,7 +104,6 @@ const BUCKET_LABELS: Record<string, string> = {
 
 /** Bundled default notification tone. */
 const DEFAULT_SOUND = defaultTone;
-
 
 /** true when "now" falls inside the configured do-not-disturb window (can wrap midnight). */
 function inDnd(s: NotifSettings): boolean {
@@ -454,7 +453,11 @@ export function NotificationBell() {
                               </button>
                             )}
                             {!n.archived ? (
-                              <button onClick={() => archive(n.id)} title="أرشفة" className="p-1 hover:bg-muted rounded">
+                              <button
+                                onClick={() => archive(n.id)}
+                                title="أرشفة"
+                                className="p-1 hover:bg-muted rounded"
+                              >
                                 <Archive className="h-3 w-3" />
                               </button>
                             ) : (
@@ -536,17 +539,36 @@ function SettingsPanel({
     toast.success("تم تعيين نغمة الإشعار");
   }
 
-
   return (
     <div className="max-h-96 overflow-y-auto p-3 space-y-3">
       <section>
         <p className="text-xs font-extrabold mb-1">التنبيهات</p>
-        <Toggle label="صوت الإشعارات" checked={settings.sound_enabled} onChange={(v) => onChange({ sound_enabled: v })} />
-        <Toggle label="إشعارات Toast" checked={settings.toast_enabled} onChange={(v) => onChange({ toast_enabled: v })} />
+        <Toggle
+          label="صوت الإشعارات"
+          checked={settings.sound_enabled}
+          onChange={(v) => onChange({ sound_enabled: v })}
+        />
+        <Toggle
+          label="إشعارات Toast"
+          checked={settings.toast_enabled}
+          onChange={(v) => onChange({ toast_enabled: v })}
+        />
         <Toggle label="إشعارات المتصفح" checked={settings.browser_enabled} onChange={onBrowserChange} />
-        <Toggle label="اهتزاز الهاتف" checked={settings.vibrate_enabled} onChange={(v) => onChange({ vibrate_enabled: v })} />
-        <Toggle label="حركة الجرس" checked={settings.bell_animation} onChange={(v) => onChange({ bell_animation: v })} />
-        <Toggle label="عداد الإشعارات" checked={settings.show_counter} onChange={(v) => onChange({ show_counter: v })} />
+        <Toggle
+          label="اهتزاز الهاتف"
+          checked={settings.vibrate_enabled}
+          onChange={(v) => onChange({ vibrate_enabled: v })}
+        />
+        <Toggle
+          label="حركة الجرس"
+          checked={settings.bell_animation}
+          onChange={(v) => onChange({ bell_animation: v })}
+        />
+        <Toggle
+          label="عداد الإشعارات"
+          checked={settings.show_counter}
+          onChange={(v) => onChange({ show_counter: v })}
+        />
       </section>
 
       <section className="border-t pt-2">
@@ -560,7 +582,11 @@ function SettingsPanel({
 
       <section className="border-t pt-2">
         <p className="text-xs font-extrabold mb-1">وضع عدم الإزعاج</p>
-        <Toggle label="تفعيل عدم الإزعاج" checked={settings.dnd_enabled} onChange={(v) => onChange({ dnd_enabled: v })} />
+        <Toggle
+          label="تفعيل عدم الإزعاج"
+          checked={settings.dnd_enabled}
+          onChange={(v) => onChange({ dnd_enabled: v })}
+        />
         {settings.dnd_enabled && (
           <div className="grid grid-cols-2 gap-2 mt-1">
             <div>
