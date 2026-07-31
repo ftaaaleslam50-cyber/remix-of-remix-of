@@ -287,14 +287,19 @@ function BookingPage() {
     })();
   }, []);
 
-  // Apply pending coupon from wheel
+  // Apply pending coupon from the wheel, or from a coupon QR link (/booking?coupon=CODE).
+  const [autoCoupon, setAutoCoupon] = useState<string | null>(null);
   useEffect(() => {
-    const pending = typeof window !== "undefined" ? localStorage.getItem("pending_coupon") : null;
-    if (pending) {
-      setCouponInput(pending);
-      localStorage.removeItem("pending_coupon");
-    }
+    if (typeof window === "undefined") return;
+    const fromUrl = new URLSearchParams(window.location.search).get("coupon");
+    const pending = localStorage.getItem("pending_coupon");
+    const code = (fromUrl || pending || "").trim().toUpperCase();
+    if (!code) return;
+    setCouponInput(code);
+    localStorage.removeItem("pending_coupon");
+    if (fromUrl) setAutoCoupon(code);
   }, []);
+
 
   // Prefill from an existing booking when the user clicks "تعديل الحجز" on the ticket page.
   useEffect(() => {
