@@ -781,7 +781,7 @@ function BookingPage() {
                   couponInput={couponInput}
                   setCouponInput={setCouponInput}
                   appliedCoupon={appliedCoupon}
-                  applyCoupon={applyCoupon}
+                  applyCoupon={() => void applyCoupon()}
                   clearCoupon={() => {
                     setAppliedCoupon(null);
                     setCouponInput("");
