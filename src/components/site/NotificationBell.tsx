@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AssetPicker, type AssetSelection, assetKind } from "@/components/admin/AssetPicker";
-import defaultTone from "@/assets/notification-default--.mp3";
+import defaultTone from "@/assets/notification-default.mp3";
 
 import { resolveDisplayUrl } from "@/lib/asset-url";
 import { formatDate } from "@/lib/format";
