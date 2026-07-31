@@ -863,17 +863,28 @@ function UnifiedBookingsTab(props: {
         </div>
       )}
 
+      <div className="flex justify-end">
+        <Button size="sm" className="rounded-full" onClick={() => setManualOpen((v) => !v)}>
+          <Plus className="h-3 w-3 ml-1" />
+          حجز يدوي
+        </Button>
+      </div>
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>رقم الحجز</TableHead>
+              <TableHead>مصدر الحجز</TableHead>
+              <TableHead>نوع الحجز</TableHead>
+              <TableHead>الأفراد</TableHead>
               <TableHead>الاسم</TableHead>
               <TableHead>الجوال</TableHead>
+              <TableHead>الفندق</TableHead>
+              <TableHead>نوع الغرفة</TableHead>
               <TableHead>الرحلة</TableHead>
               <TableHead>العودة</TableHead>
               <TableHead>الحافلة</TableHead>
-              <TableHead>الأفراد</TableHead>
               <TableHead>المقاعد</TableHead>
               <TableHead>الإجمالي</TableHead>
               <TableHead>الحالة</TableHead>
@@ -882,9 +893,21 @@ function UnifiedBookingsTab(props: {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {manualOpen && (
+              <ManualBookingRow
+                colSpan={16}
+                defaultTripId={tripId}
+                defaultBusId={busId}
+                onClose={() => setManualOpen(false)}
+                onSaved={() => {
+                  setManualOpen(false);
+                  onRefresh();
+                }}
+              />
+            )}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
                   لا توجد حجوزات مطابقة.
                 </TableCell>
               </TableRow>
@@ -894,12 +917,16 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="font-bold" dir="ltr">
                   {b.booking_code}
                 </TableCell>
+                <TableCell className="text-xs">{b.booking_source ?? "-"}</TableCell>
+                <TableCell className="text-xs">{b.booking_type === "individual" ? "أفراد" : "عائلة"}</TableCell>
+                <TableCell>{b.passenger_count}</TableCell>
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
+                <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
+                <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.actual_return_day ?? b.trips?.return_day ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
-                <TableCell>{b.passenger_count}</TableCell>
                 <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
                 <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
                 <TableCell>
@@ -940,6 +967,16 @@ function UnifiedBookingsTab(props: {
                       </Button>
                     )}
                     {!b.deleted_at && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title={b.status === "confirmed" ? "إلغاء التأكيد" : "تأكيد الحجز"}
+                        onClick={() => setBookingStatus(b.id, b.status === "confirmed" ? "pending" : "confirmed")}
+                      >
+                        {b.status === "confirmed" ? <XCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                      </Button>
+                    )}
+                    {!b.deleted_at && (
                       <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}>
                         <Archive className="h-3 w-3" />
                       </Button>
@@ -949,15 +986,20 @@ function UnifiedBookingsTab(props: {
                         <RotateCcw className="h-3 w-3" />
                       </Button>
                     )}
-                    {b.deleted_at && (
-                      <Button size="sm" variant="outline" title="حذف نهائي" onClick={() => permanentDelete(b.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive"
+                      title="حذف نهائي"
+                      onClick={() => permanentDelete(b.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
+
           </TableBody>
         </Table>
       </div>
