@@ -241,16 +241,27 @@ function AdminAssets() {
             {filtered.map((a) => {
               const src = signedUrls[a.id] ?? a.public_url;
               const usedIn = usageCount[a.id] ?? 0;
+              const kind = assetKind(a);
               return (
                 <div key={a.id} className="surface-card overflow-hidden">
-                  <div className="aspect-square bg-muted relative">
-                    <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
+                  <div className="aspect-square bg-muted relative flex items-center justify-center">
+                    {kind === "image" ? (
+                      <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
+                    ) : kind === "video" ? (
+                      <video src={src} controls className="w-full h-full object-contain" preload="metadata" />
+                    ) : (
+                      <div className="w-full px-3 text-center space-y-2">
+                        <Music className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <audio src={src} controls className="w-full" preload="none" />
+                      </div>
+                    )}
                     {usedIn > 0 && (
                       <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                         مُستخدم × {usedIn}
                       </span>
                     )}
                   </div>
+
                   <div className="p-3 space-y-2">
                     <p className="text-xs font-semibold truncate" title={a.name}>{a.name}</p>
                     <p className="text-[10px] text-muted-foreground">
