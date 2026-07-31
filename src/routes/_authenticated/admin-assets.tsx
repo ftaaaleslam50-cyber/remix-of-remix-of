@@ -2,10 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Trash2, Copy, Search, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Copy, Search, Image as ImageIcon, Loader2, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { assetKind } from "@/components/admin/AssetPicker";
+
 
 export const Route = createFileRoute("/_authenticated/admin-assets")({
   component: AdminAssets,
