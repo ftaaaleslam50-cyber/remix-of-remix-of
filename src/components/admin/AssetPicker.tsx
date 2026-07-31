@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Search, Upload, X, Image as ImageIcon, Check } from "lucide-react";
+import { Loader2, Search, Upload, X, Image as ImageIcon, Check, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,30 @@ export interface AssetSelection {
   url: string;
   name: string;
   storage_path: string;
+  mime_type?: string | null;
 }
+
 
 interface Asset {
   id: string;
   name: string;
   storage_path: string;
   public_url: string;
+  mime_type?: string | null;
 }
+
+/** Rough media kind from mime type / file extension. */
+export function assetKind(a: { mime_type?: string | null; name?: string; storage_path?: string }): "image" | "audio" | "video" {
+  const m = (a.mime_type ?? "").toLowerCase();
+  if (m.startsWith("audio/")) return "audio";
+  if (m.startsWith("video/")) return "video";
+  if (m.startsWith("image/")) return "image";
+  const src = `${a.storage_path ?? ""} ${a.name ?? ""}`.toLowerCase();
+  if (/\.(mp3|wav|ogg|m4a|aac|flac)(\?|$|\s)/.test(src)) return "audio";
+  if (/\.(mp4|webm|mov|m4v|ogv)(\?|$|\s)/.test(src)) return "video";
+  return "image";
+}
+
 
 async function compressImage(file: File, maxDim = 1920, quality = 0.85): Promise<Blob> {
   if (!file.type.startsWith("image/") || file.type === "image/svg+xml" || file.type === "image/gif") return file;
@@ -50,15 +66,20 @@ export function AssetPicker({
   open,
   onOpenChange,
   onSelect,
+  kinds,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSelect: (a: AssetSelection) => void;
+  /** Restrict the library to certain media kinds (defaults to all). */
+  kinds?: Array<"image" | "audio" | "video">;
 }) {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [uploading, setUploading] = useState(false);
   const [signed, setSigned] = useState<Record<string, string>>({});
+
+  const accept = kinds?.length ? kinds.map((k) => `${k}/*`).join(",") : "image/*,audio/*,video/*";
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ["admin-assets"],
@@ -66,7 +87,7 @@ export function AssetPicker({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assets" as never)
-        .select("id,name,storage_path,public_url")
+        .select("id,name,storage_path,public_url,mime_type")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as Asset[]) ?? [];
@@ -89,8 +110,11 @@ export function AssetPicker({
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return t ? assets.filter((a) => a.name.toLowerCase().includes(t)) : assets;
-  }, [assets, q]);
+    let list = assets;
+    if (kinds?.length) list = list.filter((a) => kinds.includes(assetKind(a)));
+    return t ? list.filter((a) => a.name.toLowerCase().includes(t)) : list;
+  }, [assets, q, kinds]);
+
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -100,9 +124,12 @@ export function AssetPicker({
       for (const file of Array.from(files)) {
         const blob = await compressImage(file);
         const dims = await getDims(blob);
-        const ext = (blob.type.split("/")[1] || "bin").split(";")[0];
+        const origExt = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const isImage = (blob.type || file.type).startsWith("image/");
+        const ext = isImage ? (blob.type.split("/")[1] || "bin").split(";")[0] : origExt || "bin";
         const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/\.[^.]+$/, "");
         const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}.${ext}`;
+
         const { error: upErr } = await supabase.storage.from("assets").upload(path, blob, {
           contentType: blob.type, upsert: false,
         });
@@ -116,14 +143,15 @@ export function AssetPicker({
           .from("assets" as never)
           .insert({
             name: file.name, storage_path: path, public_url: savedUrl,
-            mime_type: blob.type, size_bytes: blob.size,
+            mime_type: blob.type || file.type, size_bytes: blob.size,
             width: dims?.w ?? null, height: dims?.h ?? null,
           } as never)
-          .select("id,name,storage_path,public_url")
+          .select("id,name,storage_path,public_url,mime_type")
           .single();
         if (error) { toast.error(error.message); continue; }
         const r = row as unknown as Asset;
-        last = { id: r.id, url: r.public_url, name: r.name, storage_path: r.storage_path };
+        last = { id: r.id, url: r.public_url, name: r.name, storage_path: r.storage_path, mime_type: r.mime_type };
+
 
       }
       qc.invalidateQueries({ queryKey: ["admin-assets"] });
@@ -152,8 +180,9 @@ export function AssetPicker({
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث..." className="pr-10" />
           </div>
           <label className="inline-flex">
-            <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+            <input type="file" accept={accept} multiple className="hidden" disabled={uploading}
               onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
+
             <span className={`cursor-pointer inline-flex items-center h-10 px-4 rounded-full bg-[color:var(--color-navy)] text-white text-sm font-bold hover:opacity-90 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
               {uploading ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <Upload className="h-4 w-4 ml-1" />}
               {uploading ? "جاري الرفع..." : "رفع جديد"}
@@ -173,32 +202,48 @@ export function AssetPicker({
             <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4 pb-2">
               {filtered.map((a) => {
                 const src = signed[a.id] ?? a.public_url;
+                const kind = assetKind(a);
                 async function pick() {
                   let url = a.public_url;
                   // Legacy rows may still hold a broken /object/public/ URL — upgrade to signed on the fly.
                   if (!url.includes("/object/sign/")) {
                     try { url = await getLongLivedSignedUrl("assets", a.storage_path); } catch { /* keep original */ }
                   }
-                  onSelect({ id: a.id, url, name: a.name, storage_path: a.storage_path });
+                  onSelect({ id: a.id, url, name: a.name, storage_path: a.storage_path, mime_type: a.mime_type });
                   onOpenChange(false);
                 }
                 return (
-                  <button
+                  <div
                     key={a.id}
-                    type="button"
-                    onClick={pick}
                     className="group relative rounded-xl overflow-hidden border-2 border-transparent hover:border-primary transition"
                   >
-                    <div className="aspect-square bg-muted">
-                      <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <button type="button" onClick={pick} className="block w-full text-right">
+                      <div className="aspect-square bg-muted flex items-center justify-center">
+                        {kind === "image" ? (
+                          <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
+                        ) : kind === "video" ? (
+                          <video src={src} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                        ) : (
+                          <Music className="h-12 w-12 text-muted-foreground" />
+                        )}
+                      </div>
+                      <p className="p-1.5 text-[10px] font-semibold truncate text-right" title={a.name}>{a.name}</p>
+                    </button>
+                    {kind === "audio" && (
+                      <audio src={src} controls className="w-full h-8 px-1 pb-1" preload="none" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={pick}
+                      aria-label={`اختيار ${a.name}`}
+                      className="absolute inset-x-0 top-0 aspect-square bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+                    >
                       <Check className="h-8 w-8 text-white" />
-                    </div>
-                    <p className="p-1.5 text-[10px] font-semibold truncate text-right" title={a.name}>{a.name}</p>
-                  </button>
+                    </button>
+                  </div>
                 );
               })}
+
 
             </div>
           )}

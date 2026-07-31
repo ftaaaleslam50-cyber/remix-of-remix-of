@@ -2,10 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Trash2, Copy, Search, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Copy, Search, Image as ImageIcon, Loader2, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { assetKind } from "@/components/admin/AssetPicker";
+
 
 export const Route = createFileRoute("/_authenticated/admin-assets")({
   component: AdminAssets,
@@ -141,9 +143,12 @@ function AdminAssets() {
       for (const file of Array.from(files)) {
         const blob = await compressImage(file);
         const dims = await getImageDims(blob);
-        const ext = (blob.type.split("/")[1] || "bin").split(";")[0];
+        const origExt = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const isImage = (blob.type || file.type).startsWith("image/");
+        const ext = isImage ? (blob.type.split("/")[1] || "bin").split(";")[0] : origExt || "bin";
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName.replace(/\.[^.]+$/, "")}.${ext}`;
+
         const { error: upErr } = await supabase.storage.from("assets").upload(path, blob, {
           contentType: blob.type,
           upsert: false,
@@ -154,8 +159,9 @@ function AdminAssets() {
           name: file.name,
           storage_path: path,
           public_url: pub.publicUrl,
-          mime_type: blob.type,
+          mime_type: blob.type || file.type,
           size_bytes: blob.size,
+
           width: dims?.w ?? null,
           height: dims?.h ?? null,
         } as never);
@@ -211,7 +217,7 @@ function AdminAssets() {
           <label className="inline-flex">
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,audio/*,video/*"
               multiple
               className="hidden"
               disabled={uploading}
@@ -219,9 +225,10 @@ function AdminAssets() {
             />
             <span className={`cursor-pointer inline-flex items-center h-10 px-5 rounded-full bg-[color:var(--color-navy)] text-white text-sm font-bold hover:opacity-90 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
               {uploading ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <Upload className="h-4 w-4 ml-1" />}
-              {uploading ? "جاري الرفع..." : "رفع صور"}
+              {uploading ? "جاري الرفع..." : "رفع ملفات (صور / صوت / فيديو)"}
             </span>
           </label>
+
         </div>
 
         {isLoading ? (
@@ -236,16 +243,27 @@ function AdminAssets() {
             {filtered.map((a) => {
               const src = signedUrls[a.id] ?? a.public_url;
               const usedIn = usageCount[a.id] ?? 0;
+              const kind = assetKind(a);
               return (
                 <div key={a.id} className="surface-card overflow-hidden">
-                  <div className="aspect-square bg-muted relative">
-                    <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
+                  <div className="aspect-square bg-muted relative flex items-center justify-center">
+                    {kind === "image" ? (
+                      <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
+                    ) : kind === "video" ? (
+                      <video src={src} controls className="w-full h-full object-contain" preload="metadata" />
+                    ) : (
+                      <div className="w-full px-3 text-center space-y-2">
+                        <Music className="h-12 w-12 mx-auto text-muted-foreground" />
+                        <audio src={src} controls className="w-full" preload="none" />
+                      </div>
+                    )}
                     {usedIn > 0 && (
                       <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                         مُستخدم × {usedIn}
                       </span>
                     )}
                   </div>
+
                   <div className="p-3 space-y-2">
                     <p className="text-xs font-semibold truncate" title={a.name}>{a.name}</p>
                     <p className="text-[10px] text-muted-foreground">

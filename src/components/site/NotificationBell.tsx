@@ -24,7 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AssetPicker, type AssetSelection } from "@/components/admin/AssetPicker";
+import { AssetPicker, type AssetSelection, assetKind } from "@/components/admin/AssetPicker";
+import defaultTone from "@/assets/notification-default.mp3";
+
 import { resolveDisplayUrl } from "@/lib/asset-url";
 import { formatDate } from "@/lib/format";
 
@@ -100,8 +102,9 @@ const BUCKET_LABELS: Record<string, string> = {
   older: "أقدم",
 };
 
-const DEFAULT_SOUND =
-  "data:audio/wav;base64,UklGRoQDAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YWADAAA=";
+/** Bundled default notification tone. */
+const DEFAULT_SOUND = defaultTone;
+
 
 /** true when "now" falls inside the configured do-not-disturb window (can wrap midnight). */
 function inDnd(s: NotifSettings): boolean {
@@ -522,13 +525,17 @@ function SettingsPanel({
   }
 
   function onPick(a: AssetSelection) {
-    if (!/\.(mp3|wav|ogg|m4a)$/i.test(a.storage_path || a.url)) {
+    const isAudio =
+      assetKind({ mime_type: a.mime_type, name: a.name, storage_path: a.storage_path }) === "audio" ||
+      /\.(mp3|wav|ogg|m4a|aac|flac)(\?|$)/i.test(a.storage_path || a.url);
+    if (!isAudio) {
       return toast.error("اختر ملف صوت (mp3, wav, ogg, m4a)");
     }
 
     onChange({ sound_url: a.url });
     toast.success("تم تعيين نغمة الإشعار");
   }
+
 
   return (
     <div className="max-h-96 overflow-y-auto p-3 space-y-3">
@@ -603,7 +610,7 @@ function SettingsPanel({
             </>
           )}
         </div>
-        <AssetPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={onPick} />
+        <AssetPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={onPick} kinds={["audio"]} />
       </section>
     </div>
   );

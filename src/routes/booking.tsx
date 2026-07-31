@@ -287,14 +287,19 @@ function BookingPage() {
     })();
   }, []);
 
-  // Apply pending coupon from wheel
+  // Apply pending coupon from the wheel, or from a coupon QR link (/booking?coupon=CODE).
+  const [autoCoupon, setAutoCoupon] = useState<string | null>(null);
   useEffect(() => {
-    const pending = typeof window !== "undefined" ? localStorage.getItem("pending_coupon") : null;
-    if (pending) {
-      setCouponInput(pending);
-      localStorage.removeItem("pending_coupon");
-    }
+    if (typeof window === "undefined") return;
+    const fromUrl = new URLSearchParams(window.location.search).get("coupon");
+    const pending = localStorage.getItem("pending_coupon");
+    const code = (fromUrl || pending || "").trim().toUpperCase();
+    if (!code) return;
+    setCouponInput(code);
+    localStorage.removeItem("pending_coupon");
+    if (fromUrl) setAutoCoupon(code);
   }, []);
+
 
   // Prefill from an existing booking when the user clicks "تعديل الحجز" on the ticket page.
   useEffect(() => {
@@ -369,9 +374,10 @@ function BookingPage() {
   }, [appliedCoupon, subtotal]);
   const total = Math.max(0, subtotal - discount);
 
-  async function applyCoupon() {
-    const code = couponInput.trim().toUpperCase();
+  async function applyCoupon(codeArg?: string) {
+    const code = (codeArg ?? couponInput).trim().toUpperCase();
     if (!code) return;
+
     const { data } = await supabase.rpc("validate_coupon" as never, { _code: code } as never);
     const rows =
       (data as unknown as Array<{
@@ -417,6 +423,15 @@ function BookingPage() {
     setAppliedCoupon({ code: c.code, prize_type: c.prize_type, prize_value: Number(c.prize_value), label: c.label });
     toast.success("تم تطبيق كود الخصم");
   }
+
+  // Auto-validate a coupon that arrived through a QR link and tell the customer what happened.
+  useEffect(() => {
+    if (!autoCoupon) return;
+    setAutoCoupon(null);
+    void applyCoupon(autoCoupon);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCoupon]);
+
 
   function canProceed(): boolean {
     switch (stepName) {
@@ -766,7 +781,7 @@ function BookingPage() {
                   couponInput={couponInput}
                   setCouponInput={setCouponInput}
                   appliedCoupon={appliedCoupon}
-                  applyCoupon={applyCoupon}
+                  applyCoupon={() => void applyCoupon()}
                   clearCoupon={() => {
                     setAppliedCoupon(null);
                     setCouponInput("");

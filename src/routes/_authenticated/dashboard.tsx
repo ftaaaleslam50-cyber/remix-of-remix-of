@@ -30,8 +30,13 @@ import {
   Pencil,
   Search,
   Image as ImageIcon,
+  XCircle,
+  CheckCircle2,
 } from "lucide-react";
 import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
+import { ROOM_LABEL } from "@/lib/booking/pricing";
+import type { RoomType } from "@/lib/booking/types";
 import {
   buildDefaultLayout,
   downloadSeatChartPdf,
@@ -149,16 +154,30 @@ function Dashboard() {
   });
 
   async function archiveBooking(id: string) {
-    if (!confirm("أرشفة الحجز؟")) return;
-    const { error } = await supabase.from("bookings").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    if (!confirm("حذف الحجز؟ سيتم نقله للأرشفة وإلغاء تأكيده.")) return;
+    // Deleting a booking always un-confirms it so seats/finance stop counting it.
+    const { error } = await supabase
+      .from("bookings")
+      .update({ deleted_at: new Date().toISOString(), status: "cancelled" })
+      .eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("تمت الأرشفة");
+    toast.success("تم الحذف وإلغاء التأكيد");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
   async function restoreBooking(id: string) {
-    const { error } = await supabase.from("bookings").update({ deleted_at: null }).eq("id", id);
+    // Restoring re-activates the booking automatically.
+    const { error } = await supabase
+      .from("bookings")
+      .update({ deleted_at: null, status: "confirmed" })
+      .eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("تم الاسترجاع");
+    toast.success("تم الاسترجاع والتفعيل");
+    qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+  }
+  async function setBookingStatus(id: string, status: string) {
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(status === "confirmed" ? "تم تأكيد الحجز" : "تم إلغاء التأكيد");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
   async function permanentDelete(id: string) {
@@ -168,6 +187,7 @@ function Dashboard() {
     toast.success("تم الحذف");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
+
   async function downloadIdImage(b: BookingRow) {
     if (!b.id_image_url) return toast.error("لا توجد صورة هوية");
     const { data, error } = await supabase.storage.from("id-uploads").createSignedUrl(b.id_image_url, 3600);
@@ -361,6 +381,8 @@ function Dashboard() {
               archiveBooking={archiveBooking}
               restoreBooking={restoreBooking}
               permanentDelete={permanentDelete}
+              setBookingStatus={setBookingStatus}
+
               downloadIdImage={downloadIdImage}
             />
           </TabsContent>
@@ -412,6 +434,7 @@ function UnifiedBookingsTab(props: {
   archiveBooking: (id: string) => void;
   restoreBooking: (id: string) => void;
   permanentDelete: (id: string) => void;
+  setBookingStatus: (id: string, status: string) => void;
   downloadIdImage: (b: BookingRow) => void;
 }) {
   const {
@@ -422,10 +445,13 @@ function UnifiedBookingsTab(props: {
     archiveBooking,
     restoreBooking,
     permanentDelete,
+    setBookingStatus,
     downloadIdImage,
+
   } = props;
   const [tripId, setTripId] = useState<string>("");
   const [busId, setBusId] = useState<string>("");
+  const [manualOpen, setManualOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
 
@@ -719,7 +745,7 @@ function UnifiedBookingsTab(props: {
           : 0;
         const busesInScope = buses.length;
         const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
-        // Rooms breakdown: individual (shared 5-bed) bookings count people, not rooms.
+        // Rooms breakdown per hotel: individual (shared 5-bed) bookings count people, not rooms.
         const roomLabels: Record<string, string> = {
           "1": "فردي",
           "2": "ثنائي",
@@ -727,26 +753,30 @@ function UnifiedBookingsTab(props: {
           "4": "رباعي",
           "5": "خماسي",
         };
-        const roomCounts: Record<string, number> = {};
-        let sharedPeople = 0;
+        const byHotel = new Map<string, { rooms: Record<string, number>; shared: number }>();
         for (const b of filtered) {
+          const hotel = b.packages?.name || "بدون فندق";
+          const entry = byHotel.get(hotel) ?? { rooms: {}, shared: 0 };
           if (b.booking_type === "individual") {
-            sharedPeople += b.passenger_count || 0;
-            continue;
+            entry.shared += b.passenger_count || 0;
+          } else {
+            const key = String(b.room_type ?? "-");
+            entry.rooms[key] = (entry.rooms[key] ?? 0) + 1;
           }
-          const key = String(b.room_type ?? "-");
-          roomCounts[key] = (roomCounts[key] ?? 0) + 1;
+          byHotel.set(hotel, entry);
         }
-        const rooms = Object.values(roomCounts).reduce((s, n) => s + n, 0);
-        const roomsSub = [
-          Object.entries(roomCounts)
-            .sort((a, z) => Number(a[0]) - Number(z[0]))
-            .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`)
-            .join(" • "),
-          sharedPeople ? `+ ${sharedPeople} أفراد مشترك` : "",
-        ]
-          .filter(Boolean)
-          .join("  ");
+        const hotelStats = [...byHotel.entries()]
+          .map(([hotel, e]) => ({
+            hotel,
+            shared: e.shared,
+            total: Object.values(e.rooms).reduce((s, n) => s + n, 0),
+            lines: Object.entries(e.rooms)
+              .sort((a, z) => Number(a[0]) - Number(z[0]))
+              .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`),
+          }))
+          .sort((a, z) => z.total - a.total);
+        const rooms = hotelStats.reduce((s, h) => s + h.total, 0);
+        const sharedPeople = hotelStats.reduce((s, h) => s + h.shared, 0);
         const revenue = filtered
           .filter((b) => b.status === "confirmed")
           .reduce((s, b) => s + Number(b.total_price || 0), 0);
@@ -754,17 +784,53 @@ function UnifiedBookingsTab(props: {
           (b) => new Date(b.created_at).toDateString() === new Date().toDateString(),
         ).length;
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
             <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
-            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} sub={roomsSub} />
             <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
             <StatCard icon={CalendarClock} label="حجوزات اليوم" value={String(todayCount)} />
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
             <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
+
+            {/* Wide rooms counter: overall total + a mini counter per hotel */}
+            <div className="surface-card p-5 col-span-2 md:col-span-4 lg:col-span-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">الغرف</span>
+                <HotelIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div className="mt-1 flex items-end gap-3 flex-wrap">
+                <p className="text-3xl font-extrabold text-[color:var(--color-navy)]">{rooms}</p>
+                {sharedPeople > 0 && (
+                  <p className="text-xs text-muted-foreground pb-1">+ {sharedPeople} أفراد مشترك</p>
+                )}
+              </div>
+              {hotelStats.length === 0 ? (
+                <p className="mt-3 text-xs text-muted-foreground">لا توجد بيانات غرف.</p>
+              ) : (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {hotelStats.map((h) => (
+                    <div key={h.hotel} className="rounded-xl border bg-white p-3">
+                      <p className="font-extrabold text-sm flex items-center gap-1">
+                        <span className="text-[color:var(--color-gold)]">★</span> {h.hotel}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{h.total} غرفة</p>
+                      <ul className="mt-2 space-y-0.5 text-xs">
+                        {h.lines.map((l) => (
+                          <li key={l} className="text-[color:var(--color-navy)] font-semibold">
+                            {l}
+                          </li>
+                        ))}
+                        {h.shared > 0 && <li className="text-muted-foreground">+ {h.shared} أفراد مشترك</li>}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       })()}
+
 
       {busId && (
         <div className="rounded-2xl border-2 border-[color:var(--color-gold)]/40 bg-gradient-to-br from-amber-50 to-white p-4 space-y-3">
@@ -803,17 +869,28 @@ function UnifiedBookingsTab(props: {
         </div>
       )}
 
+      <div className="flex justify-end">
+        <Button size="sm" className="rounded-full" onClick={() => setManualOpen((v) => !v)}>
+          <Plus className="h-3 w-3 ml-1" />
+          حجز يدوي
+        </Button>
+      </div>
+
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>رقم الحجز</TableHead>
+              <TableHead>مصدر الحجز</TableHead>
+              <TableHead>نوع الحجز</TableHead>
+              <TableHead>الأفراد</TableHead>
               <TableHead>الاسم</TableHead>
               <TableHead>الجوال</TableHead>
+              <TableHead>الفندق</TableHead>
+              <TableHead>نوع الغرفة</TableHead>
               <TableHead>الرحلة</TableHead>
               <TableHead>العودة</TableHead>
               <TableHead>الحافلة</TableHead>
-              <TableHead>الأفراد</TableHead>
               <TableHead>المقاعد</TableHead>
               <TableHead>الإجمالي</TableHead>
               <TableHead>الحالة</TableHead>
@@ -822,9 +899,21 @@ function UnifiedBookingsTab(props: {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {manualOpen && (
+              <ManualBookingRow
+                colSpan={16}
+                defaultTripId={tripId}
+                defaultBusId={busId}
+                onClose={() => setManualOpen(false)}
+                onSaved={() => {
+                  setManualOpen(false);
+                  qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+                }}
+              />
+            )}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
                   لا توجد حجوزات مطابقة.
                 </TableCell>
               </TableRow>
@@ -834,12 +923,16 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="font-bold" dir="ltr">
                   {b.booking_code}
                 </TableCell>
+                <TableCell className="text-xs">{b.booking_source ?? "-"}</TableCell>
+                <TableCell className="text-xs">{b.booking_type === "individual" ? "أفراد" : "عائلة"}</TableCell>
+                <TableCell>{b.passenger_count}</TableCell>
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
+                <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
+                <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.actual_return_day ?? b.trips?.return_day ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
-                <TableCell>{b.passenger_count}</TableCell>
                 <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
                 <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
                 <TableCell>
@@ -880,6 +973,16 @@ function UnifiedBookingsTab(props: {
                       </Button>
                     )}
                     {!b.deleted_at && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title={b.status === "confirmed" ? "إلغاء التأكيد" : "تأكيد الحجز"}
+                        onClick={() => setBookingStatus(b.id, b.status === "confirmed" ? "pending" : "confirmed")}
+                      >
+                        {b.status === "confirmed" ? <XCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                      </Button>
+                    )}
+                    {!b.deleted_at && (
                       <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}>
                         <Archive className="h-3 w-3" />
                       </Button>
@@ -889,15 +992,20 @@ function UnifiedBookingsTab(props: {
                         <RotateCcw className="h-3 w-3" />
                       </Button>
                     )}
-                    {b.deleted_at && (
-                      <Button size="sm" variant="outline" title="حذف نهائي" onClick={() => permanentDelete(b.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive"
+                      title="حذف نهائي"
+                      onClick={() => permanentDelete(b.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
+
           </TableBody>
         </Table>
       </div>
