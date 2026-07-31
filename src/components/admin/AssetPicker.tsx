@@ -202,32 +202,48 @@ export function AssetPicker({
             <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4 pb-2">
               {filtered.map((a) => {
                 const src = signed[a.id] ?? a.public_url;
+                const kind = assetKind(a);
                 async function pick() {
                   let url = a.public_url;
                   // Legacy rows may still hold a broken /object/public/ URL — upgrade to signed on the fly.
                   if (!url.includes("/object/sign/")) {
                     try { url = await getLongLivedSignedUrl("assets", a.storage_path); } catch { /* keep original */ }
                   }
-                  onSelect({ id: a.id, url, name: a.name, storage_path: a.storage_path });
+                  onSelect({ id: a.id, url, name: a.name, storage_path: a.storage_path, mime_type: a.mime_type });
                   onOpenChange(false);
                 }
                 return (
-                  <button
+                  <div
                     key={a.id}
-                    type="button"
-                    onClick={pick}
                     className="group relative rounded-xl overflow-hidden border-2 border-transparent hover:border-primary transition"
                   >
-                    <div className="aspect-square bg-muted">
-                      <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                    <button type="button" onClick={pick} className="block w-full text-right">
+                      <div className="aspect-square bg-muted flex items-center justify-center">
+                        {kind === "image" ? (
+                          <img src={src} alt={a.name} loading="lazy" className="w-full h-full object-cover" />
+                        ) : kind === "video" ? (
+                          <video src={src} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                        ) : (
+                          <Music className="h-12 w-12 text-muted-foreground" />
+                        )}
+                      </div>
+                      <p className="p-1.5 text-[10px] font-semibold truncate text-right" title={a.name}>{a.name}</p>
+                    </button>
+                    {kind === "audio" && (
+                      <audio src={src} controls className="w-full h-8 px-1 pb-1" preload="none" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={pick}
+                      aria-label={`اختيار ${a.name}`}
+                      className="absolute inset-x-0 top-0 aspect-square bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+                    >
                       <Check className="h-8 w-8 text-white" />
-                    </div>
-                    <p className="p-1.5 text-[10px] font-semibold truncate text-right" title={a.name}>{a.name}</p>
-                  </button>
+                    </button>
+                  </div>
                 );
               })}
+
 
             </div>
           )}
