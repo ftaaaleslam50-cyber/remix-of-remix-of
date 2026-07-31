@@ -525,13 +525,17 @@ function SettingsPanel({
   }
 
   function onPick(a: AssetSelection) {
-    if (!/\.(mp3|wav|ogg|m4a)$/i.test(a.storage_path || a.url)) {
+    const isAudio =
+      assetKind({ mime_type: a.mime_type, name: a.name, storage_path: a.storage_path }) === "audio" ||
+      /\.(mp3|wav|ogg|m4a|aac|flac)(\?|$)/i.test(a.storage_path || a.url);
+    if (!isAudio) {
       return toast.error("اختر ملف صوت (mp3, wav, ogg, m4a)");
     }
 
     onChange({ sound_url: a.url });
     toast.success("تم تعيين نغمة الإشعار");
   }
+
 
   return (
     <div className="max-h-96 overflow-y-auto p-3 space-y-3">
