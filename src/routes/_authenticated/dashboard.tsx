@@ -739,7 +739,7 @@ function UnifiedBookingsTab(props: {
           : 0;
         const busesInScope = buses.length;
         const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
-        // Rooms breakdown: individual (shared 5-bed) bookings count people, not rooms.
+        // Rooms breakdown per hotel: individual (shared 5-bed) bookings count people, not rooms.
         const roomLabels: Record<string, string> = {
           "1": "فردي",
           "2": "ثنائي",
@@ -747,26 +747,30 @@ function UnifiedBookingsTab(props: {
           "4": "رباعي",
           "5": "خماسي",
         };
-        const roomCounts: Record<string, number> = {};
-        let sharedPeople = 0;
+        const byHotel = new Map<string, { rooms: Record<string, number>; shared: number }>();
         for (const b of filtered) {
+          const hotel = b.packages?.name || "بدون فندق";
+          const entry = byHotel.get(hotel) ?? { rooms: {}, shared: 0 };
           if (b.booking_type === "individual") {
-            sharedPeople += b.passenger_count || 0;
-            continue;
+            entry.shared += b.passenger_count || 0;
+          } else {
+            const key = String(b.room_type ?? "-");
+            entry.rooms[key] = (entry.rooms[key] ?? 0) + 1;
           }
-          const key = String(b.room_type ?? "-");
-          roomCounts[key] = (roomCounts[key] ?? 0) + 1;
+          byHotel.set(hotel, entry);
         }
-        const rooms = Object.values(roomCounts).reduce((s, n) => s + n, 0);
-        const roomsSub = [
-          Object.entries(roomCounts)
-            .sort((a, z) => Number(a[0]) - Number(z[0]))
-            .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`)
-            .join(" • "),
-          sharedPeople ? `+ ${sharedPeople} أفراد مشترك` : "",
-        ]
-          .filter(Boolean)
-          .join("  ");
+        const hotelStats = [...byHotel.entries()]
+          .map(([hotel, e]) => ({
+            hotel,
+            shared: e.shared,
+            total: Object.values(e.rooms).reduce((s, n) => s + n, 0),
+            lines: Object.entries(e.rooms)
+              .sort((a, z) => Number(a[0]) - Number(z[0]))
+              .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`),
+          }))
+          .sort((a, z) => z.total - a.total);
+        const rooms = hotelStats.reduce((s, h) => s + h.total, 0);
+        const sharedPeople = hotelStats.reduce((s, h) => s + h.shared, 0);
         const revenue = filtered
           .filter((b) => b.status === "confirmed")
           .reduce((s, b) => s + Number(b.total_price || 0), 0);
@@ -774,17 +778,53 @@ function UnifiedBookingsTab(props: {
           (b) => new Date(b.created_at).toDateString() === new Date().toDateString(),
         ).length;
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
             <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
-            <StatCard icon={HotelIcon} label="الغرف" value={String(rooms)} sub={roomsSub} />
             <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
             <StatCard icon={CalendarClock} label="حجوزات اليوم" value={String(todayCount)} />
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
             <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
+
+            {/* Wide rooms counter: overall total + a mini counter per hotel */}
+            <div className="surface-card p-5 col-span-2 md:col-span-4 lg:col-span-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">الغرف</span>
+                <HotelIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div className="mt-1 flex items-end gap-3 flex-wrap">
+                <p className="text-3xl font-extrabold text-[color:var(--color-navy)]">{rooms}</p>
+                {sharedPeople > 0 && (
+                  <p className="text-xs text-muted-foreground pb-1">+ {sharedPeople} أفراد مشترك</p>
+                )}
+              </div>
+              {hotelStats.length === 0 ? (
+                <p className="mt-3 text-xs text-muted-foreground">لا توجد بيانات غرف.</p>
+              ) : (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {hotelStats.map((h) => (
+                    <div key={h.hotel} className="rounded-xl border bg-white p-3">
+                      <p className="font-extrabold text-sm flex items-center gap-1">
+                        <span className="text-[color:var(--color-gold)]">★</span> {h.hotel}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{h.total} غرفة</p>
+                      <ul className="mt-2 space-y-0.5 text-xs">
+                        {h.lines.map((l) => (
+                          <li key={l} className="text-[color:var(--color-navy)] font-semibold">
+                            {l}
+                          </li>
+                        ))}
+                        {h.shared > 0 && <li className="text-muted-foreground">+ {h.shared} أفراد مشترك</li>}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       })()}
+
 
       {busId && (
         <div className="rounded-2xl border-2 border-[color:var(--color-gold)]/40 bg-gradient-to-br from-amber-50 to-white p-4 space-y-3">
