@@ -907,7 +907,7 @@ function UnifiedBookingsTab(props: {
                 onClose={() => setManualOpen(false)}
                 onSaved={() => {
                   setManualOpen(false);
-                  qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+                  qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
                 }}
               />
             )}
