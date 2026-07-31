@@ -112,14 +112,17 @@ export function renderSeatChartCanvas(
   ctx.fillStyle = "#cbd5e1";
   ctx.fillText(new Date().toLocaleString("ar"), PAD, 68);
 
-  // ---- seat grid (drawn on the right side for RTL feel) ----
+  // ---- seat grid (drawn on the right side, mirrored per RTL like the booking wizard) ----
   const gridX = width - PAD - gridW;
   const gridY = PAD + HEADER;
+  const cols = Math.max(1, layout.cols || 1);
 
   for (const cell of layout.cells) {
     if (cell.kind === "empty") continue;
-    const x = gridX + (cell.col - 1) * (CELL + GAP);
+    // RTL: column 1 sits on the far right, matching the on-screen seat map.
+    const x = gridX + (cols - cell.col) * (CELL + GAP);
     const y = gridY + (cell.row - 1) * (CELL + GAP);
+
     const id = seatId(cell);
     const occ = cell.kind === "seat" ? bySeat.get(id) : undefined;
 
