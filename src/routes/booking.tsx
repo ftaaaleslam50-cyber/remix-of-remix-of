@@ -374,9 +374,10 @@ function BookingPage() {
   }, [appliedCoupon, subtotal]);
   const total = Math.max(0, subtotal - discount);
 
-  async function applyCoupon() {
-    const code = couponInput.trim().toUpperCase();
+  async function applyCoupon(codeArg?: string) {
+    const code = (codeArg ?? couponInput).trim().toUpperCase();
     if (!code) return;
+
     const { data } = await supabase.rpc("validate_coupon" as never, { _code: code } as never);
     const rows =
       (data as unknown as Array<{
