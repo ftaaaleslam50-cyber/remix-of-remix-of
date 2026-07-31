@@ -140,14 +140,15 @@ export function AssetPicker({
           .from("assets" as never)
           .insert({
             name: file.name, storage_path: path, public_url: savedUrl,
-            mime_type: blob.type, size_bytes: blob.size,
+            mime_type: blob.type || file.type, size_bytes: blob.size,
             width: dims?.w ?? null, height: dims?.h ?? null,
           } as never)
-          .select("id,name,storage_path,public_url")
+          .select("id,name,storage_path,public_url,mime_type")
           .single();
         if (error) { toast.error(error.message); continue; }
         const r = row as unknown as Asset;
-        last = { id: r.id, url: r.public_url, name: r.name, storage_path: r.storage_path };
+        last = { id: r.id, url: r.public_url, name: r.name, storage_path: r.storage_path, mime_type: r.mime_type };
+
 
       }
       qc.invalidateQueries({ queryKey: ["admin-assets"] });
