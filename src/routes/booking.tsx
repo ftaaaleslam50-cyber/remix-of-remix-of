@@ -424,6 +424,15 @@ function BookingPage() {
     toast.success("تم تطبيق كود الخصم");
   }
 
+  // Auto-validate a coupon that arrived through a QR link and tell the customer what happened.
+  useEffect(() => {
+    if (!autoCoupon) return;
+    setAutoCoupon(null);
+    void applyCoupon(autoCoupon);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCoupon]);
+
+
   function canProceed(): boolean {
     switch (stepName) {
       case "نوع الحجز":
