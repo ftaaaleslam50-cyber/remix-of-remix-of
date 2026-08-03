@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
+import { TripSheetTab } from "@/components/admin/TripSheetTab";
+import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import {
