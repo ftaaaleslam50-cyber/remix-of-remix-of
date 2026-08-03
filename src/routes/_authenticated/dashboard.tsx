@@ -354,6 +354,9 @@ function Dashboard() {
             <TabsTrigger value="bookings" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات
             </TabsTrigger>
+            <TabsTrigger value="tripsheet" className="rounded-xl">
+              <FileText className="h-4 w-4 ml-1" /> كشف الرحلة
+            </TabsTrigger>
             <TabsTrigger value="packages" className="rounded-xl">
               <HotelIcon className="h-4 w-4 ml-1" /> الفنادق
             </TabsTrigger>
