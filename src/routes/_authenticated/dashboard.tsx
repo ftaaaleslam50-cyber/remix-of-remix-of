@@ -461,6 +461,7 @@ function UnifiedBookingsTab(props: {
   const [tripId, setTripId] = useState<string>("");
   const [busId, setBusId] = useState<string>("");
   const [manualOpen, setManualOpen] = useState<boolean>(false);
+  const [exportOpen, setExportOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
 
