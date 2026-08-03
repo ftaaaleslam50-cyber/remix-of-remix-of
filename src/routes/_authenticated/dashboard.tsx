@@ -671,6 +671,12 @@ function UnifiedBookingsTab(props: {
 
   return (
     <div className="surface-card p-6 space-y-4">
+      <ExportSheetDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        getData={exportPayload}
+        onRawExcel={exportBusExcel}
+      />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-extrabold">
           {showArchived ? "الحجوزات المؤرشفة" : "إدارة الحجوزات"}
