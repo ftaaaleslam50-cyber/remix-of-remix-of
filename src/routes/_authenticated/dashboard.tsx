@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
+import { TripSheetTab } from "@/components/admin/TripSheetTab";
+import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import {
@@ -352,6 +354,9 @@ function Dashboard() {
             <TabsTrigger value="bookings" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات
             </TabsTrigger>
+            <TabsTrigger value="tripsheet" className="rounded-xl">
+              <FileText className="h-4 w-4 ml-1" /> كشف الرحلة
+            </TabsTrigger>
             <TabsTrigger value="packages" className="rounded-xl">
               <HotelIcon className="h-4 w-4 ml-1" /> الفنادق
             </TabsTrigger>
@@ -385,6 +390,10 @@ function Dashboard() {
 
               downloadIdImage={downloadIdImage}
             />
+          </TabsContent>
+
+          <TabsContent value="tripsheet" className="mt-4">
+            <TripSheetTab />
           </TabsContent>
 
           <TabsContent value="packages" className="mt-4">
@@ -452,6 +461,7 @@ function UnifiedBookingsTab(props: {
   const [tripId, setTripId] = useState<string>("");
   const [busId, setBusId] = useState<string>("");
   const [manualOpen, setManualOpen] = useState<boolean>(false);
+  const [exportOpen, setExportOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
 
@@ -622,8 +632,51 @@ function UnifiedBookingsTab(props: {
     XLSX.writeFile(wb, `${busLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  const ROOM_TXT: Record<string, string> = { "1": "فردي", "2": "ثنائي", "3": "ثلاثي", "4": "رباعي", "5": "خماسي" };
+
+  // Data handed to the official-template exporter (Excel / PDF).
+  function exportPayload(): ExportPayload {
+    const tripName = trips.find((t) => t.id === tripId)?.name;
+    const busLabel = bus ? bus.name || `حافلة ${bus.bus_number}` : "";
+    const totalPax = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
+    const info = filtered.find((b) => b.trips)?.trips ?? null;
+    return {
+      title: `كشف رحلة${tripName ? ` — ${tripName}` : ""}${busLabel ? ` — ${busLabel}` : ""}`,
+      filename: `trip-sheet-${busLabel || tripName || "all"}-${new Date().toISOString().slice(0, 10)}`,
+      header: {
+        departureLabel: "ذهاب",
+        departureDay: info?.departure_day ?? "",
+        returnLabel: "عودة",
+        returnDay: info?.return_day ?? "",
+        capacity: bus?.capacity,
+        busNumber: bus?.bus_number,
+        passengersTotal: totalPax,
+        seatsRemaining: bus ? Math.max(0, (bus.capacity ?? 0) - totalPax) : undefined,
+      },
+      rows: filtered.map((b, i) => ({
+        index: i + 1,
+        rep: b.booking_source || "الموقع",
+        customer: b.customer_name ?? "",
+        idNumber: b.id_number ?? "",
+        nationality: b.nationality ?? "",
+        count: b.passenger_count || 0,
+        returnDay: b.actual_return_day || b.trips?.return_day || "",
+        hotel: b.packages?.name ?? "بدون فندق",
+        roomType: ROOM_TXT[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
+        total: Number(b.total_price || 0),
+        notes: b.notes ?? "",
+      })),
+    };
+  }
+
   return (
     <div className="surface-card p-6 space-y-4">
+      <ExportSheetDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        getData={exportPayload}
+        onRawExcel={exportBusExcel}
+      />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-extrabold">
           {showArchived ? "الحجوزات المؤرشفة" : "إدارة الحجوزات"}
@@ -638,8 +691,8 @@ function UnifiedBookingsTab(props: {
               <Pencil className="h-4 w-4 ml-1" /> محرر تفصيلي
             </Button>
           </Link>
-          <Button onClick={exportBusExcel} className="rounded-full">
-            <Download className="h-4 w-4 ml-1" /> {busId ? "Excel (الحافلة)" : "Excel"}
+          <Button onClick={() => setExportOpen(true)} className="rounded-full">
+            <Download className="h-4 w-4 ml-1" /> تصدير
           </Button>
           <Button
             variant="outline"
