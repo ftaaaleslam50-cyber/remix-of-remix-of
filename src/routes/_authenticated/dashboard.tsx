@@ -392,6 +392,10 @@ function Dashboard() {
             />
           </TabsContent>
 
+          <TabsContent value="tripsheet" className="mt-4">
+            <TripSheetTab />
+          </TabsContent>
+
           <TabsContent value="packages" className="mt-4">
             <PackagesTab />
           </TabsContent>
