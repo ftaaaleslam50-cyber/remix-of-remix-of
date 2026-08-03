@@ -632,6 +632,43 @@ function UnifiedBookingsTab(props: {
     XLSX.writeFile(wb, `${busLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  const ROOM_TXT: Record<string, string> = { "1": "فردي", "2": "ثنائي", "3": "ثلاثي", "4": "رباعي", "5": "خماسي" };
+
+  // Data handed to the official-template exporter (Excel / PDF).
+  function exportPayload(): ExportPayload {
+    const tripName = trips.find((t) => t.id === tripId)?.name;
+    const busLabel = bus ? bus.name || `حافلة ${bus.bus_number}` : "";
+    const totalPax = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
+    const info = filtered.find((b) => b.trips)?.trips ?? null;
+    return {
+      title: `كشف رحلة${tripName ? ` — ${tripName}` : ""}${busLabel ? ` — ${busLabel}` : ""}`,
+      filename: `trip-sheet-${busLabel || tripName || "all"}-${new Date().toISOString().slice(0, 10)}`,
+      header: {
+        departureLabel: "ذهاب",
+        departureDay: info?.departure_day ?? "",
+        returnLabel: "عودة",
+        returnDay: info?.return_day ?? "",
+        capacity: bus?.capacity,
+        busNumber: bus?.bus_number,
+        passengersTotal: totalPax,
+        seatsRemaining: bus ? Math.max(0, (bus.capacity ?? 0) - totalPax) : undefined,
+      },
+      rows: filtered.map((b, i) => ({
+        index: i + 1,
+        rep: b.booking_source || "الموقع",
+        customer: b.customer_name ?? "",
+        idNumber: b.id_number ?? "",
+        nationality: b.nationality ?? "",
+        count: b.passenger_count || 0,
+        returnDay: b.actual_return_day || b.trips?.return_day || "",
+        hotel: b.packages?.name ?? "بدون فندق",
+        roomType: ROOM_TXT[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
+        total: Number(b.total_price || 0),
+        notes: b.notes ?? "",
+      })),
+    };
+  }
+
   return (
     <div className="surface-card p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
