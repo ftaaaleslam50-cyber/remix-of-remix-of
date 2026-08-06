@@ -12,6 +12,7 @@ import {
   type TripSheetHeader,
   type TripSheetRow,
 } from "@/lib/export/trip-sheet-template";
+import { buildTripSettlementWorkbook, type SettlementInput } from "@/lib/export/trip-settlement-workbook";
 
 export interface ExportPayload {
   header: TripSheetHeader;
@@ -20,6 +21,8 @@ export interface ExportPayload {
   filename: string;
   /** Worksheet inside the template to fill (defaults to the first data sheet). */
   sheetName?: string;
+  /** Full two-sheet workbook data ("#" reference + settlement sheet). */
+  settlement?: SettlementInput;
 }
 
 export function ExportSheetDialog(props: {
