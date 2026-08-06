@@ -88,6 +88,37 @@ export function TripSheetTab() {
       }>,
   });
 
+  // Hotels (packages) + their sale prices per room type (pricing matrix).
+  const { data: hotelRows = [] } = useQuery({
+    queryKey: ["ts-hotels"],
+    queryFn: async () =>
+      ((await supabase.from("packages").select("id,name,active").order("display_order")).data ?? []) as Array<{
+        id: string;
+        name: string;
+        active: boolean;
+      }>,
+  });
+
+  const { data: pricing = [] } = useQuery({
+    queryKey: ["ts-pricing"],
+    queryFn: async () =>
+      ((await supabase.from("pricing_matrix").select("package_id,room_type,price,active")).data ?? []) as Array<{
+        package_id: string;
+        room_type: string;
+        price: number;
+        active: boolean;
+      }>,
+  });
+
+  // Representatives (used for the commission lookup table in sheet "#").
+  const { data: repProfiles = [] } = useQuery({
+    queryKey: ["ts-reps"],
+    queryFn: async () =>
+      ((await supabase.from("profiles").select("id,full_name,account_type").eq("account_type", "representative")).data ??
+        []) as Array<{ id: string; full_name: string | null; account_type: string }>,
+  });
+
+
   const { data: rows = [] } = useQuery({
     queryKey: ["ts-bookings"],
     queryFn: async () => {
