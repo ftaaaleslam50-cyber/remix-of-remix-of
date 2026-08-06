@@ -544,7 +544,143 @@ export function TripSheetTab() {
         </div>
       </div>
 
+      {/* Reference data feeding sheet "#" of the exported workbook */}
+      <div className="rounded-xl border p-4 space-y-4">
+        <h3 className="font-extrabold">بيانات الشيت المرجعي (#)</h3>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(["ذهاب فقط", "ذهاب وعوده فقط", "ذهاب وعوده برحلة اخرى"] as const).map((k) => (
+            <div key={k}>
+              <Label className="text-xs mb-1 block">سعر {k}</Label>
+              <Input
+                type="number"
+                value={String(ref.transfer[k] ?? 0)}
+                onChange={(e) =>
+                  setRef((s) => ({ ...s, transfer: { ...s.transfer, [k]: Number(e.target.value) || 0 } }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead className="bg-muted">
+              <tr>
+                <th className="border p-2">الفندق</th>
+                {ROOM_ROWS.map((r) => (
+                  <th key={r} className="border p-2 whitespace-nowrap">
+                    تكلفة {r}
+                    <span className="block text-[10px] font-normal text-muted-foreground">
+                      ÷ {ROOM_CAPACITY[r]}
+                    </span>
+                  </th>
+                ))}
+                <th className="border p-2">سعر ليلة التمديد</th>
+                <th className="border p-2">تكلفة ليلة التمديد</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hotelPricings.map((h) => (
+                <tr key={h.hotel}>
+                  <td className="border p-2 font-bold whitespace-nowrap">{h.hotel}</td>
+                  {ROOM_ROWS.map((r) => (
+                    <td key={r} className="border p-1">
+                      <Input
+                        type="number"
+                        className="h-8 text-xs"
+                        value={String(ref.costs[h.hotel]?.[r] ?? 0)}
+                        onChange={(e) =>
+                          setRef((s) => ({
+                            ...s,
+                            costs: {
+                              ...s.costs,
+                              [h.hotel]: { ...(s.costs[h.hotel] ?? {}), [r]: Number(e.target.value) || 0 },
+                            },
+                          }))
+                        }
+                      />
+                    </td>
+                  ))}
+                  <td className="border p-1">
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={String(ref.ext[h.hotel]?.sale ?? 100)}
+                      onChange={(e) =>
+                        setRef((s) => ({
+                          ...s,
+                          ext: {
+                            ...s.ext,
+                            [h.hotel]: {
+                              sale: Number(e.target.value) || 0,
+                              cost: s.ext[h.hotel]?.cost ?? 70,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </td>
+                  <td className="border p-1">
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={String(ref.ext[h.hotel]?.cost ?? 70)}
+                      onChange={(e) =>
+                        setRef((s) => ({
+                          ...s,
+                          ext: {
+                            ...s.ext,
+                            [h.hotel]: {
+                              sale: s.ext[h.hotel]?.sale ?? 100,
+                              cost: Number(e.target.value) || 0,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+              {hotelPricings.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="p-4 text-center text-muted-foreground">
+                    لا توجد فنادق
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 className="font-bold text-sm mb-2">نسب عمولة المندوبين</h4>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {reps.map((r) => (
+              <div key={r.name}>
+                <Label className="text-xs mb-1 block">{r.name}</Label>
+                <Input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={String(r.rate)}
+                  onChange={(e) =>
+                    setRef((s) => ({
+                      ...s,
+                      commissions: { ...s.commissions, [r.name]: Number(e.target.value) || 0 },
+                    }))
+                  }
+                />
+              </div>
+            ))}
+            {reps.length === 0 && <p className="text-sm text-muted-foreground">لا يوجد مندوبون</p>}
+          </div>
+        </div>
+      </div>
+
       <ExportSheetDialog open={exportOpen} onOpenChange={setExportOpen} getData={payload} />
+
     </div>
   );
 }
