@@ -36,6 +36,7 @@ export function ExportSheetDialog(props: {
   const [busy, setBusy] = useState<"excel" | "pdf" | null>(null);
   const [templateId, setTemplateId] = useState(TRIP_SHEET_TEMPLATES[0].id);
   const [sheetName, setSheetName] = useState(TRIP_SHEET_TEMPLATES[0].dataSheets[0]);
+  const [mode, setMode] = useState<"full" | "template">("full");
 
   const tpl = TRIP_SHEET_TEMPLATES.find((t) => t.id === templateId) ?? TRIP_SHEET_TEMPLATES[0];
 
@@ -43,6 +44,12 @@ export function ExportSheetDialog(props: {
     setBusy("excel");
     try {
       const d = getData();
+      if (mode === "full" && d.settlement) {
+        const blob = await buildTripSettlementWorkbook(d.settlement);
+        downloadBlob(blob, `${d.filename}.xlsx`);
+        toast.success("تم إنشاء الكشف الكامل (شيت # + نموذج الرحلة) بكل المعادلات");
+        return;
+      }
       const blob = await buildTripSheetWorkbook({
         templateId,
         sheetName: d.sheetName ?? sheetName,
