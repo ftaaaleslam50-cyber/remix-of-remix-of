@@ -12,6 +12,7 @@ import {
   type TripSheetHeader,
   type TripSheetRow,
 } from "@/lib/export/trip-sheet-template";
+import { buildTripSettlementWorkbook, type SettlementInput } from "@/lib/export/trip-settlement-workbook";
 
 export interface ExportPayload {
   header: TripSheetHeader;
@@ -20,6 +21,8 @@ export interface ExportPayload {
   filename: string;
   /** Worksheet inside the template to fill (defaults to the first data sheet). */
   sheetName?: string;
+  /** Full two-sheet workbook data ("#" reference + settlement sheet). */
+  settlement?: SettlementInput;
 }
 
 export function ExportSheetDialog(props: {
@@ -33,6 +36,7 @@ export function ExportSheetDialog(props: {
   const [busy, setBusy] = useState<"excel" | "pdf" | null>(null);
   const [templateId, setTemplateId] = useState(TRIP_SHEET_TEMPLATES[0].id);
   const [sheetName, setSheetName] = useState(TRIP_SHEET_TEMPLATES[0].dataSheets[0]);
+  const [mode, setMode] = useState<"full" | "template">("full");
 
   const tpl = TRIP_SHEET_TEMPLATES.find((t) => t.id === templateId) ?? TRIP_SHEET_TEMPLATES[0];
 
@@ -40,6 +44,12 @@ export function ExportSheetDialog(props: {
     setBusy("excel");
     try {
       const d = getData();
+      if (mode === "full" && d.settlement) {
+        const blob = await buildTripSettlementWorkbook(d.settlement);
+        downloadBlob(blob, `${d.filename}.xlsx`);
+        toast.success("تم إنشاء الكشف الكامل (شيت # + نموذج الرحلة) بكل المعادلات");
+        return;
+      }
       const blob = await buildTripSheetWorkbook({
         templateId,
         sheetName: d.sheetName ?? sheetName,
@@ -76,41 +86,56 @@ export function ExportSheetDialog(props: {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <Label className="text-xs mb-1 block">القالب</Label>
-            <select
-              value={templateId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setTemplateId(id);
-                const t = TRIP_SHEET_TEMPLATES.find((x) => x.id === id);
-                if (t) setSheetName(t.dataSheets[0]);
-              }}
-              className="h-10 w-full rounded-md border px-3 text-sm bg-background"
-            >
-              {TRIP_SHEET_TEMPLATES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label className="text-xs mb-1 block">ورقة العمل</Label>
-            <select
-              value={sheetName}
-              onChange={(e) => setSheetName(e.target.value)}
-              className="h-10 w-full rounded-md border px-3 text-sm bg-background"
-            >
-              {tpl.dataSheets.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <Label className="text-xs mb-1 block">نوع الملف</Label>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as "full" | "template")}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-background"
+          >
+            <option value="full">كشف كامل — شيت (#) المرجعي + نموذج الرحلة بكل المعادلات</option>
+            <option value="template">قالب الإكسل الرسمي (استبدال بيانات فقط)</option>
+          </select>
         </div>
+
+        {mode === "template" && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs mb-1 block">القالب</Label>
+              <select
+                value={templateId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setTemplateId(id);
+                  const t = TRIP_SHEET_TEMPLATES.find((x) => x.id === id);
+                  if (t) setSheetName(t.dataSheets[0]);
+                }}
+                className="h-10 w-full rounded-md border px-3 text-sm bg-background"
+              >
+                {TRIP_SHEET_TEMPLATES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">ورقة العمل</Label>
+              <select
+                value={sheetName}
+                onChange={(e) => setSheetName(e.target.value)}
+                className="h-10 w-full rounded-md border px-3 text-sm bg-background"
+              >
+                {tpl.dataSheets.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
 
         <div className="grid gap-4 sm:grid-cols-2 mt-2">
           <div className="rounded-2xl border p-5 flex flex-col items-center text-center gap-2">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Table2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,13 @@ import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
+import {
+  ROOM_ROWS,
+  ROOM_CAPACITY,
+  type HotelPricing,
+  type RepCommission,
+  type SettlementInput,
+} from "@/lib/export/trip-settlement-workbook";
 
 /**
  * "كشف الرحلة" — an Excel-like, auto-filled trip settlement sheet.
@@ -80,6 +87,37 @@ export function TripSheetTab() {
         capacity: number;
       }>,
   });
+
+  // Hotels (packages) + their sale prices per room type (pricing matrix).
+  const { data: hotelRows = [] } = useQuery({
+    queryKey: ["ts-hotels"],
+    queryFn: async () =>
+      ((await supabase.from("packages").select("id,name,active").order("display_order")).data ?? []) as Array<{
+        id: string;
+        name: string;
+        active: boolean;
+      }>,
+  });
+
+  const { data: pricing = [] } = useQuery({
+    queryKey: ["ts-pricing"],
+    queryFn: async () =>
+      ((await supabase.from("pricing_matrix").select("package_id,room_type,price,active")).data ?? []) as Array<{
+        package_id: string;
+        room_type: string;
+        price: number;
+        active: boolean;
+      }>,
+  });
+
+  // Representatives (used for the commission lookup table in sheet "#").
+  const { data: repProfiles = [] } = useQuery({
+    queryKey: ["ts-reps"],
+    queryFn: async () =>
+      ((await supabase.from("profiles").select("id,full_name,account_type").eq("account_type", "representative")).data ??
+        []) as Array<{ id: string; full_name: string | null; account_type: string }>,
+  });
+
 
   const { data: rows = [] } = useQuery({
     queryKey: ["ts-bookings"],
@@ -157,6 +195,138 @@ export function TripSheetTab() {
   const cashDue = profit - (Number(bankTransfer) || 0);
   const seatCost = passengers > 0 ? expenses / passengers : 0;
 
+  /* ---------------- reference data used by the exported "#" sheet -------- */
+  const LS_KEY = "trip-sheet-reference-v1";
+  type RefState = {
+    costs: Record<string, Record<string, number>>;
+    ext: Record<string, { sale: number; cost: number }>;
+    commissions: Record<string, number>;
+    transfer: Record<string, number>;
+  };
+  const [ref, setRef] = useState<RefState>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(LS_KEY);
+        if (raw) return JSON.parse(raw) as RefState;
+      } catch {
+        /* ignore */
+      }
+    }
+    return {
+      costs: {},
+      ext: {},
+      commissions: {},
+      transfer: { "ذهاب فقط": 50, "ذهاب وعوده فقط": 80, "ذهاب وعوده برحلة اخرى": 90 },
+    };
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LS_KEY, JSON.stringify(ref));
+    } catch {
+      /* ignore */
+    }
+  }, [ref]);
+
+  const hotelNames = useMemo(() => {
+    const used = new Set(filtered.map((b) => b.packages?.name).filter(Boolean) as string[]);
+    const all = hotelRows.filter((h) => h.active).map((h) => h.name);
+    return [...new Set([...all, ...used])];
+  }, [hotelRows, filtered]);
+
+  const hotelPricings: HotelPricing[] = useMemo(
+    () =>
+      hotelNames.map((name) => {
+        const pkg = hotelRows.find((h) => h.name === name);
+        const cells = pricing.filter((p) => p.package_id === pkg?.id && p.active);
+        const priceOf = (rt: string) => Number(cells.find((c) => String(c.room_type) === rt)?.price ?? 0);
+        const sale: Record<string, number> = {
+          فردي: priceOf("1"),
+          ثنائي: priceOf("2"),
+          ثلاثي: priceOf("3"),
+          رباعي: priceOf("4"),
+          خماسي: priceOf("5"),
+          "مشترك خماسي": priceOf("5"),
+          "مشترك رباعي": priceOf("4"),
+          "مشترك مشرف": priceOf("4"),
+        };
+        const cost: Record<string, number> = {};
+        for (const room of ROOM_ROWS) cost[room] = Number(ref.costs[name]?.[room] ?? 0);
+        return {
+          hotel: name,
+          sale,
+          cost,
+          extensionSale: Number(ref.ext[name]?.sale ?? 100),
+          extensionCost: Number(ref.ext[name]?.cost ?? 70),
+        };
+      }),
+    [hotelNames, hotelRows, pricing, ref],
+  );
+
+  const repNames = useMemo(() => {
+    const names = new Set<string>();
+    repProfiles.forEach((p) => p.full_name && names.add(p.full_name));
+    filtered.forEach((b) => names.add(b.booking_source || "الموقع"));
+    return [...names];
+  }, [repProfiles, filtered]);
+
+  const reps: RepCommission[] = useMemo(
+    () => repNames.map((n) => ({ name: n, rate: Number(ref.commissions[n] ?? 0.75) })),
+    [repNames, ref],
+  );
+
+  function roomLabelOf(b: SheetBooking): string {
+    if (!b.packages?.name) return "ذهاب وعوده فقط";
+    if (b.booking_type === "individual") return "مشترك خماسي";
+    return ROOM_LABELS[String(b.room_type ?? "5")] ?? "خماسي";
+  }
+
+  function settlement(): SettlementInput {
+    return {
+      header: {
+        departureLabel: "ذهاب",
+        departureDay: tripInfo?.departure_day ?? "",
+        departureDate: "",
+        returnLabel: "عوده",
+        returnDay: tripInfo?.return_day ?? "",
+        returnDate: "",
+        capacity: capacity || 0,
+        vehicleType: "باص",
+        plate: bus?.name ?? "",
+        driverName: "",
+        driverId: "",
+        driverPhone: "",
+      },
+      rows: filtered.map((b) => ({
+        rep: b.booking_source || "الموقع",
+        customer: b.customer_name ?? "",
+        idNumber: b.id_number ?? "",
+        nationality: b.nationality ?? "",
+        count: b.passenger_count || 0,
+        returnDay: b.actual_return_day || b.trips?.return_day || "",
+        hotel: b.packages?.name ?? "توصيل فقط",
+        roomType: roomLabelOf(b),
+        roomNumber: "",
+        extensionNights: 0,
+        notes: b.notes ?? "",
+      })),
+      hotels: hotelPricings,
+      reps,
+      expenses: {
+        busRent: Number(busRent) || 0,
+        driverTip: Number(driverTip) || 0,
+        supervisor: Number(supervisor) || 0,
+        parking: Number(parking) || 0,
+        other: Number(other) || 0,
+        bankTransfer: Number(bankTransfer) || 0,
+      },
+      transferPrices: {
+        "ذهاب فقط": Number(ref.transfer["ذهاب فقط"] ?? 0),
+        "ذهاب وعوده فقط": Number(ref.transfer["ذهاب وعوده فقط"] ?? 0),
+        "ذهاب وعوده برحلة اخرى": Number(ref.transfer["ذهاب وعوده برحلة اخرى"] ?? 0),
+      },
+    };
+  }
+
   function payload(): ExportPayload {
     const title = `كشف رحلة — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}${bus ? ` — ${bus.name || `حافلة ${bus.bus_number}`}` : ""}`;
     return {
@@ -185,8 +355,10 @@ export function TripSheetTab() {
         total: Number(b.total_price || 0),
         notes: b.notes ?? "",
       })),
+      settlement: settlement(),
     };
   }
+
 
   return (
     <div className="surface-card p-6 space-y-5">
@@ -372,7 +544,143 @@ export function TripSheetTab() {
         </div>
       </div>
 
+      {/* Reference data feeding sheet "#" of the exported workbook */}
+      <div className="rounded-xl border p-4 space-y-4">
+        <h3 className="font-extrabold">بيانات الشيت المرجعي (#)</h3>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(["ذهاب فقط", "ذهاب وعوده فقط", "ذهاب وعوده برحلة اخرى"] as const).map((k) => (
+            <div key={k}>
+              <Label className="text-xs mb-1 block">سعر {k}</Label>
+              <Input
+                type="number"
+                value={String(ref.transfer[k] ?? 0)}
+                onChange={(e) =>
+                  setRef((s) => ({ ...s, transfer: { ...s.transfer, [k]: Number(e.target.value) || 0 } }))
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead className="bg-muted">
+              <tr>
+                <th className="border p-2">الفندق</th>
+                {ROOM_ROWS.map((r) => (
+                  <th key={r} className="border p-2 whitespace-nowrap">
+                    تكلفة {r}
+                    <span className="block text-[10px] font-normal text-muted-foreground">
+                      ÷ {ROOM_CAPACITY[r]}
+                    </span>
+                  </th>
+                ))}
+                <th className="border p-2">سعر ليلة التمديد</th>
+                <th className="border p-2">تكلفة ليلة التمديد</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hotelPricings.map((h) => (
+                <tr key={h.hotel}>
+                  <td className="border p-2 font-bold whitespace-nowrap">{h.hotel}</td>
+                  {ROOM_ROWS.map((r) => (
+                    <td key={r} className="border p-1">
+                      <Input
+                        type="number"
+                        className="h-8 text-xs"
+                        value={String(ref.costs[h.hotel]?.[r] ?? 0)}
+                        onChange={(e) =>
+                          setRef((s) => ({
+                            ...s,
+                            costs: {
+                              ...s.costs,
+                              [h.hotel]: { ...(s.costs[h.hotel] ?? {}), [r]: Number(e.target.value) || 0 },
+                            },
+                          }))
+                        }
+                      />
+                    </td>
+                  ))}
+                  <td className="border p-1">
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={String(ref.ext[h.hotel]?.sale ?? 100)}
+                      onChange={(e) =>
+                        setRef((s) => ({
+                          ...s,
+                          ext: {
+                            ...s.ext,
+                            [h.hotel]: {
+                              sale: Number(e.target.value) || 0,
+                              cost: s.ext[h.hotel]?.cost ?? 70,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </td>
+                  <td className="border p-1">
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={String(ref.ext[h.hotel]?.cost ?? 70)}
+                      onChange={(e) =>
+                        setRef((s) => ({
+                          ...s,
+                          ext: {
+                            ...s.ext,
+                            [h.hotel]: {
+                              sale: s.ext[h.hotel]?.sale ?? 100,
+                              cost: Number(e.target.value) || 0,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+              {hotelPricings.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="p-4 text-center text-muted-foreground">
+                    لا توجد فنادق
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 className="font-bold text-sm mb-2">نسب عمولة المندوبين</h4>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {reps.map((r) => (
+              <div key={r.name}>
+                <Label className="text-xs mb-1 block">{r.name}</Label>
+                <Input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={String(r.rate)}
+                  onChange={(e) =>
+                    setRef((s) => ({
+                      ...s,
+                      commissions: { ...s.commissions, [r.name]: Number(e.target.value) || 0 },
+                    }))
+                  }
+                />
+              </div>
+            ))}
+            {reps.length === 0 && <p className="text-sm text-muted-foreground">لا يوجد مندوبون</p>}
+          </div>
+        </div>
+      </div>
+
       <ExportSheetDialog open={exportOpen} onOpenChange={setExportOpen} getData={payload} />
+
     </div>
   );
 }
