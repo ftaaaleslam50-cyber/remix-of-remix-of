@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Table2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,13 @@ import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
+import {
+  ROOM_ROWS,
+  ROOM_CAPACITY,
+  type HotelPricing,
+  type RepCommission,
+  type SettlementInput,
+} from "@/lib/export/trip-settlement-workbook";
 
 /**
  * "كشف الرحلة" — an Excel-like, auto-filled trip settlement sheet.
