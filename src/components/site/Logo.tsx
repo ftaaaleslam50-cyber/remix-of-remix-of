@@ -146,7 +146,7 @@ export function Logo({
               from-white
               to-gray-100
               object-contain
-              ring-4
+              ring-2
               ring-[color:var(--color-gold)]/60
               border
               border-white/40
