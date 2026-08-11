@@ -122,7 +122,7 @@ export function Logo({
   // Small navbar-scale logos get a much tighter halo so it never reads
   // bigger than the logo circle itself — half the previous small-size scale.
   const resolvedGlowScale = glowScale ?? (size <= 64 ? 0.375 : 1);
-  const imgPadding = Math.max(1, Math.round(size * (size <= 64 ? 0.06 : 0.14)));
+  const imgPadding = 0;
 
   return (
     <div className="flex items-center gap-4">
