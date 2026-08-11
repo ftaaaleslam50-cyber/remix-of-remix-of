@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Logo } from "@/components/site/Logo";
-import { BRAND } from "@/lib/brand";
+import { BRAND, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/brand";
 import { supabase } from "@/integrations/supabase/client";
 
 interface HomeCms {
@@ -18,14 +18,10 @@ interface HomeCms {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: `${BRAND.name} | احجز رحلتك للعمرة الآن` },
-      {
-        name: "description",
-        content:
-          "رحلات عمرة منظّمة من المدينة المنورة إلى مكة المكرمة. باقات أفراد وعوائل، فنادق مختارة، حافلات حديثة، وأسعار شفافة.",
-      },
-      { property: "og:title", content: `${BRAND.name} | احجز رحلتك للعمرة` },
-      { property: "og:description", content: "رحلات عمرة منظّمة من المدينة المنورة إلى مكة المكرمة." },
+      { title: SITE_TITLE },
+      { name: "description", content: SITE_DESCRIPTION },
+      { property: "og:title", content: SITE_TITLE },
+      { property: "og:description", content: SITE_DESCRIPTION },
       { property: "og:image", content: BRAND.logoUrl },
     ],
   }),
