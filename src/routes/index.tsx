@@ -18,14 +18,10 @@ interface HomeCms {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: `${BRAND.name} | احجز رحلتك للعمرة الآن` },
-      {
-        name: "description",
-        content:
-          "رحلات عمرة منظّمة من المدينة المنورة إلى مكة المكرمة. باقات أفراد وعوائل، فنادق مختارة، حافلات حديثة، وأسعار شفافة.",
-      },
-      { property: "og:title", content: `${BRAND.name} | احجز رحلتك للعمرة` },
-      { property: "og:description", content: "رحلات عمرة منظّمة من المدينة المنورة إلى مكة المكرمة." },
+      { title: SITE_TITLE },
+      { name: "description", content: SITE_DESCRIPTION },
+      { property: "og:title", content: SITE_TITLE },
+      { property: "og:description", content: SITE_DESCRIPTION },
       { property: "og:image", content: BRAND.logoUrl },
     ],
   }),
