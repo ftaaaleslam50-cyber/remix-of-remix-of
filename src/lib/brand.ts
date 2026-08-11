@@ -3,7 +3,7 @@ export const BRAND = {
   shortName: "زهرة طيبة",
   email: "zhrttybt888@gmail.com",
   nationalNumber: "7029663460",
-  whatsapp: "966573890050",
+  whatsapp: "966502728301",
   logoUrl: "https://i.ibb.co/8ntds0qQ/image.png",
   tagline: "انطلق من مسجد قباء إلى مكة المكرمة",
 };
