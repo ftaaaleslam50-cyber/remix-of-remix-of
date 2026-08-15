@@ -453,8 +453,6 @@ function BookingPage() {
       case "البيانات":
         return (
           customer.customer_name.trim().length > 1 &&
-          customer.id_number.trim().length > 3 &&
-          customer.nationality.trim().length > 1 &&
           /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
           /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
           (!!idFile || !!editingCode || !!profileIdImagePath)
