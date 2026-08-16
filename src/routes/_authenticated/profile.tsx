@@ -170,39 +170,45 @@ function ProfilePage() {
               onChange={(v) => setP({ ...p, whatsapp_phone: v })}
               dir="ltr"
             />
-            <Field
-              label="رقم الهوية"
-              value={p.national_id ?? ""}
-              onChange={(v) => setP({ ...p, national_id: v })}
-              dir="ltr"
-            />
-            <Field label="الجنسية" value={p.nationality ?? ""} onChange={(v) => setP({ ...p, nationality: v })} />
+            {p.account_type !== "representative" && (
+              <Field
+                label="رقم الهوية"
+                value={p.national_id ?? ""}
+                onChange={(v) => setP({ ...p, national_id: v })}
+                dir="ltr"
+              />
+            )}
+            {p.account_type !== "representative" && (
+              <Field label="الجنسية" value={p.nationality ?? ""} onChange={(v) => setP({ ...p, nationality: v })} />
+            )}
           </div>
 
-          <div>
-            <Label>صورة الهوية</Label>
-            <div className="mt-2 flex items-center gap-3">
-              {idSigned && <img src={idSigned} alt="id" className="h-16 w-24 object-cover rounded-lg border" />}
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    const path = await uploadFile("id-uploads", f);
-                    if (path) setP({ ...p, national_id_image_url: path });
-                  }}
-                />
-                <Button asChild variant="outline" className="rounded-xl gap-1">
-                  <span>
-                    <Upload className="h-4 w-4" /> رفع صورة الهوية
-                  </span>
-                </Button>
-              </label>
+          {p.account_type !== "representative" && (
+            <div>
+              <Label>صورة الهوية</Label>
+              <div className="mt-2 flex items-center gap-3">
+                {idSigned && <img src={idSigned} alt="id" className="h-16 w-24 object-cover rounded-lg border" />}
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const path = await uploadFile("id-uploads", f);
+                      if (path) setP({ ...p, national_id_image_url: path });
+                    }}
+                  />
+                  <Button asChild variant="outline" className="rounded-xl gap-1">
+                    <span>
+                      <Upload className="h-4 w-4" /> رفع صورة الهوية
+                    </span>
+                  </Button>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           <Button onClick={save} disabled={saving} className="w-full h-12 rounded-xl btn-primary-glow font-bold">
             {saving && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
