@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, ArrowLeft, Search, Save, Trash2, UserCheck, UserX } from "lucide-react";
+import { Users, ArrowLeft, Search, Save, Trash2, UserCheck, UserX, KeyRound, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { setUserPassword } from "@/lib/admin-passwords.functions";
 import { formatDate } from "@/lib/format";
+
 
 export const Route = createFileRoute("/_authenticated/admin-users")({
   component: AdminUsers,
@@ -25,8 +28,11 @@ function AdminUsers() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  // Only full admins may reset passwords.
+  const [isFullAdmin, setIsFullAdmin] = useState(false);
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "customer" | "representative">("all");
+  const [pwTarget, setPwTarget] = useState<ProfileRow | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -34,8 +40,10 @@ function AdminUsers() {
       if (!user) { navigate({ to: "/auth" }); return; }
       const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["admin","user_manager"]);
       setIsAdmin(!!data && data.length > 0);
+      setIsFullAdmin(!!data?.some((r) => r.role === "admin"));
     })();
   }, [navigate]);
+
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["admin-profiles"],
@@ -131,29 +139,104 @@ function AdminUsers() {
                 <TableHead>الاسم</TableHead><TableHead>الجوال</TableHead><TableHead>واتساب</TableHead>
                 <TableHead>الهوية</TableHead><TableHead>النوع</TableHead><TableHead>الحالة</TableHead>
                 <TableHead>الصلاحيات</TableHead>
+                {isFullAdmin && <TableHead>كلمة المرور</TableHead>}
                 <TableHead>آخر دخول</TableHead><TableHead>التسجيل</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {filtered.length === 0 && <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">لا يوجد مستخدمون</TableCell></TableRow>}
-                {filtered.map((p) => <UserRowEditor key={p.id} profile={p} userRoles={roles.filter(r => r.user_id === p.id).map(r => r.role)} onToggleRole={(r,on) => toggleRole(p.id, r, on)} onSave={save} onDelete={() => del(p)} onToggle={() => toggleActive(p)} />)}
+                {filtered.length === 0 && <TableRow><TableCell colSpan={isFullAdmin ? 11 : 10} className="text-center py-10 text-muted-foreground">لا يوجد مستخدمون</TableCell></TableRow>}
+                {filtered.map((p) => <UserRowEditor key={p.id} profile={p} userRoles={roles.filter(r => r.user_id === p.id).map(r => r.role)} onToggleRole={(r,on) => toggleRole(p.id, r, on)} onSave={save} onDelete={() => del(p)} onToggle={() => toggleActive(p)} showPassword={isFullAdmin} onResetPassword={() => setPwTarget(p)} />)}
               </TableBody>
+
             </Table>
           </div>
         </div>
       </main>
+      <PasswordDialog profile={pwTarget} onClose={() => setPwTarget(null)} />
     </div>
   );
 }
+
+function randomPassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  let out = "";
+  const buf = new Uint32Array(10);
+  crypto.getRandomValues(buf);
+  for (let i = 0; i < 10; i++) out += chars[buf[i]! % chars.length];
+  return out;
+}
+
+function PasswordDialog({ profile, onClose }: { profile: ProfileRow | null; onClose: () => void }) {
+  const [pw, setPw] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => { setPw(""); setDone(false); }, [profile?.id]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(pw);
+      toast.success("تم نسخ كلمة المرور");
+    } catch {
+      toast.error("تعذر النسخ");
+    }
+  }
+
+  async function submit() {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      await setUserPassword({ data: { userId: profile.id, password: pw } });
+      setDone(true);
+      toast.success("تم تعيين كلمة المرور الجديدة");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر تعيين كلمة المرور");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!profile} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent dir="rtl" className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4" /> تعيين كلمة مرور</DialogTitle>
+          <DialogDescription>
+            {profile?.full_name ?? "المستخدم"} — كلمات المرور مخزّنة مشفّرة ولا يمكن عرضها، يمكنك فقط تعيين كلمة مرور جديدة ونسخها.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2">
+          <Input dir="ltr" className="h-10 font-mono" value={pw} onChange={(e) => { setPw(e.target.value); setDone(false); }} placeholder="كلمة المرور الجديدة" />
+          <Button type="button" size="sm" variant="outline" onClick={() => { setPw(randomPassword()); setDone(false); }} title="توليد">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={copy} disabled={!pw} title="نسخ">
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+        {done && <p className="text-xs text-success">تم الحفظ — انسخ كلمة المرور الآن وأرسلها للمستخدم.</p>}
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>إغلاق</Button>
+          <Button onClick={submit} disabled={saving || pw.length < 6}>
+            {saving && <Loader2 className="h-4 w-4 ml-2 animate-spin" />} حفظ
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "مسؤول", manager: "مدير", user_manager: "مسؤول مستخدمين", representative: "مندوب", user: "مستخدم",
 };
 const ASSIGNABLE_ROLES = ["admin", "manager", "user_manager", "representative"];
 
-function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onToggle }: {
+function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onToggle, showPassword, onResetPassword }: {
   profile: ProfileRow; userRoles: string[]; onToggleRole: (r: string, on: boolean) => void;
   onSave: (p: ProfileRow) => void; onDelete: () => void; onToggle: () => void;
+  showPassword: boolean; onResetPassword: () => void;
 }) {
+
   const [local, setLocal] = useState(profile);
   useEffect(() => setLocal(profile), [profile]);
   return (
@@ -185,7 +268,15 @@ function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onT
           })}
         </div>
       </TableCell>
+      {showPassword && (
+        <TableCell>
+          <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1" onClick={onResetPassword}>
+            <KeyRound className="h-3 w-3" /> تعيين كلمة مرور
+          </Button>
+        </TableCell>
+      )}
       <TableCell className="text-xs text-muted-foreground">{local.last_login_at ? formatDate(local.last_login_at) : "—"}</TableCell>
+
       <TableCell className="text-xs text-muted-foreground">{formatDate(local.created_at)}</TableCell>
       <TableCell className="flex gap-1">
         <Button size="sm" onClick={() => onSave(local)}><Save className="h-3 w-3" /></Button>
