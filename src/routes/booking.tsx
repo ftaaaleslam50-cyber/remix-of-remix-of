@@ -645,7 +645,8 @@ function BookingPage() {
         </div>
       </section>
 
-      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-32 md:pb-40">
+      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-36 md:pb-40">
+
         <Stepper steps={STEPS} step={step} />
 
         <div className="surface-card p-3 md:p-10 mt-3 md:mt-6 min-h-[300px] md:min-h-[400px]">
