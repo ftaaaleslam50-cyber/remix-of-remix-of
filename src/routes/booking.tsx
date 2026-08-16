@@ -289,17 +289,43 @@ function BookingPage() {
     })();
   }, []);
 
-  // Apply pending coupon from the wheel, or from a coupon QR link (/booking?coupon=CODE).
+  // Apply pending coupon from the wheel, a coupon link (/booking?coupon=CODE),
+  // or the coupon already bound to this visitor's IP (survives reloads/revisits).
   const [autoCoupon, setAutoCoupon] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const fromUrl = new URLSearchParams(window.location.search).get("coupon");
-    const pending = localStorage.getItem("pending_coupon");
-    const code = (fromUrl || pending || "").trim().toUpperCase();
-    if (!code) return;
-    setCouponInput(code);
-    localStorage.removeItem("pending_coupon");
-    if (fromUrl) setAutoCoupon(code);
+    (async () => {
+      const fromUrl = new URLSearchParams(window.location.search).get("coupon");
+      const pending = localStorage.getItem("pending_coupon");
+      const code = (fromUrl || pending || "").trim().toUpperCase();
+      const ip = await getClientIp();
+
+      if (code) {
+        setCouponInput(code);
+        localStorage.removeItem("pending_coupon");
+        setAutoCoupon(code);
+        if (ip) {
+          const { data: userRes } = await supabase.auth.getUser();
+          await supabase.rpc("bind_coupon_to_ip" as never, {
+            _code: code,
+            _ip: ip,
+            _source: fromUrl ? "link" : "wheel",
+            _device_id: getDeviceId(),
+            _user_id: userRes.user?.id ?? null,
+          } as never);
+        }
+        return;
+      }
+
+      // No explicit code: restore the coupon bound to this IP, if any.
+      if (!ip) return;
+      const { data } = await supabase.rpc("get_coupon_for_ip" as never, { _ip: ip } as never);
+      const row = (data as unknown as Array<{ code: string }> | null)?.[0];
+      if (row?.code) {
+        setCouponInput(row.code);
+        setAutoCoupon(row.code);
+      }
+    })();
   }, []);
 
 
