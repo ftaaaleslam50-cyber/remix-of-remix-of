@@ -1103,6 +1103,7 @@ interface PackageRow {
   active: boolean;
   display_order: number;
   stars: number | null;
+  extension_price?: number;
 }
 function PackagesTab() {
   const qc = useQueryClient();
