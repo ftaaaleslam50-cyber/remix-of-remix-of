@@ -45,7 +45,7 @@ import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
-import { bookingBlockedMessage } from "@/lib/booking-availability";
+import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 
 export const Route = createFileRoute("/booking")({
@@ -63,7 +63,9 @@ const BASE_STEPS = ["نوع الحجز", "عدد الأفراد", "الرحلة 
 
 function BookingPage() {
   const navigate = useNavigate();
+  const { data: availability } = useBookingAvailability();
   const [step, setStep] = useState(0);
+
 
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [passengerCount, setPassengerCount] = useState(1);
@@ -652,9 +654,27 @@ function BookingPage() {
     }
   }
 
+  if (availability && !availability.allowed) {
+    return (
+      <BookingFocusLayout>
+        <section className="container-luxe py-20">
+          <div className="surface-card max-w-lg mx-auto p-8 text-center space-y-4">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center text-3xl">⏸️</div>
+            <h1 className="text-xl font-extrabold">الحجز غير متاح حاليًا</h1>
+            <p className="text-muted-foreground">{availability.message}</p>
+            <Button className="rounded-xl" onClick={() => navigate({ to: "/" })}>
+              العودة للرئيسية
+            </Button>
+          </div>
+        </section>
+      </BookingFocusLayout>
+    );
+  }
+
   return (
     <BookingFocusLayout>
       <Stepper steps={STEPS} step={step} />
+
 
       <section className="container-luxe relative z-10 pb-36 md:pb-40">
 
