@@ -85,16 +85,17 @@ function ProfilePage() {
   async function save() {
     if (!uid) return;
     setSaving(true);
+    const isRep = p.account_type === "representative";
     const { error } = await supabase.from("profiles").upsert(
       {
         id: uid,
         full_name: p.full_name,
         mobile_phone: (p.mobile_phone || "").replace(/\D/g, ""),
         whatsapp_phone: (p.whatsapp_phone || "").replace(/\D/g, ""),
-        national_id: p.national_id,
-        national_id_image_url: p.national_id_image_url,
+        national_id: isRep ? undefined : p.national_id,
+        national_id_image_url: isRep ? undefined : p.national_id_image_url,
         avatar_url: p.avatar_url,
-        nationality: p.nationality,
+        nationality: isRep ? undefined : p.nationality,
         account_type: p.account_type,
       },
       { onConflict: "id" },
