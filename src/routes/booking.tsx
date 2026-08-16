@@ -1773,6 +1773,8 @@ function StepConfirm(props: {
   bookingSource: string;
   pricePerPerson: number;
   subtotal: number;
+  extensionNights: number;
+  extensionTotal: number;
   discount: number;
   total: number;
   busNumber: number;
@@ -1787,6 +1789,9 @@ function StepConfirm(props: {
     ["عدد الأفراد", String(props.passengerCount)],
     ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
+    ...(props.extensionNights > 0
+      ? [["عدد ليال التمديد", `${props.extensionNights}`] as [string, string]]
+      : []),
     ["الرحلة", props.trip?.name ?? "—"],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
     ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
