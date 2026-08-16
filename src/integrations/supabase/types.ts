@@ -615,6 +615,59 @@ export type Database = {
           },
         ]
       }
+      coupon_ip_bindings: {
+        Row: {
+          coupon_code: string
+          coupon_id: string | null
+          created_at: string
+          device_id: string | null
+          expires_at: string | null
+          id: string
+          ip: string
+          reward_id: string | null
+          source: string
+          status: string
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          coupon_code: string
+          coupon_id?: string | null
+          created_at?: string
+          device_id?: string | null
+          expires_at?: string | null
+          id?: string
+          ip: string
+          reward_id?: string | null
+          source?: string
+          status?: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          coupon_code?: string
+          coupon_id?: string | null
+          created_at?: string
+          device_id?: string | null
+          expires_at?: string | null
+          id?: string
+          ip?: string
+          reward_id?: string | null
+          source?: string
+          status?: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_ip_bindings_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_redemptions: {
         Row: {
           booking_code: string | null
@@ -1370,7 +1423,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bind_coupon_to_ip: {
+        Args: {
+          _code: string
+          _device_id?: string
+          _ip: string
+          _source?: string
+          _user_id?: string
+        }
+        Returns: Json
+      }
       generate_booking_code: { Args: never; Returns: string }
+      get_coupon_for_ip: {
+        Args: { _ip: string }
+        Returns: {
+          code: string
+          expiry_date: string
+          label: string
+          prize_type: string
+          prize_value: number
+          source: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
