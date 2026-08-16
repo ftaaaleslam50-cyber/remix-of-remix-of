@@ -84,29 +84,22 @@ function DrawPage() {
   const N = segments.length;
   const sliceAngle = N > 0 ? 360 / N : 0;
 
-  async function fetchClientIp(): Promise<string | null> {
-    try {
-      const res = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
-      const j = await res.json();
-      return typeof j?.ip === "string" ? j.ip : null;
-    } catch {
-      return null;
-    }
-  }
+  const fetchClientIp = getClientIp;
 
-  function getDeviceId(): string {
-    try {
-      const KEY = "zt_device_id";
-      let id = localStorage.getItem(KEY);
-      if (!id) {
-        id = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
-        localStorage.setItem(KEY, id);
-      }
-      return id;
-    } catch {
-      return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
-  }
+  // Restore a reward already bound to this IP (refresh / revisit / new tab).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const ip = await getClientIp();
+      if (!ip || cancelled) return;
+      const { data } = await supabase.rpc("get_coupon_for_ip" as never, { _ip: ip } as never);
+      const row = (data as unknown as Array<{ code: string; label?: string | null }> | null)?.[0];
+      if (row?.code && !cancelled) setExistingCoupon({ code: row.code, label: row.label ?? null });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function attemptSpin() {
     if (spinLockRef.current || spinning) return;
