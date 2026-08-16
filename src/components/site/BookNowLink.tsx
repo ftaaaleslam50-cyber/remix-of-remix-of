@@ -82,14 +82,14 @@ export function BookNowLink({
             {/* Primary row: login + signup */}
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <Button
-                onClick={() => navigate({ to: "/auth" })}
+                onClick={() => navigate({ to: "/auth", search: { tab: "signin" } })}
                 className="h-11 rounded-xl btn-primary-glow font-bold"
               >
                 <LogIn className="ml-2 h-4 w-4" />
                 تسجيل الدخول
               </Button>
               <Button
-                onClick={() => navigate({ to: "/auth" })}
+                onClick={() => navigate({ to: "/auth", search: { tab: "signup" } })}
                 variant="outline"
                 className="h-11 rounded-xl font-bold"
               >
