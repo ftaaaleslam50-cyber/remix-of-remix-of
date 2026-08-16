@@ -101,6 +101,8 @@ function BookingPage() {
   const [repName, setRepName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [actualReturnDay, setActualReturnDay] = useState<string>("");
+  // Hotel stay extension (0 = no extension, max 5 nights). Only applies when a hotel is selected.
+  const [extensionNights, setExtensionNights] = useState<number>(0);
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
@@ -311,7 +313,7 @@ function BookingPage() {
       const { data } = await supabase
         .from("bookings")
         .select(
-          "booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code",
+          "booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code,extension_nights",
         )
         .eq("booking_code", editCode)
         .maybeSingle();
@@ -320,6 +322,7 @@ function BookingPage() {
       setPassengerCount(data.passenger_count);
       setRoomType((data.room_type ?? "5") as RoomType);
       setPackageId(data.package_id ?? null);
+      setExtensionNights(Number(data.extension_nights ?? 0));
       setTripId(data.trip_id ?? null);
       setSeats(data.seat_numbers ?? []);
       setCustomer((c) => ({
@@ -372,7 +375,13 @@ function BookingPage() {
     if (appliedCoupon.prize_type === "percent") return Math.round(subtotal * (appliedCoupon.prize_value / 100));
     return Math.min(appliedCoupon.prize_value, subtotal);
   }, [appliedCoupon, subtotal]);
-  const total = Math.max(0, subtotal - discount);
+  // Hotel extension is an independent add-on: nights × the selected hotel's per-night extension price.
+  // It never applies without a hotel and never affects the base/coupon math.
+  const effectiveExtensionNights = noHotel || !selectedPackage ? 0 : extensionNights;
+  const extensionPricePerNight =
+    noHotel || !selectedPackage ? 0 : Number((selectedPackage as { extension_price?: number }).extension_price ?? 0);
+  const extensionTotal = extensionPricePerNight * effectiveExtensionNights;
+  const total = Math.max(0, subtotal - discount) + extensionTotal;
 
   async function applyCoupon(codeArg?: string) {
     const code = (codeArg ?? couponInput).trim().toUpperCase();
@@ -521,6 +530,7 @@ function BookingPage() {
         status: "confirmed",
         notes: notes.trim() || null,
         actual_return_day: (actualReturnDay || selectedTrip?.return_day || null) as string | null,
+        extension_nights: effectiveExtensionNights,
       };
 
       if (editingCode) {
@@ -675,7 +685,11 @@ function BookingPage() {
                   onSelectNoHotel={() => {
                     setNoHotel(true);
                     setPackageId(null);
+                    setExtensionNights(0);
                   }}
+                  extensionNights={effectiveExtensionNights}
+                  onExtensionChange={setExtensionNights}
+                  extensionPricePerNight={extensionPricePerNight}
                   passengerCount={passengerCount}
                   roomType={roomType}
                 />
@@ -773,6 +787,8 @@ function BookingPage() {
                   customer={customer}
                   pricePerPerson={pricePerPerson}
                   subtotal={subtotal}
+                  extensionNights={effectiveExtensionNights}
+                  extensionTotal={extensionTotal}
                   discount={discount}
                   total={total}
                   busNumber={activeBus?.bus_number ?? 1}
@@ -1023,6 +1039,9 @@ function StepPackage({
   noHotel,
   passengerCount,
   roomType,
+  extensionNights,
+  onExtensionChange,
+  extensionPricePerNight,
 }: {
   packages: Package[];
   pricing: PricingCell[];
@@ -1032,6 +1051,9 @@ function StepPackage({
   noHotel: boolean;
   passengerCount: number;
   roomType: RoomType;
+  extensionNights: number;
+  onExtensionChange: (n: number) => void;
+  extensionPricePerNight: number;
 }) {
   const [openPkg, setOpenPkg] = useState<Package | null>(null);
   return (
@@ -1120,6 +1142,33 @@ function StepPackage({
           );
         })}
       </div>
+
+      {/* Room extension — only when an actual hotel is selected. */}
+      {!noHotel && value && (
+        <div className="mt-6 surface-card p-5 max-w-md">
+          <Label className="font-semibold">عدد ليال التمديد</Label>
+          <select
+            value={String(extensionNights)}
+            onChange={(e) => onExtensionChange(Number(e.target.value))}
+            className="mt-2 h-12 w-full rounded-xl border-2 border-border bg-white px-3 text-sm font-semibold"
+          >
+            <option value="0">بدون تمديد</option>
+            <option value="1">1 ليلة</option>
+            <option value="2">2 ليال</option>
+            <option value="3">3 ليال</option>
+            <option value="4">4 ليال</option>
+            <option value="5">5 ليال</option>
+          </select>
+          {extensionNights > 0 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              قيمة التمديد: <b className="text-primary">{sar(extensionPricePerNight * extensionNights)}</b> (
+              {sar(extensionPricePerNight)} × {extensionNights})
+            </p>
+          )}
+        </div>
+      )}
+
+
 
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
@@ -1725,6 +1774,8 @@ function StepConfirm(props: {
   bookingSource: string;
   pricePerPerson: number;
   subtotal: number;
+  extensionNights: number;
+  extensionTotal: number;
   discount: number;
   total: number;
   busNumber: number;
@@ -1739,6 +1790,9 @@ function StepConfirm(props: {
     ["عدد الأفراد", String(props.passengerCount)],
     ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
+    ...(props.extensionNights > 0
+      ? [["عدد ليال التمديد", `${props.extensionNights}`] as [string, string]]
+      : []),
     ["الرحلة", props.trip?.name ?? "—"],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
     ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
@@ -1805,6 +1859,12 @@ function StepConfirm(props: {
             <div className="flex justify-between text-[color:var(--color-gold)]">
               <span>الخصم</span>
               <span className="font-bold">− {sar(props.discount)}</span>
+            </div>
+          )}
+          {props.extensionTotal > 0 && (
+            <div className="flex justify-between">
+              <span className="text-white/70">التمديد ({props.extensionNights} ليلة)</span>
+              <span className="font-bold">{sar(props.extensionTotal)}</span>
             </div>
           )}
           <div className="h-px bg-white/20 my-2" />

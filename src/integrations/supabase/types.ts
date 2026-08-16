@@ -358,6 +358,7 @@ export type Database = {
           customer_name: string
           deleted_at: string | null
           discount_amount: number
+          extension_nights: number
           female_count: number
           hotel_id: string | null
           id: string
@@ -399,6 +400,7 @@ export type Database = {
           customer_name: string
           deleted_at?: string | null
           discount_amount?: number
+          extension_nights?: number
           female_count?: number
           hotel_id?: string | null
           id?: string
@@ -440,6 +442,7 @@ export type Database = {
           customer_name?: string
           deleted_at?: string | null
           discount_amount?: number
+          extension_nights?: number
           female_count?: number
           hotel_id?: string | null
           id?: string
@@ -1017,6 +1020,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           display_order: number
+          extension_price: number
           id: string
           image_url: string | null
           includes: Json | null
@@ -1032,6 +1036,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_order?: number
+          extension_price?: number
           id?: string
           image_url?: string | null
           includes?: Json | null
@@ -1047,6 +1052,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           display_order?: number
+          extension_price?: number
           id?: string
           image_url?: string | null
           includes?: Json | null

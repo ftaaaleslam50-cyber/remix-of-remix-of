@@ -30,6 +30,7 @@ export interface Package {
   active: boolean;
   display_order: number;
   stars?: number | null;
+  extension_price?: number;
 }
 
 

@@ -37,6 +37,7 @@ interface AdminBooking {
   package_id: string | null;
   no_hotel: boolean;
   no_bus: boolean;
+  extension_nights: number | null;
   deleted_at: string | null;
   rep_name: string | null;
 
@@ -125,6 +126,7 @@ function AdminBookings() {
           package_id,
           no_hotel,
           no_bus,
+          extension_nights,
           deleted_at,
           rep_name,
           trips(name,departure_day),
@@ -440,6 +442,10 @@ function AdminBookings() {
                             عدد الأفراد: <b>{b.passenger_count}</b>
                           </div>
 
+                          <div>
+                            عدد ليال التمديد: <b>{extNights(b)}</b>
+                          </div>
+
                           {b.seat_numbers?.length ? (
                             <div className="col-span-full">
                               المقاعد: <b className="font-mono">{b.seat_numbers.join(", ")}</b>
@@ -570,6 +576,8 @@ function AdminBookings() {
 
               <TabsContent value="hotel" className="space-y-1 text-sm mt-3">
                 <Row k="الفندق" v={details.packages?.name || (details.no_hotel ? "بدون فندق" : "—")} />
+
+                <Row k="عدد ليال التمديد" v={extNights(details)} />
               </TabsContent>
 
               <TabsContent value="bus" className="space-y-1 text-sm mt-3">
@@ -620,6 +628,13 @@ function AdminBookings() {
       </Dialog>
     </div>
   );
+}
+
+// Extension nights display: hotel-less bookings never carry an extension.
+function extNights(b: AdminBooking): string {
+  if (b.no_hotel || !b.package_id) return "بدون تمديد";
+  const n = Number(b.extension_nights ?? 0);
+  return n > 0 ? String(n) : "بدون تمديد";
 }
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {

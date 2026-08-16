@@ -35,6 +35,7 @@ interface Booking {
   created_at: string;
   notes?: string | null;
   actual_return_day?: string | null;
+  extension_nights?: number | null;
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
@@ -56,7 +57,7 @@ function TicketPage() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)",
+          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)",
         )
         .eq("booking_code", code)
         .maybeSingle();
@@ -187,6 +188,9 @@ function TicketPage() {
             <TicketRow label="جوال الواتساب" value={booking.whatsapp_phone} ltr />
             <TicketRow label="الرحلة" value={booking.trips?.name ?? "-"} />
             <TicketRow label="الفندق" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />
+            {Number(booking.extension_nights ?? 0) > 0 && (
+              <TicketRow label="عدد ليال التمديد" value={String(booking.extension_nights)} />
+            )}
             <TicketRow label="نوع الحجز" value={booking.booking_type === "individual" ? "أفراد" : "عوائل"} />
             <TicketRow label="نوع الغرفة" value={ROOM_LABEL[booking.room_type as RoomType]} />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
