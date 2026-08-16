@@ -30,7 +30,9 @@ export function BookNowLink({
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  function handleClick() {
+  async function handleClick() {
+    const blocked = await bookingBlockedMessage();
+    if (blocked) return toast.error(blocked);
     if (userId) {
       navigate({ to: "/booking" });
     } else {
@@ -38,11 +40,15 @@ export function BookNowLink({
     }
   }
 
+  const { data: availability } = useBookingAvailability();
+  const unavailable = availability ? !availability.allowed : false;
+
   return (
     <>
-      <Button className={className} onClick={handleClick}>
+      <Button className={className} onClick={handleClick} disabled={unavailable} title={availability?.message ?? undefined}>
         {children}
       </Button>
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md p-0 overflow-hidden gap-0">
