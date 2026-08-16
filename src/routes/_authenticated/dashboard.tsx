@@ -61,6 +61,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
 import { sar, formatDate } from "@/lib/format";
+import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
