@@ -914,24 +914,27 @@ function BookingPage() {
 function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
   return (
     <div className="sticky top-16 z-30 glass-bar border-b shadow-[var(--shadow-soft)]">
-      <div className="container-luxe py-2.5 md:py-3">
-        <ol className="flex items-center gap-2 min-w-max overflow-x-auto">
+      <div className="container-luxe py-2.5">
+        <ol
+          className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto min-w-max pb-1"
+          style={{ scrollbarWidth: "thin" }}
+        >
           {steps.map((label, i) => {
             const active = i === step;
             const done = i < step;
             return (
-              <li key={label} className="flex items-center gap-2">
+              <li key={label} className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div
-                  className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}
+                  className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all shrink-0 ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}
                 >
                   {done ? <Check className="h-4 w-4" /> : i + 1}
                 </div>
                 <span
-                  className={`text-xs md:text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}
+                  className={`text-xs md:text-sm font-semibold whitespace-nowrap ${active ? "text-foreground" : "text-muted-foreground"}`}
                 >
                   {label}
                 </span>
-                {i < steps.length - 1 && <div className="h-[2px] w-8 bg-border" />}
+                {i < steps.length - 1 && <div className="h-[2px] w-6 sm:w-8 bg-border shrink-0" />}
               </li>
             );
           })}
