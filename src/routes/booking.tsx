@@ -1860,6 +1860,12 @@ function StepConfirm(props: {
               <span className="font-bold">− {sar(props.discount)}</span>
             </div>
           )}
+          {props.extensionTotal > 0 && (
+            <div className="flex justify-between">
+              <span className="text-white/70">التمديد ({props.extensionNights} ليلة)</span>
+              <span className="font-bold">{sar(props.extensionTotal)}</span>
+            </div>
+          )}
           <div className="h-px bg-white/20 my-2" />
           <div className="flex justify-between items-baseline">
             <span className="text-white/80">الإجمالي النهائي</span>
