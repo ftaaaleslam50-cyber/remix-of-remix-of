@@ -28,8 +28,11 @@ function AdminUsers() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  // Only full admins may reset passwords.
+  const [isFullAdmin, setIsFullAdmin] = useState(false);
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "customer" | "representative">("all");
+  const [pwTarget, setPwTarget] = useState<ProfileRow | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -37,8 +40,10 @@ function AdminUsers() {
       if (!user) { navigate({ to: "/auth" }); return; }
       const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["admin","user_manager"]);
       setIsAdmin(!!data && data.length > 0);
+      setIsFullAdmin(!!data?.some((r) => r.role === "admin"));
     })();
   }, [navigate]);
+
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["admin-profiles"],
