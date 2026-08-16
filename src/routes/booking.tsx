@@ -498,6 +498,43 @@ function BookingPage() {
     }
   }
 
+  /** Arabic reason the current step is incomplete, or null when the user may continue. */
+  function validationMessage(): string | null {
+    switch (stepName) {
+      case "نوع الحجز":
+        return bookingType ? null : "يجب اختيار نوع الحجز (أفراد أو عوائل) للمتابعة";
+      case "عدد الأفراد":
+        if (passengerCount <= 0) return "يجب تحديد عدد الأفراد";
+        if (maleCount + femaleCount !== passengerCount)
+          return `مجموع الذكور والإناث (${maleCount + femaleCount}) يجب أن يساوي عدد الأفراد (${passengerCount})`;
+        return null;
+      case "الرحلة والحافلة": {
+        if (noBus) return null;
+        if (!tripId) return "يجب اختيار الرحلة أولاً";
+        if (!busId) return "يجب اختيار الحافلة للمتابعة";
+        const ro = selectedTrip?.return_options ?? [];
+        if (ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
+        return null;
+      }
+      case "المقاعد":
+        return seats.length === passengerCount
+          ? null
+          : `يجب اختيار ${passengerCount} مقعد (تم اختيار ${seats.length})`;
+      case "الفندق":
+        return noHotel || packageId ? null : "يجب اختيار الفندق أو تحديد «بدون فندق»";
+      case "البيانات": {
+        if (customer.customer_name.trim().length <= 1) return "يجب إدخال اسم العميل بشكل صحيح";
+        if (!/^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, ""))) return "يجب إدخال رقم جوال صحيح للتواصل";
+        if (!/^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, ""))) return "يجب إدخال رقم واتساب صحيح";
+        if (!idFile && !editingCode && !profileIdImagePath) return "يجب إرفاق صورة الهوية";
+        return null;
+      }
+      default:
+        return null;
+    }
+  }
+
+
   async function uploadIdImage(): Promise<string | null> {
     if (!idFile) return null;
     const ext = idFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
