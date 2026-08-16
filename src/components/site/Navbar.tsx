@@ -4,6 +4,7 @@ import { Menu, X, User as UserIcon, LogOut, LayoutDashboard } from "lucide-react
 import { Logo } from "./Logo";
 import { NAV_LINKS } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
+import { BookNowLink } from "@/components/site/BookNowLink";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
