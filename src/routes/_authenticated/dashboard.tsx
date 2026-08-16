@@ -984,6 +984,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
                 <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
                 <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
+                <TableCell className="text-xs">{(b.extension_nights ?? 0) > 0 ? `${b.extension_nights} ليلة` : "بدون"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.actual_return_day ?? b.trips?.return_day ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
