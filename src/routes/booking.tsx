@@ -1036,6 +1036,9 @@ function StepPackage({
   noHotel,
   passengerCount,
   roomType,
+  extensionNights,
+  onExtensionChange,
+  extensionPricePerNight,
 }: {
   packages: Package[];
   pricing: PricingCell[];
@@ -1045,6 +1048,9 @@ function StepPackage({
   noHotel: boolean;
   passengerCount: number;
   roomType: RoomType;
+  extensionNights: number;
+  onExtensionChange: (n: number) => void;
+  extensionPricePerNight: number;
 }) {
   const [openPkg, setOpenPkg] = useState<Package | null>(null);
   return (
