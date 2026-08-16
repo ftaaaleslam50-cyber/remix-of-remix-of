@@ -177,12 +177,10 @@ function BookingJourney() {
           ))}
         </ol>
         <div className="mt-8 flex justify-center">
-          <Link to="/booking">
-            <Button className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-14 px-10 text-base font-bold">
-              ابدأ الحجز الآن
-              <ArrowLeft className="mr-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <BookNowLink className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-14 px-10 text-base font-bold">
+            ابدأ الحجز الآن
+            <ArrowLeft className="mr-2 h-5 w-5" />
+          </BookNowLink>
         </div>
       </div>
     </section>
