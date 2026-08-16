@@ -902,16 +902,31 @@ function BookingPage() {
 }
 
 function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    const target = activeRef.current;
+    if (!container || !target) return;
+    // Center the active step horizontally within the visible scroll area.
+    const targetCenter = target.offsetLeft + target.offsetWidth / 2;
+    container.scrollTo({
+      left: targetCenter - container.clientWidth / 2,
+      behavior: "smooth",
+    });
+  }, [step]);
+
   return (
     <div className="sticky top-16 z-30 w-full max-w-full overflow-hidden glass-bar border-b shadow-[var(--shadow-soft)]">
       <div className="container-luxe min-w-0 max-w-full py-2.5">
-        <div className="w-full max-w-full overflow-x-auto overscroll-x-contain pb-1" style={{ scrollbarWidth: "thin" }}>
+        <div ref={scrollRef} className="w-full max-w-full overflow-x-auto overscroll-x-contain pb-1" style={{ scrollbarWidth: "thin" }}>
           <ol className="flex w-max min-w-full items-center gap-1.5 sm:gap-2">
           {steps.map((label, i) => {
             const active = i === step;
             const done = i < step;
             return (
-              <li key={label} className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <li key={label} ref={active ? activeRef : null} className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div
                   className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all shrink-0 ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}
                 >
