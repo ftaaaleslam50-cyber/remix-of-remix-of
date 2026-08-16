@@ -44,6 +44,7 @@ function identifierToEmail(raw: string): string {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { tab?: "signin" | "signup" };
   const [loading, setLoading] = useState(false);
   
 
