@@ -649,7 +649,7 @@ function BookingPage() {
 
         <Stepper steps={STEPS} step={step} />
 
-        <div className="surface-card p-3 md:p-10 mt-3 md:mt-6 min-h-[300px] md:min-h-[400px]">
+        <div className="surface-card p-3 md:p-8 mt-3 md:mt-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={stepName}
