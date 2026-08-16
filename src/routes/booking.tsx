@@ -470,33 +470,10 @@ function BookingPage() {
 
 
   function canProceed(): boolean {
-    switch (stepName) {
-      case "نوع الحجز":
-        return !!bookingType;
-      case "عدد الأفراد":
-        return passengerCount > 0 && maleCount + femaleCount === passengerCount;
-      case "الرحلة والحافلة": {
-        if (noBus) return true;
-        if (!tripId || !busId) return false;
-        const ro = selectedTrip?.return_options ?? [];
-        if (ro.length > 1 && !actualReturnDay) return false;
-        return true;
-      }
-      case "المقاعد":
-        return seats.length === passengerCount;
-      case "الفندق":
-        return noHotel || !!packageId;
-      case "البيانات":
-        return (
-          customer.customer_name.trim().length > 1 &&
-          /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
-          /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
-          (!!idFile || !!editingCode || !!profileIdImagePath)
-        );
-      default:
-        return true;
-    }
+    return validationMessage() === null;
   }
+  void canProceed;
+
 
   /** Arabic reason the current step is incomplete, or null when the user may continue. */
   function validationMessage(): string | null {
