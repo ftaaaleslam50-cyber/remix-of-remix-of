@@ -941,6 +941,7 @@ function UnifiedBookingsTab(props: {
               <TableHead>الجوال</TableHead>
               <TableHead>الفندق</TableHead>
               <TableHead>نوع الغرفة</TableHead>
+              <TableHead>ليال التمديد</TableHead>
               <TableHead>الرحلة</TableHead>
               <TableHead>العودة</TableHead>
               <TableHead>الحافلة</TableHead>
