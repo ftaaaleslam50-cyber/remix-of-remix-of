@@ -90,12 +90,10 @@ function Hero({ cms }: { cms: HomeCms | null | undefined }) {
           <h1 className="text-4xl md:text-6xl font-extrabold leading-[1.15] max-w-4xl">{title}</h1>
           <p className="mt-5 max-w-2xl text-white/80 text-lg leading-relaxed">{subtitle}</p>
           <div className="mt-9 flex flex-col sm:flex-row items-center gap-3">
-            <Link to="/booking">
-              <Button className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-14 px-8 text-base font-bold">
-                {cta}
-                <ArrowLeft className="mr-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <BookNowLink className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-14 px-8 text-base font-bold">
+              {cta}
+              <ArrowLeft className="mr-2 h-5 w-5" />
+            </BookNowLink>
             <Link to="/packages">
               <Button
                 variant="outline"
