@@ -470,33 +470,47 @@ function BookingPage() {
 
 
   function canProceed(): boolean {
+    return validationMessage() === null;
+  }
+  void canProceed;
+
+
+  /** Arabic reason the current step is incomplete, or null when the user may continue. */
+  function validationMessage(): string | null {
     switch (stepName) {
       case "نوع الحجز":
-        return !!bookingType;
+        return bookingType ? null : "يجب اختيار نوع الحجز (أفراد أو عوائل) للمتابعة";
       case "عدد الأفراد":
-        return passengerCount > 0 && maleCount + femaleCount === passengerCount;
+        if (passengerCount <= 0) return "يجب تحديد عدد الأفراد";
+        if (maleCount + femaleCount !== passengerCount)
+          return `مجموع الذكور والإناث (${maleCount + femaleCount}) يجب أن يساوي عدد الأفراد (${passengerCount})`;
+        return null;
       case "الرحلة والحافلة": {
-        if (noBus) return true;
-        if (!tripId || !busId) return false;
+        if (noBus) return null;
+        if (!tripId) return "يجب اختيار الرحلة أولاً";
+        if (!busId) return "يجب اختيار الحافلة للمتابعة";
         const ro = selectedTrip?.return_options ?? [];
-        if (ro.length > 1 && !actualReturnDay) return false;
-        return true;
+        if (ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
+        return null;
       }
       case "المقاعد":
-        return seats.length === passengerCount;
+        return seats.length === passengerCount
+          ? null
+          : `يجب اختيار ${passengerCount} مقعد (تم اختيار ${seats.length})`;
       case "الفندق":
-        return noHotel || !!packageId;
-      case "البيانات":
-        return (
-          customer.customer_name.trim().length > 1 &&
-          /^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, "")) &&
-          /^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, "")) &&
-          (!!idFile || !!editingCode || !!profileIdImagePath)
-        );
+        return noHotel || packageId ? null : "يجب اختيار الفندق أو تحديد «بدون فندق»";
+      case "البيانات": {
+        if (customer.customer_name.trim().length <= 1) return "يجب إدخال اسم العميل بشكل صحيح";
+        if (!/^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, ""))) return "يجب إدخال رقم جوال صحيح للتواصل";
+        if (!/^\+?\d{9,15}$/.test(customer.whatsapp_phone.replace(/\s/g, ""))) return "يجب إدخال رقم واتساب صحيح";
+        if (!idFile && !editingCode && !profileIdImagePath) return "يجب إرفاق صورة الهوية";
+        return null;
+      }
       default:
-        return true;
+        return null;
     }
   }
+
 
   async function uploadIdImage(): Promise<string | null> {
     if (!idFile) return null;
@@ -645,10 +659,11 @@ function BookingPage() {
         </div>
       </section>
 
-      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-32 md:pb-40">
+      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-36 md:pb-40">
+
         <Stepper steps={STEPS} step={step} />
 
-        <div className="surface-card p-3 md:p-10 mt-3 md:mt-6 min-h-[300px] md:min-h-[400px]">
+        <div className="surface-card p-3 md:p-8 mt-3 md:mt-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={stepName}
@@ -832,40 +847,6 @@ function BookingPage() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-4 md:mt-10 flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setStep((s) => Math.max(0, s - 1))}
-              disabled={step === 0}
-              className="rounded-full md:h-11 md:px-6"
-            >
-              <ChevronRight className="h-4 w-4 ml-1" />
-              السابق
-            </Button>
-            {step < STEPS.length - 1 ? (
-              <Button
-                size="sm"
-                className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6"
-                disabled={!canProceed()}
-                onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-              >
-                التالي
-                <ChevronLeft className="h-4 w-4 mr-1" />
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6"
-                disabled={submitting}
-                onClick={submitBooking}
-              >
-                {submitting && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
-                تأكيد الحجز
-                <Check className="h-4 w-4 mr-2" />
-              </Button>
-            )}
-          </div>
         </div>
       </section>
 
@@ -878,7 +859,49 @@ function BookingPage() {
         subtotal={subtotal}
         discount={discount}
         total={total}
-      />
+      >
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            disabled={step === 0}
+            className="rounded-full md:h-11 md:px-6"
+          >
+            <ChevronRight className="h-4 w-4 ml-1" />
+            السابق
+          </Button>
+          {step < STEPS.length - 1 ? (
+            <Button
+              size="sm"
+              className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6"
+              onClick={() => {
+                const msg = validationMessage();
+                if (msg) {
+                  toast.error(msg);
+                  return;
+                }
+                setStep((s) => Math.min(STEPS.length - 1, s + 1));
+              }}
+            >
+              التالي
+              <ChevronLeft className="h-4 w-4 mr-1" />
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="btn-primary-glow hover:btn-primary-glow-hover rounded-full md:h-11 md:px-6"
+              disabled={submitting}
+              onClick={submitBooking}
+            >
+              {submitting && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
+              تأكيد الحجز
+              <Check className="h-4 w-4 mr-2" />
+            </Button>
+          )}
+        </div>
+      </PriceBar>
+
     </BookingFocusLayout>
   );
 }
@@ -1925,10 +1948,11 @@ function PriceBar(props: {
   subtotal: number;
   discount: number;
   total: number;
+  children?: React.ReactNode;
 }) {
   return (
     <div className="fixed bottom-0 inset-x-0 z-30 glass-bar border-t shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)]">
-      <div className="container-luxe py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div className="container-luxe py-2 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
@@ -1939,13 +1963,19 @@ function PriceBar(props: {
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">الإجمالي</p>
             {props.discount > 0 && <p className="text-xs text-muted-foreground line-through">{sar(props.subtotal)}</p>}
-            <p className="text-xl md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
+            <p className="text-lg md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
           </div>
         </div>
       </div>
+      {props.children && (
+        <div className="border-t bg-background/60">
+          <div className="container-luxe py-2">{props.children}</div>
+        </div>
+      )}
     </div>
   );
 }
+
 function PriceCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
