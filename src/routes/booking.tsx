@@ -533,8 +533,12 @@ function BookingPage() {
   async function submitBooking() {
     if (!noHotel && !selectedPackage) return;
     if (!noBus && (!activeBus || !selectedTrip)) return;
+    // Booking availability gate (create + edit). Server enforces it too.
+    const blocked = await bookingBlockedMessage();
+    if (blocked) return toast.error(blocked);
     setSubmitting(true);
     try {
+
       const uploadedPath = await uploadIdImage();
       // Fall back to the user's saved profile ID image when no new file was uploaded.
       const id_image_url = uploadedPath ?? profileIdImagePath ?? null;
