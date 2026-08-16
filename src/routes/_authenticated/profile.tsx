@@ -43,6 +43,7 @@ function ProfilePage() {
   });
   const [avatarSigned, setAvatarSigned] = useState<string>("");
   const [idSigned, setIdSigned] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -53,9 +54,19 @@ function ProfilePage() {
       setUid(user.id);
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if (data) setP(data as ProfileRow);
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (roleData) setUserRole(roleData.role as string);
       setLoading(false);
     })();
   }, []);
+
+  // A representative is identified either by their profile account_type or by
+  // their assigned role in user_roles — reps without a profile row still count.
+  const isRep = p.account_type === "representative" || userRole === "representative";
 
   useEffect(() => {
     (async () => {
