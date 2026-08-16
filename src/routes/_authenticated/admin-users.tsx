@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Users, ArrowLeft, Search, Save, Trash2, UserCheck, UserX } from "lucide-react";
+import { Users, ArrowLeft, Search, Save, Trash2, UserCheck, UserX, KeyRound, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { setUserPassword } from "@/lib/admin-passwords.functions";
 import { formatDate } from "@/lib/format";
+
 
 export const Route = createFileRoute("/_authenticated/admin-users")({
   component: AdminUsers,
