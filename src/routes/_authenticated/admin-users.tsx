@@ -160,10 +160,12 @@ const ROLE_LABELS: Record<string, string> = {
 };
 const ASSIGNABLE_ROLES = ["admin", "manager", "user_manager", "representative"];
 
-function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onToggle }: {
+function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onToggle, showPassword, onResetPassword }: {
   profile: ProfileRow; userRoles: string[]; onToggleRole: (r: string, on: boolean) => void;
   onSave: (p: ProfileRow) => void; onDelete: () => void; onToggle: () => void;
+  showPassword: boolean; onResetPassword: () => void;
 }) {
+
   const [local, setLocal] = useState(profile);
   useEffect(() => setLocal(profile), [profile]);
   return (
