@@ -1084,89 +1084,97 @@ function StepPackage({
           return (
             <div
               key={p.id}
-              onClick={() => onChange(p.id)}
-              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all cursor-pointer ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]"}`}
+              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)] cursor-pointer"}`}
             >
-              <div className="relative h-40 overflow-hidden" style={{ background: "var(--gradient-navy)" }}>
-                {p.image_url ? (
-                  <img
-                    src={p.image_url}
-                    alt={p.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-white/60">
-                    <PackageIcon className="h-14 w-14" />
-                  </div>
-                )}
-                {typeof p.stars === "number" && p.stars > 0 ? (
-                  <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-0.5">
-                    {Array.from({ length: p.stars }).map((_, i) => (
-                      <Star key={i} className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                    ))}
-                  </div>
-                ) : (
-                  p.tier &&
-                  p.tier !== "basic" &&
-                  p.tier !== "economy" && (
-                    <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
-                      {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+              <div
+                onClick={() => onChange(p.id)}
+                className="cursor-pointer"
+              >
+                <div className="relative h-40 overflow-hidden" style={{ background: "var(--gradient-navy)" }}>
+                  {p.image_url ? (
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-white/60">
+                      <PackageIcon className="h-14 w-14" />
                     </div>
-                  )
-                )}
-                {active && (
-                  <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
-                    <Check className="h-5 w-5" />
+                  )}
+                  {typeof p.stars === "number" && p.stars > 0 ? (
+                    <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-0.5">
+                      {Array.from({ length: p.stars }).map((_, i) => (
+                        <Star key={i} className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                      ))}
+                    </div>
+                  ) : (
+                    p.tier &&
+                    p.tier !== "basic" &&
+                    p.tier !== "economy" && (
+                      <div className="absolute top-3 right-3 bg-white/95 rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
+                        {p.tier.replace("stars", "")} <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                      </div>
+                    )
+                  )}
+                  {active && (
+                    <div className="absolute top-3 left-3 h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                      <Check className="h-5 w-5" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-5 text-center">
+                  <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{p.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.description}</p>
+                  <p className="mt-3 text-primary font-extrabold text-xl">
+                    {sar(price)} <span className="text-xs text-muted-foreground font-normal">للفرد</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenPkg(p);
+                    }}
+                    className="mt-3 text-xs font-semibold text-[color:var(--color-navy)] underline-offset-2 hover:underline"
+                  >
+                    التفاصيل
+                  </button>
+                </div>
+              </div>
+
+              {/* Room extension — shown only for the selected hotel. */}
+              {active && !noHotel && (
+                <div className="px-5 pb-5 -mt-1">
+                  <div className="surface-card p-4">
+                    <Label className="font-semibold text-sm">عدد ليال التمديد</Label>
+                    <select
+                      value={String(extensionNights)}
+                      onChange={(e) => onExtensionChange(Number(e.target.value))}
+                      className="mt-2 h-11 w-full rounded-xl border-2 border-border bg-white px-3 text-sm font-semibold"
+                    >
+                      <option value="0">بدون تمديد</option>
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={String(n)}>
+                          {n} {n === 1 ? "ليلة" : n === 2 ? "ليالي" : "ليال"}
+                        </option>
+                      ))}
+                    </select>
+                    {extensionNights > 0 && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        قيمة التمديد: <b className="text-primary">{sar(extensionPricePerNight * extensionNights)}</b> (
+                        {sar(extensionPricePerNight)} × {extensionNights})
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="p-5 text-center">
-                <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">{p.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{p.description}</p>
-                <p className="mt-3 text-primary font-extrabold text-xl">
-                  {sar(price)} <span className="text-xs text-muted-foreground font-normal">للفرد</span>
-                </p>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenPkg(p);
-                  }}
-                  className="mt-3 text-xs font-semibold text-[color:var(--color-navy)] underline-offset-2 hover:underline"
-                >
-                  التفاصيل
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Room extension — only when an actual hotel is selected. */}
-      {!noHotel && value && (
-        <div className="mt-6 surface-card p-5 max-w-md">
-          <Label className="font-semibold">عدد ليال التمديد</Label>
-          <select
-            value={String(extensionNights)}
-            onChange={(e) => onExtensionChange(Number(e.target.value))}
-            className="mt-2 h-12 w-full rounded-xl border-2 border-border bg-white px-3 text-sm font-semibold"
-          >
-            <option value="0">بدون تمديد</option>
-            <option value="1">1 ليلة</option>
-            <option value="2">2 ليال</option>
-            <option value="3">3 ليال</option>
-            <option value="4">4 ليال</option>
-            <option value="5">5 ليال</option>
-          </select>
-          {extensionNights > 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              قيمة التمديد: <b className="text-primary">{sar(extensionPricePerNight * extensionNights)}</b> (
-              {sar(extensionPricePerNight)} × {extensionNights})
-            </p>
-          )}
-        </div>
-      )}
+      {/* Room extension now renders inside the selected hotel card. */}
 
 
 
