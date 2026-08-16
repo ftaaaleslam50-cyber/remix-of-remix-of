@@ -374,7 +374,13 @@ function BookingPage() {
     if (appliedCoupon.prize_type === "percent") return Math.round(subtotal * (appliedCoupon.prize_value / 100));
     return Math.min(appliedCoupon.prize_value, subtotal);
   }, [appliedCoupon, subtotal]);
-  const total = Math.max(0, subtotal - discount);
+  // Hotel extension is an independent add-on: nights × the selected hotel's per-night extension price.
+  // It never applies without a hotel and never affects the base/coupon math.
+  const effectiveExtensionNights = noHotel || !selectedPackage ? 0 : extensionNights;
+  const extensionPricePerNight =
+    noHotel || !selectedPackage ? 0 : Number((selectedPackage as { extension_price?: number }).extension_price ?? 0);
+  const extensionTotal = extensionPricePerNight * effectiveExtensionNights;
+  const total = Math.max(0, subtotal - discount) + extensionTotal;
 
   async function applyCoupon(codeArg?: string) {
     const code = (codeArg ?? couponInput).trim().toUpperCase();
