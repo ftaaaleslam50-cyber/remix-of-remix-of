@@ -63,7 +63,9 @@ const BASE_STEPS = ["نوع الحجز", "عدد الأفراد", "الرحلة 
 
 function BookingPage() {
   const navigate = useNavigate();
+  const { data: availability } = useBookingAvailability();
   const [step, setStep] = useState(0);
+
 
   const [bookingType, setBookingType] = useState<BookingType | null>(null);
   const [passengerCount, setPassengerCount] = useState(1);
