@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
 import { ShieldCheck, LogIn, UserPlus, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
+
 
 /**
  * Booking CTA: if the visitor is not logged in, shows a polished modal
