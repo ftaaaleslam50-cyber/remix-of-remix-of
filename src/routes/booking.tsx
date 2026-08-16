@@ -664,9 +664,9 @@ function BookingPage() {
         </div>
       </section>
 
-      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-36 md:pb-40">
+      <Stepper steps={STEPS} step={step} />
 
-        <Stepper steps={STEPS} step={step} />
+      <section className="container-luxe relative z-10 pb-36 md:pb-40">
 
         <div className="surface-card p-3 md:p-8 mt-3 md:mt-6">
           <AnimatePresence mode="wait">
@@ -913,28 +913,30 @@ function BookingPage() {
 
 function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
   return (
-    <div className="surface-card p-4 md:p-5 overflow-x-auto">
-      <ol className="flex items-center gap-2 min-w-max">
-        {steps.map((label, i) => {
-          const active = i === step;
-          const done = i < step;
-          return (
-            <li key={label} className="flex items-center gap-2">
-              <div
-                className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}
-              >
-                {done ? <Check className="h-4 w-4" /> : i + 1}
-              </div>
-              <span
-                className={`text-xs md:text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}
-              >
-                {label}
-              </span>
-              {i < steps.length - 1 && <div className="h-[2px] w-8 bg-border" />}
-            </li>
-          );
-        })}
-      </ol>
+    <div className="sticky top-16 z-30 glass-bar border-b shadow-[var(--shadow-soft)]">
+      <div className="container-luxe py-2.5 md:py-3">
+        <ol className="flex items-center gap-2 min-w-max overflow-x-auto">
+          {steps.map((label, i) => {
+            const active = i === step;
+            const done = i < step;
+            return (
+              <li key={label} className="flex items-center gap-2">
+                <div
+                  className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${done ? "bg-[color:var(--color-navy)] text-white" : active ? "btn-primary-glow text-white" : "bg-muted text-muted-foreground"}`}
+                >
+                  {done ? <Check className="h-4 w-4" /> : i + 1}
+                </div>
+                <span
+                  className={`text-xs md:text-sm font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}
+                >
+                  {label}
+                </span>
+                {i < steps.length - 1 && <div className="h-[2px] w-8 bg-border" />}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </div>
   );
 }
