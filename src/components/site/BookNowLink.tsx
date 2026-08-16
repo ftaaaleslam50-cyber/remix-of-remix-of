@@ -66,6 +66,9 @@ export function BookNowLink({
 
           <DialogHeader className="px-6 pt-5 pb-1 sr-only">
             <DialogTitle>تنبيه قبل إتمام الحجز</DialogTitle>
+            <DialogDescription>
+              أنت لم تقم بتسجيل الدخول. اختر تسجيل الدخول أو إنشاء حساب أو المتابعة كزائر.
+            </DialogDescription>
           </DialogHeader>
 
           {/* Body */}
