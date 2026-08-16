@@ -123,9 +123,9 @@ export function Navbar() {
             ) : (
               <Link to="/auth" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">دخول</Link>
             )}
-            <Link to="/booking" className="mt-2">
-              <Button className="btn-primary-glow w-full rounded-xl h-12 font-bold">احجز الآن</Button>
-            </Link>
+            <div className="mt-2">
+              <BookNowLink className="btn-primary-glow w-full rounded-xl h-12 font-bold">احجز الآن</BookNowLink>
+            </div>
           </div>
         </div>
       )}
