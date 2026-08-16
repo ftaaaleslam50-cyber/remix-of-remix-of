@@ -101,6 +101,8 @@ function BookingPage() {
   const [repName, setRepName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [actualReturnDay, setActualReturnDay] = useState<string>("");
+  // Hotel stay extension (0 = no extension, max 5 nights). Only applies when a hotel is selected.
+  const [extensionNights, setExtensionNights] = useState<number>(0);
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
