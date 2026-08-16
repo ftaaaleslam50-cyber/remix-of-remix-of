@@ -92,6 +92,7 @@ interface BookingRow {
   actual_return_day?: string | null;
   nationality?: string | null;
   booking_source?: string | null;
+  extension_nights?: number | null;
   bus_id?: string | null;
   trip_id?: string | null;
   packages?: { name: string } | null;
