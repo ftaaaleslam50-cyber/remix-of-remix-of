@@ -684,7 +684,11 @@ function BookingPage() {
                   onSelectNoHotel={() => {
                     setNoHotel(true);
                     setPackageId(null);
+                    setExtensionNights(0);
                   }}
+                  extensionNights={effectiveExtensionNights}
+                  onExtensionChange={setExtensionNights}
+                  extensionPricePerNight={extensionPricePerNight}
                   passengerCount={passengerCount}
                   roomType={roomType}
                 />
