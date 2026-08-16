@@ -139,12 +139,14 @@ function AdminUsers() {
                 <TableHead>الاسم</TableHead><TableHead>الجوال</TableHead><TableHead>واتساب</TableHead>
                 <TableHead>الهوية</TableHead><TableHead>النوع</TableHead><TableHead>الحالة</TableHead>
                 <TableHead>الصلاحيات</TableHead>
+                {isFullAdmin && <TableHead>كلمة المرور</TableHead>}
                 <TableHead>آخر دخول</TableHead><TableHead>التسجيل</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {filtered.length === 0 && <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">لا يوجد مستخدمون</TableCell></TableRow>}
-                {filtered.map((p) => <UserRowEditor key={p.id} profile={p} userRoles={roles.filter(r => r.user_id === p.id).map(r => r.role)} onToggleRole={(r,on) => toggleRole(p.id, r, on)} onSave={save} onDelete={() => del(p)} onToggle={() => toggleActive(p)} />)}
+                {filtered.length === 0 && <TableRow><TableCell colSpan={isFullAdmin ? 11 : 10} className="text-center py-10 text-muted-foreground">لا يوجد مستخدمون</TableCell></TableRow>}
+                {filtered.map((p) => <UserRowEditor key={p.id} profile={p} userRoles={roles.filter(r => r.user_id === p.id).map(r => r.role)} onToggleRole={(r,on) => toggleRole(p.id, r, on)} onSave={save} onDelete={() => del(p)} onToggle={() => toggleActive(p)} showPassword={isFullAdmin} onResetPassword={() => setPwTarget(p)} />)}
               </TableBody>
+
             </Table>
           </div>
         </div>
