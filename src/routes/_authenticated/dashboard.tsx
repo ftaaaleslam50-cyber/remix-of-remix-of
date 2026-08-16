@@ -968,7 +968,7 @@ function UnifiedBookingsTab(props: {
             )}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={17} className="text-center py-10 text-muted-foreground">
                   لا توجد حجوزات مطابقة.
                 </TableCell>
               </TableRow>
