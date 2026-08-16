@@ -197,7 +197,15 @@ function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onT
           })}
         </div>
       </TableCell>
+      {showPassword && (
+        <TableCell>
+          <Button size="sm" variant="outline" className="h-8 text-[11px] gap-1" onClick={onResetPassword}>
+            <KeyRound className="h-3 w-3" /> تعيين كلمة مرور
+          </Button>
+        </TableCell>
+      )}
       <TableCell className="text-xs text-muted-foreground">{local.last_login_at ? formatDate(local.last_login_at) : "—"}</TableCell>
+
       <TableCell className="text-xs text-muted-foreground">{formatDate(local.created_at)}</TableCell>
       <TableCell className="flex gap-1">
         <Button size="sm" onClick={() => onSave(local)}><Save className="h-3 w-3" /></Button>
