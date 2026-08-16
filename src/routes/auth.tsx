@@ -137,7 +137,6 @@ function AuthPage() {
           </p>
         </div>
         <div className="surface-card p-6">
-  const search = useSearch({ strict: false }) as { tab?: "signin" | "signup" };
           <Tabs defaultValue={search.tab === "signup" ? "signup" : "signin"}>
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="signin">دخول</TabsTrigger>
