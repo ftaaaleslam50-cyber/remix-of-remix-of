@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Logo } from "@/components/site/Logo";
+import { BookNowLink } from "@/components/site/BookNowLink";
 import { BRAND, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/brand";
 import { supabase } from "@/integrations/supabase/client";
 
