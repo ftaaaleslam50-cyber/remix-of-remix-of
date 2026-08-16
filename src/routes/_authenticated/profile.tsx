@@ -96,7 +96,6 @@ function ProfilePage() {
   async function save() {
     if (!uid) return;
     setSaving(true);
-    const isRep = p.account_type === "representative";
     const { error } = await supabase.from("profiles").upsert(
       {
         id: uid,
