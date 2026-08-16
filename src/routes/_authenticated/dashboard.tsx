@@ -2583,20 +2583,27 @@ function BookingControlTab() {
 
   if (!local) return <div className="surface-card p-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</div>;
 
-  const toggle = (k: keyof BookingCtlRow, label: string, hint?: string) => (
-    <label className="flex items-start gap-3 rounded-xl border p-3 cursor-pointer">
-      <input
-        type="checkbox"
-        className="mt-1 h-4 w-4"
-        checked={Boolean(local[k])}
-        onChange={(e) => setLocal({ ...local, [k]: e.target.checked })}
-      />
-      <span>
-        <span className="block text-sm font-bold">{label}</span>
-        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
-      </span>
-    </label>
-  );
+  // `inverted` = the stored column is a "block_*" flag, so the switch shows the opposite.
+  const onoff = (k: keyof BookingCtlRow, label: string, hint: string | undefined, inverted: boolean) => {
+    const on = inverted ? !local[k] : Boolean(local[k]);
+    return (
+      <label className="flex items-start gap-3 rounded-xl border p-3 cursor-pointer">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4"
+          checked={on}
+          onChange={(e) => setLocal({ ...local, [k]: inverted ? !e.target.checked : e.target.checked })}
+        />
+        <span>
+          <span className="block text-sm font-bold">
+            {label} — <span className={on ? "text-green-600" : "text-destructive"}>{on ? "مفعّل" : "متوقف"}</span>
+          </span>
+          {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+        </span>
+      </label>
+    );
+  };
+
 
   return (
     <div className="space-y-4">
