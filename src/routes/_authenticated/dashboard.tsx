@@ -2602,62 +2602,222 @@ function BookingControlTab() {
     <div className="space-y-4">
       <div className="surface-card p-6 space-y-4">
         <div>
-          <h2 className="text-lg font-extrabold">التحكم في الحجز</h2>
+          <h2 className="text-lg font-extrabold">التحكم الأساسي في الحجز</h2>
           <p className="text-xs text-muted-foreground">
-            تنطبق هذه الإعدادات على إنشاء حجز جديد وتعديل الحجوزات الحالية. المسؤولون والمديرون غير متأثرين.
+            تحكم يدوي مستقل تمامًا عن الجدولة. المسؤولون والمديرون غير متأثرين.
           </p>
         </div>
 
-        {toggle("booking_enabled", "الحجز مفعّل", "عند إيقافه يتوقف إنشاء وتعديل الحجوزات لجميع الفئات غير الإدارية.")}
-
-        <div className="grid md:grid-cols-3 gap-3">
-          {toggle("booking_block_guest", "إيقاف الحجز للزوار (غير المسجلين)")}
-          {toggle("booking_block_customer", "إيقاف الحجز للعملاء")}
-          {toggle("booking_block_representative", "إيقاف الحجز للمندوبين")}
+        <div className="grid md:grid-cols-2 gap-3">
+          {onoff("booking_enabled", "الحجز للجميع", "عند إيقافه يتوقف إنشاء وتعديل الحجوزات لجميع الفئات غير الإدارية.", false)}
+          {onoff("booking_block_representative", "الحجز للمندوبين", undefined, true)}
+          {onoff("booking_block_customer", "الحجز للعملاء", undefined, true)}
+          {onoff("booking_block_guest", "الحجز للزوار غير المسجلين", undefined, true)}
         </div>
 
-        <div className="space-y-3">
-          {toggle("booking_schedule_enabled", "تفعيل جدولة أوقات الحجز", "بتوقيت الرياض.")}
-          <div className="grid md:grid-cols-2 gap-3">
-            <div>
-              <Label>وقت الفتح</Label>
-              <Input
-                type="time"
-                dir="ltr"
-                value={(local.booking_open_time ?? "08:00").slice(0, 5)}
-                onChange={(e) => setLocal({ ...local, booking_open_time: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>وقت الإغلاق</Label>
-              <Input
-                type="time"
-                dir="ltr"
-                value={(local.booking_close_time ?? "23:59").slice(0, 5)}
-                onChange={(e) => setLocal({ ...local, booking_close_time: e.target.value })}
-              />
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label>رسالة الإيقاف الأساسية</Label>
+          <p className="text-xs text-muted-foreground">تظهر عند المنع بسبب الإيقاف اليدوي.</p>
+          <Textarea
+            rows={4}
+            value={local.booking_unavailable_message ?? ""}
+            placeholder={DEFAULT_BOOKING_UNAVAILABLE_MESSAGE}
+            onChange={(e) => setLocal({ ...local, booking_unavailable_message: e.target.value })}
+          />
         </div>
-      </div>
 
-      <div className="surface-card p-6 space-y-3">
-        <div>
-          <h3 className="font-extrabold">رسالة عدم إتاحة الحجز</h3>
-          <p className="text-xs text-muted-foreground">
-            تظهر هذه الرسالة للمستخدم عند محاولة إنشاء أو تعديل حجز أثناء فترة عدم الإتاحة.
-          </p>
-        </div>
-        <Textarea
-          rows={5}
-          value={local.booking_unavailable_message ?? ""}
-          placeholder={DEFAULT_BOOKING_UNAVAILABLE_MESSAGE}
-          onChange={(e) => setLocal({ ...local, booking_unavailable_message: e.target.value })}
-        />
         <Button onClick={save} disabled={saving} className="btn-primary-glow rounded-full">
-          <Save className="h-4 w-4 ml-1" /> حفظ
+          <Save className="h-4 w-4 ml-1" /> حفظ التحكم الأساسي
         </Button>
       </div>
+
+      <BookingSchedulesCard />
     </div>
   );
 }
+
+// ================== BOOKING SCHEDULES ==================
+interface BookingSchedule {
+  id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  enabled: boolean;
+  block_representative: boolean;
+  block_customer: boolean;
+  block_guest: boolean;
+  message: string;
+  display_order: number;
+}
+
+function BookingSchedulesCard() {
+  const qc = useQueryClient();
+  const { data: schedules = [], isLoading } = useQuery({
+    queryKey: ["booking-schedules"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("booking_schedules" as never)
+        .select("*")
+        .order("display_order")
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as BookingSchedule[];
+    },
+  });
+  const [drafts, setDrafts] = useState<Record<string, BookingSchedule>>({});
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["booking-schedules"] });
+    qc.invalidateQueries({ queryKey: ["booking-availability"] });
+  };
+
+  async function addSchedule() {
+    const { error } = await supabase.from("booking_schedules" as never).insert({
+      name: "جدولة جديدة",
+      start_time: "23:00",
+      end_time: "08:00",
+      enabled: false,
+      block_representative: false,
+      block_customer: false,
+      block_guest: false,
+      message: DEFAULT_BOOKING_UNAVAILABLE_MESSAGE,
+      display_order: schedules.length,
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success("تمت إضافة جدولة");
+    refresh();
+  }
+
+  async function saveSchedule(s: BookingSchedule) {
+    const { id, ...rest } = s;
+    const { error } = await supabase
+      .from("booking_schedules" as never)
+      .update({ ...rest, message: rest.message?.trim() || DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } as never)
+      .eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("تم حفظ الجدولة");
+    setDrafts((d) => {
+      const n = { ...d };
+      delete n[id];
+      return n;
+    });
+    refresh();
+  }
+
+  async function toggleSchedule(s: BookingSchedule, enabled: boolean) {
+    const { error } = await supabase.from("booking_schedules" as never).update({ enabled } as never).eq("id", s.id);
+    if (error) return toast.error(error.message);
+    refresh();
+  }
+
+  async function removeSchedule(s: BookingSchedule) {
+    if (!confirm(`حذف الجدولة "${s.name}"؟`)) return;
+    const { error } = await supabase.from("booking_schedules" as never).delete().eq("id", s.id);
+    if (error) return toast.error(error.message);
+    toast.success("تم حذف الجدولة");
+    refresh();
+  }
+
+  const value = (s: BookingSchedule) => drafts[s.id] ?? s;
+  const patch = (s: BookingSchedule, p: Partial<BookingSchedule>) =>
+    setDrafts((d) => ({ ...d, [s.id]: { ...(d[s.id] ?? s), ...p } }));
+
+  return (
+    <div className="surface-card p-6 space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-extrabold">جدولة الحجز</h2>
+          <p className="text-xs text-muted-foreground">
+            منع مؤقت خلال الفترة المحددة فقط (بتوقيت الرياض)، ولا يغيّر التحكم الأساسي.
+          </p>
+        </div>
+        <Button onClick={addSchedule} className="rounded-full" variant="outline">
+          + إضافة جدولة
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>
+      ) : schedules.length === 0 ? (
+        <p className="text-sm text-muted-foreground">لا توجد جداول بعد.</p>
+      ) : (
+        <div className="space-y-4">
+          {schedules.map((row) => {
+            const s = value(row);
+            const dirty = !!drafts[row.id];
+            return (
+              <div key={row.id} className="rounded-xl border p-4 space-y-3">
+                <div className="grid md:grid-cols-4 gap-3">
+                  <div className="md:col-span-2">
+                    <Label>اسم الجدولة</Label>
+                    <Input value={s.name} onChange={(e) => patch(row, { name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>وقت البداية</Label>
+                    <Input
+                      type="time"
+                      dir="ltr"
+                      value={(s.start_time ?? "23:00").slice(0, 5)}
+                      onChange={(e) => patch(row, { start_time: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>وقت النهاية</Label>
+                    <Input
+                      type="time"
+                      dir="ltr"
+                      value={(s.end_time ?? "08:00").slice(0, 5)}
+                      onChange={(e) => patch(row, { end_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-3">
+                  {([
+                    ["block_representative", "المندوبون"],
+                    ["block_customer", "العملاء"],
+                    ["block_guest", "الزوار غير المسجلين"],
+                  ] as const).map(([k, label]) => (
+                    <label key={k} className="flex items-center gap-2 rounded-xl border p-3 cursor-pointer text-sm font-bold">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={Boolean(s[k])}
+                        onChange={(e) => patch(row, { [k]: e.target.checked } as Partial<BookingSchedule>)}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+
+                <div>
+                  <Label>رسالة الجدولة</Label>
+                  <Textarea rows={3} value={s.message ?? ""} onChange={(e) => patch(row, { message: e.target.value })} />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer text-sm font-bold">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={row.enabled}
+                      onChange={(e) => toggleSchedule(row, e.target.checked)}
+                    />
+                    {row.enabled ? "الجدولة مفعّلة" : "الجدولة متوقفة"}
+                  </label>
+                  <Button onClick={() => saveSchedule(s)} disabled={!dirty} className="btn-primary-glow rounded-full">
+                    <Save className="h-4 w-4 ml-1" /> حفظ
+                  </Button>
+                  <Button variant="outline" className="rounded-full text-destructive" onClick={() => removeSchedule(row)}>
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
