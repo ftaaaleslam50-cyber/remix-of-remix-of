@@ -98,9 +98,7 @@ export function Navbar() {
           ) : (
             <Link to="/auth"><Button variant="outline" className="rounded-full h-11 px-5 font-bold">دخول</Button></Link>
           )}
-          <Link to="/booking">
-            <Button className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-11 px-6 font-bold">احجز الآن</Button>
-          </Link>
+          <BookNowLink className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-11 px-6 font-bold">احجز الآن</BookNowLink>
         </div>
 
         <button className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted" onClick={() => setOpen(!open)} aria-label="القائمة">
