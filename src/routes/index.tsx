@@ -73,7 +73,7 @@ function Hero({ cms }: { cms: HomeCms | null | undefined }) {
           mixBlendMode: "overlay",
         }}
       />
-      <div className="container-luxe py-20 md:py-28 lg:py-32 text-white">
+      <div className="container-luxe pt-6 pb-20 md:pb-28 lg:pb-32 text-white">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
