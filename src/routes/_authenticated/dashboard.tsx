@@ -92,6 +92,7 @@ interface BookingRow {
   actual_return_day?: string | null;
   nationality?: string | null;
   booking_source?: string | null;
+  extension_nights?: number | null;
   bus_id?: string | null;
   trip_id?: string | null;
   packages?: { name: string } | null;
@@ -144,7 +145,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -941,6 +942,7 @@ function UnifiedBookingsTab(props: {
               <TableHead>الجوال</TableHead>
               <TableHead>الفندق</TableHead>
               <TableHead>نوع الغرفة</TableHead>
+              <TableHead>ليال التمديد</TableHead>
               <TableHead>الرحلة</TableHead>
               <TableHead>العودة</TableHead>
               <TableHead>الحافلة</TableHead>
@@ -954,7 +956,7 @@ function UnifiedBookingsTab(props: {
           <TableBody>
             {manualOpen && (
               <ManualBookingRow
-                colSpan={16}
+                colSpan={17}
                 defaultTripId={tripId}
                 defaultBusId={busId}
                 onClose={() => setManualOpen(false)}
@@ -966,7 +968,7 @@ function UnifiedBookingsTab(props: {
             )}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={17} className="text-center py-10 text-muted-foreground">
                   لا توجد حجوزات مطابقة.
                 </TableCell>
               </TableRow>
@@ -983,6 +985,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
                 <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
                 <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
+                <TableCell className="text-xs">{(b.extension_nights ?? 0) > 0 ? `${b.extension_nights} ليلة` : "بدون"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.actual_return_day ?? b.trips?.return_day ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
