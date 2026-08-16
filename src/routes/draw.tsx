@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
+import { getClientIp, getDeviceId } from "@/lib/client-ip";
 
 export const Route = createFileRoute("/draw")({
   head: () => ({
@@ -63,6 +64,7 @@ function DrawPage() {
   const [showWinner, setShowWinner] = useState(false);
   const [showWarn, setShowWarn] = useState(false);
   const [showBlocked, setShowBlocked] = useState<{ nextDate: Date } | null>(null);
+  const [existingCoupon, setExistingCoupon] = useState<{ code: string; label: string | null } | null>(null);
   const spinLockRef = useRef(false);
 
   const { data: config } = useQuery({
