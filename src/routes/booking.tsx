@@ -1140,6 +1140,33 @@ function StepPackage({
         })}
       </div>
 
+      {/* Room extension — only when an actual hotel is selected. */}
+      {!noHotel && value && (
+        <div className="mt-6 surface-card p-5 max-w-md">
+          <Label className="font-semibold">عدد ليال التمديد</Label>
+          <select
+            value={String(extensionNights)}
+            onChange={(e) => onExtensionChange(Number(e.target.value))}
+            className="mt-2 h-12 w-full rounded-xl border-2 border-border bg-white px-3 text-sm font-semibold"
+          >
+            <option value="0">بدون تمديد</option>
+            <option value="1">1 ليلة</option>
+            <option value="2">2 ليال</option>
+            <option value="3">3 ليال</option>
+            <option value="4">4 ليال</option>
+            <option value="5">5 ليال</option>
+          </select>
+          {extensionNights > 0 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              قيمة التمديد: <b className="text-primary">{sar(extensionPricePerNight * extensionNights)}</b> (
+              {sar(extensionPricePerNight)} × {extensionNights})
+            </p>
+          )}
+        </div>
+      )}
+
+
+
       <Dialog open={!!openPkg} onOpenChange={(o) => !o && setOpenPkg(null)}>
         <DialogContent className="max-w-2xl">
           {openPkg && (
