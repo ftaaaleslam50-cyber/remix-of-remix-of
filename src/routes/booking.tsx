@@ -786,6 +786,8 @@ function BookingPage() {
                   customer={customer}
                   pricePerPerson={pricePerPerson}
                   subtotal={subtotal}
+                  extensionNights={effectiveExtensionNights}
+                  extensionTotal={extensionTotal}
                   discount={discount}
                   total={total}
                   busNumber={activeBus?.bus_number ?? 1}
