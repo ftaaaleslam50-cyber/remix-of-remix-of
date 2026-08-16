@@ -652,9 +652,27 @@ function BookingPage() {
     }
   }
 
+  if (availability && !availability.allowed) {
+    return (
+      <BookingFocusLayout>
+        <section className="container-luxe py-20">
+          <div className="surface-card max-w-lg mx-auto p-8 text-center space-y-4">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center text-3xl">⏸️</div>
+            <h1 className="text-xl font-extrabold">الحجز غير متاح حاليًا</h1>
+            <p className="text-muted-foreground">{availability.message}</p>
+            <Button className="rounded-xl" onClick={() => navigate({ to: "/" })}>
+              العودة للرئيسية
+            </Button>
+          </div>
+        </section>
+      </BookingFocusLayout>
+    );
+  }
+
   return (
     <BookingFocusLayout>
       <Stepper steps={STEPS} step={step} />
+
 
       <section className="container-luxe relative z-10 pb-36 md:pb-40">
 
