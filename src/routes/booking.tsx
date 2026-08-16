@@ -664,9 +664,9 @@ function BookingPage() {
         </div>
       </section>
 
-      <section className="container-luxe -mt-4 md:-mt-8 relative z-10 pb-36 md:pb-40">
+      <Stepper steps={STEPS} step={step} />
 
-        <Stepper steps={STEPS} step={step} />
+      <section className="container-luxe relative z-10 pb-36 md:pb-40">
 
         <div className="surface-card p-3 md:p-8 mt-3 md:mt-6">
           <AnimatePresence mode="wait">
