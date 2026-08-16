@@ -313,7 +313,7 @@ function BookingPage() {
       const { data } = await supabase
         .from("bookings")
         .select(
-          "booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code",
+          "booking_type,passenger_count,room_type,package_id,trip_id,seat_numbers,customer_name,id_number,contact_phone,whatsapp_phone,coupon_code,extension_nights",
         )
         .eq("booking_code", editCode)
         .maybeSingle();
@@ -322,6 +322,7 @@ function BookingPage() {
       setPassengerCount(data.passenger_count);
       setRoomType((data.room_type ?? "5") as RoomType);
       setPackageId(data.package_id ?? null);
+      setExtensionNights(Number(data.extension_nights ?? 0));
       setTripId(data.trip_id ?? null);
       setSeats(data.seat_numbers ?? []);
       setCustomer((c) => ({
