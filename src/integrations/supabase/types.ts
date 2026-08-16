@@ -367,6 +367,51 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_schedules: {
+        Row: {
+          block_customer: boolean
+          block_guest: boolean
+          block_representative: boolean
+          created_at: string
+          display_order: number
+          enabled: boolean
+          end_time: string
+          id: string
+          message: string
+          name: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          block_customer?: boolean
+          block_guest?: boolean
+          block_representative?: boolean
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          end_time?: string
+          id?: string
+          message?: string
+          name?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Update: {
+          block_customer?: boolean
+          block_guest?: boolean
+          block_representative?: boolean
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          end_time?: string
+          id?: string
+          message?: string
+          name?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           actual_return_day: string | null
