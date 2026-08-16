@@ -1591,27 +1591,43 @@ function PricingTab() {
     qc.invalidateQueries({ queryKey: ["pricing_matrix"] });
   }
 
+  // Extension price is stored per hotel (packages.extension_price) = cost of ONE extra night.
+  async function updateExtension(pkgId: string, price: number) {
+    await supabase
+      .from("packages" as never)
+      .update({ extension_price: price } as never)
+      .eq("id", pkgId);
+    toast.success("تم تحديث سعر التمديد");
+    qc.invalidateQueries({ queryKey: ["admin-packages"] });
+    qc.invalidateQueries({ queryKey: ["packages"] });
+  }
+
   return (
     <div className="surface-card p-6">
       <h2 className="text-lg font-extrabold mb-4">مصفوفة الأسعار</h2>
-      <p className="text-sm text-muted-foreground mb-4">حدّد سعر الفرد لكل فندق حسب عدد الأفراد في الغرفة.</p>
+      <p className="text-sm text-muted-foreground mb-4">
+        حدّد سعر الفرد لكل فندق حسب عدد الأفراد في الغرفة، وسعر ليلة التمديد الواحدة.
+      </p>
       <div className="space-y-6">
         {packages.map((p) => (
           <div key={p.id} className="border-2 border-border rounded-2xl p-4">
             <h3 className="font-bold mb-3">{p.name}</h3>
-            <div className="grid grid-cols-6 gap-2 text-sm items-center">
+            <div className="grid grid-cols-7 gap-2 text-sm items-center">
               <div className="font-bold text-muted-foreground">عدد الأفراد →</div>
               {[1, 2, 3, 4, 5].map((n) => (
                 <div key={n} className="font-bold text-center">
                   {n}
                 </div>
               ))}
+              <div className="font-bold text-center">التمديد</div>
               <div className="font-bold text-muted-foreground">السعر (ر.س)</div>
               {[1, 2, 3, 4, 5].map((n) => {
                 const cell = pricing.find((c) => c.package_id === p.id && c.room_type === String(n));
                 return <PriceInput key={n} value={cell?.price ?? 0} onSave={(v) => updateCell(p.id, n, v)} />;
               })}
+              <PriceInput value={Number(p.extension_price ?? 0)} onSave={(v) => updateExtension(p.id, v)} />
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">التمديد = سعر ليلة واحدة، يُضرب في عدد ليال التمديد.</p>
           </div>
         ))}
       </div>
