@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { BusSeatMap, pickRandomSeats } from "@/components/booking/BusSeatMap";
 import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { supabase } from "@/integrations/supabase/client";
+import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
