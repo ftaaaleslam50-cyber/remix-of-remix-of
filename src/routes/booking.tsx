@@ -913,12 +913,10 @@ function BookingPage() {
 
 function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
   return (
-    <div className="sticky top-16 z-30 glass-bar border-b shadow-[var(--shadow-soft)]">
-      <div className="container-luxe py-2.5">
-        <ol
-          className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto min-w-max pb-1"
-          style={{ scrollbarWidth: "thin" }}
-        >
+    <div className="sticky top-16 z-30 w-full max-w-full overflow-hidden glass-bar border-b shadow-[var(--shadow-soft)]">
+      <div className="container-luxe min-w-0 max-w-full py-2.5">
+        <div className="w-full max-w-full overflow-x-auto overscroll-x-contain pb-1" style={{ scrollbarWidth: "thin" }}>
+          <ol className="flex w-max min-w-full items-center gap-1.5 sm:gap-2">
           {steps.map((label, i) => {
             const active = i === step;
             const done = i < step;
@@ -938,7 +936,8 @@ function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
               </li>
             );
           })}
-        </ol>
+          </ol>
+        </div>
       </div>
     </div>
   );
