@@ -6,6 +6,7 @@ import { BRAND } from "@/lib/brand";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { AssetImg } from "@/components/admin/AssetImg";
+import { BookNowLink } from "@/components/site/BookNowLink";
 
 export const Route = createFileRoute("/packages")({
   head: () => ({
@@ -119,12 +120,10 @@ function PackagesPage() {
             </p>
 
             <div className="mt-6 sm:mt-8 grid gap-3 max-w-xl mx-auto">
-              <Link to="/booking" className="w-full">
-                <Button className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-12 sm:h-14 w-full px-4 sm:px-8 text-sm sm:text-base font-bold whitespace-nowrap">
-                  <span className="truncate">ابدأ الحجز الآن</span>
-                  <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                </Button>
-              </Link>
+              <BookNowLink className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-12 sm:h-14 w-full px-4 sm:px-8 text-sm sm:text-base font-bold whitespace-nowrap">
+                <span className="truncate">ابدأ الحجز الآن</span>
+                <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              </BookNowLink>
 
               <div className="flex items-center gap-3 my-1 text-white/60">
                 <span className="flex-1 h-px bg-white/20" />

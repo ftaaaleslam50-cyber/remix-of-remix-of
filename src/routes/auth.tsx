@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, ShieldCheck, Phone, Lock, User } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +44,7 @@ function identifierToEmail(raw: string): string {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { tab?: "signin" | "signup" };
   const [loading, setLoading] = useState(false);
   
 
@@ -137,7 +138,7 @@ function AuthPage() {
           </p>
         </div>
         <div className="surface-card p-6">
-          <Tabs defaultValue="signin">
+          <Tabs defaultValue={search.tab === "signup" ? "signup" : "signin"}>
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="signin">دخول</TabsTrigger>
               <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>

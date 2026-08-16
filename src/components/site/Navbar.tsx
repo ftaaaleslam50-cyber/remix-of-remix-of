@@ -4,6 +4,7 @@ import { Menu, X, User as UserIcon, LogOut, LayoutDashboard } from "lucide-react
 import { Logo } from "./Logo";
 import { NAV_LINKS } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
+import { BookNowLink } from "@/components/site/BookNowLink";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
@@ -98,9 +99,7 @@ export function Navbar() {
           ) : (
             <Link to="/auth"><Button variant="outline" className="rounded-full h-11 px-5 font-bold">دخول</Button></Link>
           )}
-          <Link to="/booking">
-            <Button className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-11 px-6 font-bold">احجز الآن</Button>
-          </Link>
+          <BookNowLink className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-11 px-6 font-bold">احجز الآن</BookNowLink>
         </div>
 
         <button className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted" onClick={() => setOpen(!open)} aria-label="القائمة">
@@ -124,9 +123,9 @@ export function Navbar() {
             ) : (
               <Link to="/auth" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">دخول</Link>
             )}
-            <Link to="/booking" className="mt-2">
-              <Button className="btn-primary-glow w-full rounded-xl h-12 font-bold">احجز الآن</Button>
-            </Link>
+            <div className="mt-2">
+              <BookNowLink className="btn-primary-glow w-full rounded-xl h-12 font-bold">احجز الآن</BookNowLink>
+            </div>
           </div>
         </div>
       )}
