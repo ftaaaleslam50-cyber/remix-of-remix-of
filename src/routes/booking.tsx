@@ -1925,10 +1925,11 @@ function PriceBar(props: {
   subtotal: number;
   discount: number;
   total: number;
+  children?: React.ReactNode;
 }) {
   return (
     <div className="fixed bottom-0 inset-x-0 z-30 glass-bar border-t shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)]">
-      <div className="container-luxe py-3 flex items-center justify-between gap-4 flex-wrap">
+      <div className="container-luxe py-2 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
@@ -1939,13 +1940,19 @@ function PriceBar(props: {
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">الإجمالي</p>
             {props.discount > 0 && <p className="text-xs text-muted-foreground line-through">{sar(props.subtotal)}</p>}
-            <p className="text-xl md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
+            <p className="text-lg md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
           </div>
         </div>
       </div>
+      {props.children && (
+        <div className="border-t bg-background/60">
+          <div className="container-luxe py-2">{props.children}</div>
+        </div>
+      )}
     </div>
   );
 }
+
 function PriceCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
