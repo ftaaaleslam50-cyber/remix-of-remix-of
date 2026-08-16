@@ -184,6 +184,7 @@ function DrawPage() {
         label: res.label ?? winner.label,
       });
       setCouponCode(res.coupon_code ?? null);
+      if (res.coupon_code) setExistingCoupon({ code: res.coupon_code, label: res.label ?? null });
       setShowWinner(true);
       if (res.prize_type && res.prize_type !== "lose") {
         confetti({ particleCount: 180, spread: 100, origin: { y: 0.6 } });
@@ -259,6 +260,23 @@ function DrawPage() {
             {spinning ? <Loader2 className="h-5 w-5 ml-2 animate-spin" /> : <Sparkles className="h-5 w-5 ml-2" />}
             {spinning ? "جاري السحب..." : "ابدأ السحب"}
           </Button>
+
+          {existingCoupon && (
+            <div className="mt-6 rounded-2xl border border-[color:var(--color-gold)]/40 bg-muted p-4 text-center">
+              <p className="text-xs text-muted-foreground">لديك مكافأة محفوظة على هذا الاتصال</p>
+              <p className="mt-1 text-xl font-extrabold tracking-widest text-primary" dir="ltr">{existingCoupon.code}</p>
+              {existingCoupon.label && <p className="text-sm font-semibold">{existingCoupon.label}</p>}
+              <Button
+                className="btn-primary-glow rounded-full mt-3"
+                onClick={() => {
+                  localStorage.setItem("pending_coupon", existingCoupon.code);
+                  navigate({ to: "/booking" });
+                }}
+              >
+                <Ticket className="h-4 w-4 ml-2" /> استخدم الكوبون الآن
+              </Button>
+            </div>
+          )}
 
           <p className="mt-4 text-xs text-muted-foreground">
             يحق لكل مستخدم السحب مرة واحدة فقط كل {config?.spin_cooldown_days ?? 30} يوماً.
