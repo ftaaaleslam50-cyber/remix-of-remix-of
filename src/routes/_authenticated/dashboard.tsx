@@ -956,7 +956,7 @@ function UnifiedBookingsTab(props: {
           <TableBody>
             {manualOpen && (
               <ManualBookingRow
-                colSpan={16}
+                colSpan={17}
                 defaultTripId={tripId}
                 defaultBusId={busId}
                 onClose={() => setManualOpen(false)}
