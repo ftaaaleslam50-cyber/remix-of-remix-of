@@ -181,7 +181,7 @@ function ProfilePage() {
               onChange={(v) => setP({ ...p, whatsapp_phone: v })}
               dir="ltr"
             />
-            {p.account_type !== "representative" && (
+             {!isRep && (
               <Field
                 label="رقم الهوية"
                 value={p.national_id ?? ""}
@@ -189,12 +189,12 @@ function ProfilePage() {
                 dir="ltr"
               />
             )}
-            {p.account_type !== "representative" && (
+             {!isRep && (
               <Field label="الجنسية" value={p.nationality ?? ""} onChange={(v) => setP({ ...p, nationality: v })} />
             )}
           </div>
 
-          {p.account_type !== "representative" && (
+           {!isRep && (
             <div>
               <Label>صورة الهوية</Label>
               <div className="mt-2 flex items-center gap-3">
