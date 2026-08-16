@@ -18,11 +18,19 @@ export type Database = {
         Row: {
           about_body: string | null
           about_title: string | null
+          booking_block_customer: boolean
+          booking_block_guest: boolean
+          booking_block_representative: boolean
           booking_button: string | null
           booking_cancel: string | null
+          booking_close_time: string
+          booking_enabled: boolean
+          booking_open_time: string
+          booking_schedule_enabled: boolean
           booking_steps: Json | null
           booking_success: string | null
           booking_terms: string | null
+          booking_unavailable_message: string
           bus_full_message: string | null
           commercial_register: string | null
           company_address: string | null
@@ -87,11 +95,19 @@ export type Database = {
         Insert: {
           about_body?: string | null
           about_title?: string | null
+          booking_block_customer?: boolean
+          booking_block_guest?: boolean
+          booking_block_representative?: boolean
           booking_button?: string | null
           booking_cancel?: string | null
+          booking_close_time?: string
+          booking_enabled?: boolean
+          booking_open_time?: string
+          booking_schedule_enabled?: boolean
           booking_steps?: Json | null
           booking_success?: string | null
           booking_terms?: string | null
+          booking_unavailable_message?: string
           bus_full_message?: string | null
           commercial_register?: string | null
           company_address?: string | null
@@ -156,11 +172,19 @@ export type Database = {
         Update: {
           about_body?: string | null
           about_title?: string | null
+          booking_block_customer?: boolean
+          booking_block_guest?: boolean
+          booking_block_representative?: boolean
           booking_button?: string | null
           booking_cancel?: string | null
+          booking_close_time?: string
+          booking_enabled?: boolean
+          booking_open_time?: string
+          booking_schedule_enabled?: boolean
           booking_steps?: Json | null
           booking_success?: string | null
           booking_terms?: string | null
+          booking_unavailable_message?: string
           bus_full_message?: string | null
           commercial_register?: string | null
           company_address?: string | null
@@ -1433,6 +1457,7 @@ export type Database = {
         }
         Returns: Json
       }
+      booking_availability: { Args: never; Returns: Json }
       generate_booking_code: { Args: never; Returns: string }
       get_coupon_for_ip: {
         Args: { _ip: string }

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { bookingBlockedMessage } from "@/lib/booking-availability";
 
 export const Route = createFileRoute("/_authenticated/my-bookings")({
   head: () => ({ meta: [{ title: `حجوزاتي | ${BRAND.name}` }, { name: "robots", content: "noindex" }] }),
@@ -78,6 +79,8 @@ function MyBookingsPage() {
   }, [bookings]);
 
   async function deleteBooking(b: MyBooking) {
+    const blocked = await bookingBlockedMessage();
+    if (blocked) return toast.error(blocked);
     if (!confirm(`هل أنت متأكد من حذف الحجز ${b.booking_code}؟`)) return;
     const { error } = await supabase.from("bookings").update({ deleted_at: new Date().toISOString() }).eq("id", b.id);
     if (error) return toast.error(error.message);
@@ -85,7 +88,9 @@ function MyBookingsPage() {
     qc.invalidateQueries({ queryKey: ["my-bookings", uid] });
   }
 
-  function editBooking(code: string) {
+  async function editBooking(code: string) {
+    const blocked = await bookingBlockedMessage();
+    if (blocked) return toast.error(blocked);
     localStorage.setItem("edit_booking_code", code);
     navigate({ to: "/booking" });
   }

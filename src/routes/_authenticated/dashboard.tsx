@@ -61,6 +61,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
 import { sar, formatDate } from "@/lib/format";
+import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -373,6 +374,9 @@ function Dashboard() {
             <TabsTrigger value="social" className="rounded-xl">
               <Share2 className="h-4 w-4 ml-1" /> التواصل
             </TabsTrigger>
+            <TabsTrigger value="bookingctl" className="rounded-xl">
+              <CalendarCheck className="h-4 w-4 ml-1" /> التحكم في الحجز
+            </TabsTrigger>
             <TabsTrigger value="site" className="rounded-xl">
               <Layout className="h-4 w-4 ml-1" /> إعدادات الموقع
             </TabsTrigger>
@@ -411,6 +415,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="social" className="mt-4">
             <SocialTab />
+          </TabsContent>
+          <TabsContent value="bookingctl" className="mt-4">
+            <BookingControlTab />
           </TabsContent>
           <TabsContent value="site" className="mt-4">
             <SiteTab />
@@ -2521,6 +2528,135 @@ function SiteTab() {
             </Button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ================== BOOKING AVAILABILITY CONTROL ==================
+interface BookingCtlRow {
+  booking_enabled: boolean;
+  booking_block_guest: boolean;
+  booking_block_customer: boolean;
+  booking_block_representative: boolean;
+  booking_schedule_enabled: boolean;
+  booking_open_time: string;
+  booking_close_time: string;
+  booking_unavailable_message: string;
+}
+
+const BOOKING_CTL_FIELDS =
+  "booking_enabled,booking_block_guest,booking_block_customer,booking_block_representative,booking_schedule_enabled,booking_open_time,booking_close_time,booking_unavailable_message";
+
+function BookingControlTab() {
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["booking-control"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select(BOOKING_CTL_FIELDS).eq("id", 1).maybeSingle();
+      return data as unknown as BookingCtlRow;
+    },
+  });
+  const [local, setLocal] = useState<BookingCtlRow | null>(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (data) setLocal(data);
+  }, [data]);
+
+  async function save() {
+    if (!local) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("app_settings")
+      .update({
+        ...local,
+        booking_unavailable_message:
+          local.booking_unavailable_message?.trim() || DEFAULT_BOOKING_UNAVAILABLE_MESSAGE,
+      } as never)
+      .eq("id", 1);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("تم حفظ إعدادات التحكم في الحجز");
+    qc.invalidateQueries({ queryKey: ["booking-control"] });
+    qc.invalidateQueries({ queryKey: ["booking-availability"] });
+  }
+
+  if (!local) return <div className="surface-card p-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</div>;
+
+  const toggle = (k: keyof BookingCtlRow, label: string, hint?: string) => (
+    <label className="flex items-start gap-3 rounded-xl border p-3 cursor-pointer">
+      <input
+        type="checkbox"
+        className="mt-1 h-4 w-4"
+        checked={Boolean(local[k])}
+        onChange={(e) => setLocal({ ...local, [k]: e.target.checked })}
+      />
+      <span>
+        <span className="block text-sm font-bold">{label}</span>
+        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+      </span>
+    </label>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="surface-card p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-extrabold">التحكم في الحجز</h2>
+          <p className="text-xs text-muted-foreground">
+            تنطبق هذه الإعدادات على إنشاء حجز جديد وتعديل الحجوزات الحالية. المسؤولون والمديرون غير متأثرين.
+          </p>
+        </div>
+
+        {toggle("booking_enabled", "الحجز مفعّل", "عند إيقافه يتوقف إنشاء وتعديل الحجوزات لجميع الفئات غير الإدارية.")}
+
+        <div className="grid md:grid-cols-3 gap-3">
+          {toggle("booking_block_guest", "إيقاف الحجز للزوار (غير المسجلين)")}
+          {toggle("booking_block_customer", "إيقاف الحجز للعملاء")}
+          {toggle("booking_block_representative", "إيقاف الحجز للمندوبين")}
+        </div>
+
+        <div className="space-y-3">
+          {toggle("booking_schedule_enabled", "تفعيل جدولة أوقات الحجز", "بتوقيت الرياض.")}
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <Label>وقت الفتح</Label>
+              <Input
+                type="time"
+                dir="ltr"
+                value={(local.booking_open_time ?? "08:00").slice(0, 5)}
+                onChange={(e) => setLocal({ ...local, booking_open_time: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>وقت الإغلاق</Label>
+              <Input
+                type="time"
+                dir="ltr"
+                value={(local.booking_close_time ?? "23:59").slice(0, 5)}
+                onChange={(e) => setLocal({ ...local, booking_close_time: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="surface-card p-6 space-y-3">
+        <div>
+          <h3 className="font-extrabold">رسالة عدم إتاحة الحجز</h3>
+          <p className="text-xs text-muted-foreground">
+            تظهر هذه الرسالة للمستخدم عند محاولة إنشاء أو تعديل حجز أثناء فترة عدم الإتاحة.
+          </p>
+        </div>
+        <Textarea
+          rows={5}
+          value={local.booking_unavailable_message ?? ""}
+          placeholder={DEFAULT_BOOKING_UNAVAILABLE_MESSAGE}
+          onChange={(e) => setLocal({ ...local, booking_unavailable_message: e.target.value })}
+        />
+        <Button onClick={save} disabled={saving} className="btn-primary-glow rounded-full">
+          <Save className="h-4 w-4 ml-1" /> حفظ
+        </Button>
       </div>
     </div>
   );

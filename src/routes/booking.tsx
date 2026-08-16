@@ -45,6 +45,7 @@ import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
+import { bookingBlockedMessage } from "@/lib/booking-availability";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 
 export const Route = createFileRoute("/booking")({
@@ -533,8 +534,12 @@ function BookingPage() {
   async function submitBooking() {
     if (!noHotel && !selectedPackage) return;
     if (!noBus && (!activeBus || !selectedTrip)) return;
+    // Booking availability gate (create + edit). Server enforces it too.
+    const blocked = await bookingBlockedMessage();
+    if (blocked) return toast.error(blocked);
     setSubmitting(true);
     try {
+
       const uploadedPath = await uploadIdImage();
       // Fall back to the user's saved profile ID image when no new file was uploaded.
       const id_image_url = uploadedPath ?? profileIdImagePath ?? null;
