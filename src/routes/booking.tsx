@@ -529,6 +529,7 @@ function BookingPage() {
         status: "confirmed",
         notes: notes.trim() || null,
         actual_return_day: (actualReturnDay || selectedTrip?.return_day || null) as string | null,
+        extension_nights: effectiveExtensionNights,
       };
 
       if (editingCode) {
