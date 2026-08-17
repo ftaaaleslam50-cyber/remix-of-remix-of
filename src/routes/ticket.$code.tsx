@@ -40,7 +40,7 @@ interface Booking {
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
-  buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
+  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
 }
 
 function TicketPage() {
