@@ -138,19 +138,56 @@ function TicketPage() {
     );
   }
 
+  /** Full booking summary used for both WhatsApp sharing and clipboard copy. */
+  function summaryText() {
+    const b = booking!;
+    const lines: string[] = [];
+    lines.push(`🌹 ملخص حجز رحلة العمرة — ${BRAND.name}`);
+    lines.push(`رقم الحجز: ${b.booking_code}`);
+    lines.push("——————————————");
+    lines.push(`الاسم: ${b.customer_name}`);
+    if (b.id_number) lines.push(`رقم الهوية: ${b.id_number}`);
+    if (b.contact_phone) lines.push(`جوال التواصل: ${b.contact_phone}`);
+    if (b.whatsapp_phone) lines.push(`جوال الواتساب: ${b.whatsapp_phone}`);
+    lines.push("——————————————");
+    lines.push(`الرحلة: ${b.trips?.name ?? "-"}`);
+    lines.push(`الفندق: ${b.packages?.name ?? b.hotels?.name ?? "-"}`);
+    if (Number(b.extension_nights ?? 0) > 0) lines.push(`عدد ليال التمديد: ${b.extension_nights}`);
+    lines.push(`نوع الحجز: ${b.booking_type === "individual" ? "أفراد" : "عوائل"}`);
+    lines.push(`نوع الغرفة: ${ROOM_LABEL[b.room_type as RoomType] ?? b.room_type}`);
+    lines.push(`عدد الأفراد: ${b.passenger_count}`);
+    lines.push(
+      `رقم الباص: ${b.buses?.bus_number ?? 1}${b.buses?.name ? ` (${b.buses.name})` : ""}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`,
+    );
+    lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
+    if (b.trips?.departure_day) lines.push(`الذهاب: ${b.trips.departure_day}`);
+    if (b.trips?.return_day) lines.push(`العودة: ${returnDisplay(b.trips.return_day, b.extension_nights)}`);
+    if (Number(b.extension_nights ?? 0) === 0 && b.actual_return_day)
+      lines.push(`العودة الفعلية: ${b.actual_return_day}`);
+    lines.push(`تاريخ الحجز: ${formatDate(b.created_at)}`);
+    if (b.notes) lines.push(`ملاحظات: ${b.notes}`);
+    lines.push("——————————————");
+    lines.push(`سعر الفرد: ${sar(Number(b.price_per_person))}`);
+    if (Number(b.discount_amount ?? 0) > 0) lines.push(`الخصم: −${sar(Number(b.discount_amount))}`);
+    if (b.coupon_code) lines.push(`كود الخصم: ${b.coupon_code}`);
+    lines.push(`الإجمالي: ${sar(Number(b.total_price))}`);
+    lines.push("——————————————");
+    lines.push(`رابط التذكرة: ${typeof window !== "undefined" ? window.location.href : ""}`);
+    lines.push("يرجى إبراز التذكرة عند الصعود للباص.");
+    return lines.join("\n");
+  }
+
   function shareWhatsApp() {
-    const busLine = `رقم الباص: ${booking!.buses?.bus_number ?? 1}${booking!.buses?.name ? ` (${booking!.buses.name})` : ""}${booking!.buses?.plate ? ` — لوحة ${booking!.buses.plate}` : ""}`;
-    const text = `تم تأكيد حجز رحلة العمرة 🌹\nرقم الحجز: ${booking!.booking_code}\nالرحلة: ${booking!.trips?.name ?? "-"}\n${busLine}\nالمقاعد: ${booking!.seat_numbers.join(", ")}\nالإجمالي: ${sar(Number(booking!.total_price))}\nيرجى الاحتفاظ بالتذكرة عند الصعود للباص.`;
-    window.open(whatsappLink(text), "_blank");
+    window.open(whatsappLink(summaryText()), "_blank");
   }
 
   function copyDetails() {
-    const text = `حجز ${booking!.booking_code} | ${booking!.customer_name} | ${booking!.trips?.name} | مقاعد ${booking!.seat_numbers.join(", ")} | ${sar(Number(booking!.total_price))}`;
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(summaryText());
     setCopied(true);
-    toast.success("تم نسخ بيانات الحجز");
+    toast.success("تم نسخ بيانات الحجز كاملة");
     setTimeout(() => setCopied(false), 2000);
   }
+
 
   return (
     <div className="min-h-screen bg-muted py-10 print:bg-white print:py-0">
