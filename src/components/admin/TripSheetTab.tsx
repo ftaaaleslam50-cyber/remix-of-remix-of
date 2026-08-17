@@ -474,15 +474,45 @@ export function TripSheetTab() {
   return (
     <div className="surface-card p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
-
         <h2 className="text-lg font-extrabold flex items-center gap-2">
           <Table2 className="h-5 w-5" /> كشف الرحلة
           <span className="text-sm font-normal text-muted-foreground">({filtered.length} حجز)</span>
         </h2>
-        <Button className="rounded-full" onClick={() => setExportOpen(true)}>
-          <Download className="h-4 w-4 ml-1" /> تصدير
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button className="rounded-full" disabled={busySheet} onClick={() => downloadBusSheet(false)}>
+            <Download className="h-4 w-4 ml-1" /> كشف الرحلة (Excel)
+          </Button>
+          <Button variant="outline" className="rounded-full" onClick={() => pdfBusSheet(false)}>
+            <Download className="h-4 w-4 ml-1" /> كشف الرحلة (PDF)
+          </Button>
+          <Button variant="outline" className="rounded-full" disabled={busySheet} onClick={() => downloadBusSheet(true)}>
+            <Download className="h-4 w-4 ml-1" /> كشف التفويج
+          </Button>
+          <Button variant="ghost" className="rounded-full" onClick={() => pdfBusSheet(true)}>
+            كشف التفويج (PDF)
+          </Button>
+          <Button variant="ghost" className="rounded-full" onClick={() => setExportOpen(true)}>
+            تصدير آخر
+          </Button>
+        </div>
       </div>
+
+      {/* Driver / vehicle fields used in the sheet header */}
+      <div className="grid gap-3 sm:grid-cols-3 rounded-2xl border p-3">
+        <div>
+          <Label className="text-xs mb-1 block">اسم السائق</Label>
+          <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">هوية السائق</Label>
+          <Input value={driverId} onChange={(e) => setDriverId(e.target.value)} />
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">جوال السائق</Label>
+          <Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} />
+        </div>
+      </div>
+
 
       {/* Filters */}
       <div className="grid gap-3 md:grid-cols-3 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
