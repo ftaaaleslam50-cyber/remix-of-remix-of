@@ -34,6 +34,9 @@ interface BusRow {
   bus_type: string | null;
   details: string | null;
   price_addition: number;
+  round_trip_price: number;
+  outbound_price: number;
+  return_price: number;
 }
 
 interface LayoutRow {
