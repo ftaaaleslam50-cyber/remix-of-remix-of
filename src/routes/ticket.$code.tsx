@@ -102,7 +102,7 @@ function TicketPage() {
   // Always fall back to the standard layout so the map renders on every device.
   useEffect(() => {
     (async () => {
-      if (!booking) return;
+      if (!booking || layout) return;
       const layoutId = booking.buses?.layout_id;
       if (!layoutId) {
         setLayout((prev) => prev ?? defaultTicketLayout());
