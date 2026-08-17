@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND, whatsappLink } from "@/lib/brand";
 import { sar, formatDate } from "@/lib/format";
+import { returnDisplay } from "@/lib/return-display";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 
@@ -199,8 +200,10 @@ function TicketPage() {
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
             {booking.trips?.departure_day && <TicketRow label="الذهاب" value={booking.trips.departure_day} />}
-            {booking.trips?.return_day && <TicketRow label="العودة" value={booking.trips.return_day} />}
-            {booking.actual_return_day && (
+            {booking.trips?.return_day && (
+              <TicketRow label="العودة" value={returnDisplay(booking.trips.return_day, booking.extension_nights)} />
+            )}
+            {Number(booking.extension_nights ?? 0) === 0 && booking.actual_return_day && (
               <TicketRow label="العودة الفعلية" value={booking.actual_return_day} />
             )}
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
