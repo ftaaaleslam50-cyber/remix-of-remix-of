@@ -105,6 +105,8 @@ function BookingPage() {
   const [repName, setRepName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [actualReturnDay, setActualReturnDay] = useState<string>("");
+  // نوع الرحلة داخل بطاقة الحافلة: ذهاب وعودة / ذهاب فقط / عودة فقط
+  const [tripMode, setTripMode] = useState<TripMode>("round");
   // Hotel stay extension (0 = no extension, max 5 nights). Only applies when a hotel is selected.
   const [extensionNights, setExtensionNights] = useState<number>(0);
 
@@ -392,7 +394,7 @@ function BookingPage() {
   // Pricing = passengers × (bus per-person + hotel per-person).
   // Bus per-person = activeBus.price_addition (0 when noBus or no bus selected yet).
   // Hotel per-person = getPackagePrice(pkg, room, count, pricing) (0 when noHotel).
-  const busPerPerson = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
+  const busPerPerson = !noBus && activeBus ? busPriceFor(activeBus, tripMode) : 0;
   const hotelPerPerson = useMemo(
     () => (noHotel || !selectedPackage ? 0 : getPackagePrice(selectedPackage, roomType, passengerCount, pricing)),
     [noHotel, selectedPackage, roomType, passengerCount, pricing],
@@ -493,7 +495,7 @@ function BookingPage() {
         if (!tripId) return "يجب اختيار الرحلة أولاً";
         if (!busId) return "يجب اختيار الحافلة للمتابعة";
         const ro = selectedTrip?.return_options ?? [];
-        if (ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
+        if (tripMode !== "outbound" && ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
         return null;
       }
       case "المقاعد":
@@ -577,7 +579,10 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
         notes: notes.trim() || null,
-        actual_return_day: (actualReturnDay || selectedTrip?.return_day || null) as string | null,
+        trip_mode: tripMode,
+        actual_return_day: (tripMode === "outbound"
+          ? null
+          : actualReturnDay || selectedTrip?.return_day || null) as string | null,
         extension_nights: effectiveExtensionNights,
       };
 
@@ -715,6 +720,7 @@ function BookingPage() {
                   onSelectBus={(id) => {
                     setNoBus(false);
                     setBusId(id);
+                    if (id !== busId) setTripMode("round");
                   }}
                   noBus={noBus}
                   onSelectNoBus={() => {
@@ -727,6 +733,11 @@ function BookingPage() {
                   returnOptions={selectedTrip?.return_options ?? []}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
+                  tripMode={tripMode}
+                  onTripModeChange={(m) => {
+                    setTripMode(m);
+                    if (m === "outbound") setActualReturnDay("");
+                  }}
                 />
               )}
               {stepName === "الفندق" && (
@@ -870,6 +881,12 @@ function BookingPage() {
         passengerCount={passengerCount}
         roomType={roomType}
         tripName={selectedTrip?.name}
+        departureLabel={tripMode === "return" ? "بدون ذهاب" : (selectedTrip?.departure_day || "")}
+        returnLabel={
+          tripMode === "outbound"
+            ? "بدون عودة"
+            : actualReturnDay || selectedTrip?.return_day || ""
+        }
         pricePerPerson={pricePerPerson}
         subtotal={subtotal}
         discount={discount}
@@ -1978,6 +1995,8 @@ function PriceBar(props: {
   passengerCount: number;
   roomType: RoomType;
   tripName?: string;
+  departureLabel?: string;
+  returnLabel?: string;
   pricePerPerson: number;
   subtotal: number;
   discount: number;
@@ -1992,6 +2011,8 @@ function PriceBar(props: {
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
           <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
           {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
+          {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
+          {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
