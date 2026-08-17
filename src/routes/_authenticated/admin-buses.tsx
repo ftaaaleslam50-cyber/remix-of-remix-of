@@ -554,13 +554,26 @@ function BusEditRow({
         <Input
           type="number"
           className="h-9 w-24"
-          value={local.price_addition ?? 0}
-          onChange={(e) =>
-            setLocal({
-              ...local,
-              price_addition: Number(e.target.value),
-            })
-          }
+          value={local.round_trip_price ?? 0}
+          onChange={(e) => setLocal({ ...local, round_trip_price: Number(e.target.value) })}
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={local.outbound_price ?? 0}
+          onChange={(e) => setLocal({ ...local, outbound_price: Number(e.target.value) })}
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={local.return_price ?? 0}
+          onChange={(e) => setLocal({ ...local, return_price: Number(e.target.value) })}
         />
       </TableCell>
 
