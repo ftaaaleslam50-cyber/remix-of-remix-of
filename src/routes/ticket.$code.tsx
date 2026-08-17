@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND, whatsappLink } from "@/lib/brand";
 import { sar, formatDate } from "@/lib/format";
+import { returnDisplay } from "@/lib/return-display";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 
