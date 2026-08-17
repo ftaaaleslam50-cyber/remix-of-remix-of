@@ -365,7 +365,9 @@ function AdminBuses() {
                   <TableHead>القالب</TableHead>
                   <TableHead>السعة</TableHead>
                   <TableHead>المحجوز</TableHead>
-                  <TableHead>+سعر</TableHead>
+                  <TableHead>ذهاب وعودة</TableHead>
+                  <TableHead>ذهاب فقط</TableHead>
+                  <TableHead>عودة فقط</TableHead>
                   <TableHead>صورة</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead></TableHead>
