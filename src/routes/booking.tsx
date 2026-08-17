@@ -1467,7 +1467,6 @@ function StepTripBus({
                       const available = Math.max(0, cap - blocked - used);
                       const full = available <= 0;
                       const selected = busId === b.id;
-                      const busPrice = busPriceFor(b as unknown as Record<string, unknown>, tripMode);
                       return (
                         <div
                           key={b.id}
