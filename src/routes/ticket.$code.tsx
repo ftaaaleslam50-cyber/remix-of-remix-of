@@ -57,18 +57,26 @@ function TicketPage() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(
-          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate,layout_id)",
-        )
-        .eq("booking_code", code)
-        .maybeSingle();
-      if (error || !data) {
-        const cached = typeof window !== "undefined" ? localStorage.getItem(`booking:${code}`) : null;
-        if (cached) setBooking(JSON.parse(cached));
+      // Public ticket lookup via SECURITY DEFINER RPC so the ticket opens on
+      // any device (tablet/phone/desktop), not only where it was created.
+      const { data: rpcData } = await supabase.rpc("get_ticket" as never, { _code: code } as never);
+      const t = rpcData as (Booking & { layout_json?: LayoutJson | null }) | null;
+      if (t && t.booking_code) {
+        setBooking(t);
+        if (t.layout_json) setLayout(t.layout_json);
       } else {
-        setBooking(data as unknown as Booking);
+        const { data } = await supabase
+          .from("bookings")
+          .select(
+            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate,layout_id)",
+          )
+          .eq("booking_code", code)
+          .maybeSingle();
+        if (data) setBooking(data as unknown as Booking);
+        else {
+          const cached = typeof window !== "undefined" ? localStorage.getItem(`booking:${code}`) : null;
+          if (cached) setBooking(JSON.parse(cached));
+        }
       }
       setLoading(false);
     })();
@@ -91,11 +99,13 @@ function TicketPage() {
   }, [booking?.id_image_url]);
 
   // Bus seat layout for the ticket's second (printable) page.
+  // Always fall back to the standard layout so the map renders on every device.
   useEffect(() => {
     (async () => {
-      const layoutId = booking?.buses?.layout_id;
+      if (!booking) return;
+      const layoutId = booking.buses?.layout_id;
       if (!layoutId) {
-        if (booking?.buses) setLayout(defaultTicketLayout());
+        setLayout((prev) => prev ?? defaultTicketLayout());
         return;
       }
       const { data } = await supabase
@@ -104,9 +114,10 @@ function TicketPage() {
         .eq("id", layoutId)
         .maybeSingle();
       const lj = (data as { layout_json: LayoutJson } | null)?.layout_json;
-      setLayout(lj ?? defaultTicketLayout());
+      setLayout((prev) => lj ?? prev ?? defaultTicketLayout());
     })();
-  }, [booking?.buses?.layout_id, booking?.buses]);
+  }, [booking]);
+
 
 
   if (loading)
