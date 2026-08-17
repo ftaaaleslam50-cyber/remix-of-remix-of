@@ -43,6 +43,7 @@ import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/compone
 import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
+import { extensionLabel } from "@/lib/return-display";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
@@ -831,7 +832,7 @@ function BookingPage() {
                   existingIdImageUrl={profileIdImageSignedUrl}
                   notes={notes}
                   setNotes={setNotes}
-                  returnOptions={selectedTrip?.return_options ?? []}
+                  returnOptions={tripMode === "return" ? [] : (selectedTrip?.return_options ?? [])}
                   defaultReturnDay={selectedTrip?.return_day ?? ""}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
@@ -885,7 +886,9 @@ function BookingPage() {
         returnLabel={
           tripMode === "outbound"
             ? "بدون عودة"
-            : actualReturnDay || selectedTrip?.return_day || ""
+            : effectiveExtensionNights > 0
+              ? extensionLabel(effectiveExtensionNights)
+              : actualReturnDay || selectedTrip?.return_day || ""
         }
         pricePerPerson={pricePerPerson}
         subtotal={subtotal}
@@ -1963,6 +1966,7 @@ function StepConfirm(props: {
       ? [["عدد ليال التمديد", `${props.extensionNights}`] as [string, string]]
       : []),
     ["الرحلة", props.trip?.name ?? "—"],
+    ["العودة", props.extensionNights > 0 ? extensionLabel(props.extensionNights) : (props.trip?.return_day ?? "—")],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
     ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Table2 } from "lucide-react";
+import { returnDisplay } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ interface SheetBooking {
   deleted_at: string | null;
   notes: string | null;
   actual_return_day: string | null;
+  extension_nights?: number | null;
   trip_id: string | null;
   bus_id: string | null;
   packages: { name: string } | null;
@@ -125,7 +127,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,trip_id,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_id,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -302,7 +304,7 @@ export function TripSheetTab() {
         idNumber: b.id_number ?? "",
         nationality: b.nationality ?? "",
         count: b.passenger_count || 0,
-        returnDay: b.actual_return_day || b.trips?.return_day || "",
+        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
         hotel: b.packages?.name ?? "توصيل فقط",
         roomType: roomLabelOf(b),
         roomNumber: "",
@@ -349,7 +351,7 @@ export function TripSheetTab() {
         idNumber: b.id_number ?? "",
         nationality: b.nationality ?? "",
         count: b.passenger_count || 0,
-        returnDay: b.actual_return_day || b.trips?.return_day || "",
+        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
         hotel: b.packages?.name ?? "بدون فندق",
         roomType: ROOM_LABELS[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
         total: Number(b.total_price || 0),
@@ -463,7 +465,7 @@ export function TripSheetTab() {
                   <td className="border p-2 text-center font-mono">{b.id_number}</td>
                   <td className="border p-2 text-center">{b.nationality ?? "—"}</td>
                   <td className="border p-2 text-center">{b.passenger_count}</td>
-                  <td className="border p-2 text-center">{b.actual_return_day || b.trips?.return_day || "—"}</td>
+                  <td className="border p-2 text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—")}</td>
                   <td className="border p-2 text-center">{b.packages?.name ?? "بدون فندق"}</td>
                   <td className="border p-2 text-center">{ROOM_LABELS[String(b.room_type ?? "5")] ?? "—"}</td>
                   <td className="border p-2 text-center font-bold">{total}</td>
