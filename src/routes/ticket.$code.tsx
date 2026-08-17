@@ -228,8 +228,9 @@ function TicketPage() {
         </div>
       </div>
 
-      <div ref={printRef} className="container-luxe max-w-3xl">
+      <div ref={printRef} className="container-luxe max-w-3xl print-sheet print-compact">
         <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
+
           <div className="px-8 py-6 text-white flex items-center gap-4" style={{ background: "var(--gradient-navy)" }}>
             <img src={BRAND.logoUrl} alt="logo" className="h-16 w-16 rounded-full bg-white p-1" />
             <div className="flex-1">
@@ -320,7 +321,7 @@ function TicketPage() {
       </div>
 
       {layout && (
-        <div className="container-luxe max-w-3xl mt-6 print-break">
+        <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
           <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
             <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>
               <img src={BRAND.logoUrl} alt="logo" className="h-12 w-12 rounded-full bg-white p-1" />
