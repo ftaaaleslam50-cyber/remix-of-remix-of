@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
-import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
+import { dayNameFromDate, downloadBlob } from "@/lib/export/trip-sheet-template";
+import { toast } from "sonner";
+import {
+  buildBusTripSheetWorkbook,
+  printBusTripSheet,
+  type BusSheetInput,
+} from "@/lib/export/bus-trip-sheet";
+
 import {
   ROOM_ROWS,
   ROOM_CAPACITY,
@@ -42,10 +49,12 @@ interface SheetBooking {
   extension_nights?: number | null;
   trip_id: string | null;
   bus_id: string | null;
+  package_id: string | null;
   packages: { name: string } | null;
   trips: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses: { id: string; name: string | null; bus_number: number; capacity: number; expenses: number | null } | null;
 }
+
 
 const ROOM_LABELS: Record<string, string> = {
   "1": "فردي",
@@ -60,6 +69,13 @@ export function TripSheetTab() {
   const [busId, setBusId] = useState("");
   const [search, setSearch] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [busySheet, setBusySheet] = useState(false);
+
+  // Trip-sheet header fields that are not stored per bus.
+  const [driverName, setDriverName] = useState("");
+  const [driverId, setDriverId] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
+
 
   // Manual expense inputs (bus-level), mirroring the workbook expense block.
   const [busRent, setBusRent] = useState("1600");
@@ -82,22 +98,36 @@ export function TripSheetTab() {
   const { data: buses = [] } = useQuery({
     queryKey: ["ts-buses"],
     queryFn: async () =>
-      ((await supabase.from("buses").select("id,name,bus_number,capacity").order("bus_number")).data ?? []) as Array<{
+      ((await supabase.from("buses").select("id,name,bus_number,capacity,plate,bus_type,details").order("bus_number"))
+        .data ?? []) as Array<{
         id: string;
         name: string | null;
         bus_number: number;
         capacity: number;
+        plate: string | null;
+        bus_type: string | null;
+        details: string | null;
       }>,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["ts-settings"],
+    queryFn: async () =>
+      (await supabase.from("app_settings").select("company_name").eq("id", 1).maybeSingle()).data as {
+        company_name: string;
+      } | null,
   });
 
   // Hotels (packages) + their sale prices per room type (pricing matrix).
   const { data: hotelRows = [] } = useQuery({
     queryKey: ["ts-hotels"],
     queryFn: async () =>
-      ((await supabase.from("packages").select("id,name,active").order("display_order")).data ?? []) as Array<{
+      ((await supabase.from("packages").select("id,name,active,extension_price").order("display_order")).data ??
+        []) as Array<{
         id: string;
         name: string;
         active: boolean;
+        extension_price: number | null;
       }>,
   });
 
@@ -111,6 +141,7 @@ export function TripSheetTab() {
         active: boolean;
       }>,
   });
+
 
   // Representatives (used for the commission lookup table in sheet "#").
   const { data: repProfiles = [] } = useQuery({
@@ -127,7 +158,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_id,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_id,bus_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -361,6 +392,84 @@ export function TripSheetTab() {
     };
   }
 
+  /* -------- كشف الرحلة (reference layout, live site pricing) ------------- */
+  const sheetTitle = `كشف رحله — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}${
+    bus ? ` — ${bus.name || `حافلة ${bus.bus_number}`}` : ""
+  }`;
+
+  function pricePerPerson(b: SheetBooking): number {
+    const cell = pricing.find(
+      (p) => p.package_id === b.package_id && p.active && String(p.room_type) === String(b.room_type ?? ""),
+    );
+    return Number(cell?.price ?? 0);
+  }
+
+  function busSheetInput(manifest: boolean): BusSheetInput {
+    return {
+      manifest,
+      header: {
+        departureLabel: "ذهاب",
+        departureDay: tripInfo?.departure_day ?? dayNameFromDate(undefined),
+        returnLabel: "عوده",
+        returnDay: tripInfo?.return_day ?? "",
+        capacity: capacity || undefined,
+        vehicleType: bus?.bus_type ?? "باص",
+        busName: bus ? bus.name || `حافلة ${bus.bus_number}` : "",
+        plate: bus?.plate ?? "",
+        transportCompany: settings?.company_name ?? "",
+        driverName,
+        driverId,
+        driverPhone,
+        passengersTotal: passengers,
+        seatsRemaining: bus ? remaining : undefined,
+      },
+      rows: filtered.map((b, i) => {
+        const perPerson = pricePerPerson(b);
+        const count = b.passenger_count || 0;
+        const nights = Number(b.extension_nights ?? 0);
+        const extPrice = Number(hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
+        return {
+          index: i + 1,
+          rep: b.booking_source || "الموقع",
+          customer: b.customer_name ?? "",
+          idNumber: b.id_number ?? "",
+          nationality: b.nationality ?? "",
+          count,
+          returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
+          hotel: b.packages?.name ?? "توصيل فقط",
+          roomType: roomLabelOf(b),
+          roomNumber: "",
+          packageTotal: perPerson * count,
+          extensionNights: nights,
+          extensionTotal: extPrice * nights * count,
+          notes: b.notes ?? "",
+          perPerson,
+        };
+      }),
+      summary: {
+        expenses: Math.round(expenses),
+        bankTransfer: Number(bankTransfer) || 0,
+      },
+    };
+  }
+
+  async function downloadBusSheet(manifest: boolean) {
+    setBusySheet(true);
+    try {
+      const blob = await buildBusTripSheetWorkbook(busSheetInput(manifest));
+      downloadBlob(blob, `${manifest ? "tafwij" : "trip-sheet"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success(manifest ? "تم تنزيل كشف التفويج" : "تم تنزيل كشف الرحلة");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر التصدير");
+    } finally {
+      setBusySheet(false);
+    }
+  }
+
+  function pdfBusSheet(manifest: boolean) {
+    const ok = printBusTripSheet(busSheetInput(manifest), manifest ? "كشف التفويج" : sheetTitle);
+    if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
+  }
 
   return (
     <div className="surface-card p-6 space-y-5">
@@ -369,10 +478,41 @@ export function TripSheetTab() {
           <Table2 className="h-5 w-5" /> كشف الرحلة
           <span className="text-sm font-normal text-muted-foreground">({filtered.length} حجز)</span>
         </h2>
-        <Button className="rounded-full" onClick={() => setExportOpen(true)}>
-          <Download className="h-4 w-4 ml-1" /> تصدير
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button className="rounded-full" disabled={busySheet} onClick={() => downloadBusSheet(false)}>
+            <Download className="h-4 w-4 ml-1" /> كشف الرحلة (Excel)
+          </Button>
+          <Button variant="outline" className="rounded-full" onClick={() => pdfBusSheet(false)}>
+            <Download className="h-4 w-4 ml-1" /> كشف الرحلة (PDF)
+          </Button>
+          <Button variant="outline" className="rounded-full" disabled={busySheet} onClick={() => downloadBusSheet(true)}>
+            <Download className="h-4 w-4 ml-1" /> كشف التفويج
+          </Button>
+          <Button variant="ghost" className="rounded-full" onClick={() => pdfBusSheet(true)}>
+            كشف التفويج (PDF)
+          </Button>
+          <Button variant="ghost" className="rounded-full" onClick={() => setExportOpen(true)}>
+            تصدير آخر
+          </Button>
+        </div>
       </div>
+
+      {/* Driver / vehicle fields used in the sheet header */}
+      <div className="grid gap-3 sm:grid-cols-3 rounded-2xl border p-3">
+        <div>
+          <Label className="text-xs mb-1 block">اسم السائق</Label>
+          <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">هوية السائق</Label>
+          <Input value={driverId} onChange={(e) => setDriverId(e.target.value)} />
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">جوال السائق</Label>
+          <Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} />
+        </div>
+      </div>
+
 
       {/* Filters */}
       <div className="grid gap-3 md:grid-cols-3 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
