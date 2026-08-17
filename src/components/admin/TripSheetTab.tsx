@@ -62,6 +62,13 @@ export function TripSheetTab() {
   const [busId, setBusId] = useState("");
   const [search, setSearch] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [busySheet, setBusySheet] = useState(false);
+
+  // Trip-sheet header fields that are not stored per bus.
+  const [driverName, setDriverName] = useState("");
+  const [driverId, setDriverId] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
+
 
   // Manual expense inputs (bus-level), mirroring the workbook expense block.
   const [busRent, setBusRent] = useState("1600");
