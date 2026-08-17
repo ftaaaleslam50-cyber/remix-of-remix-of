@@ -84,22 +84,36 @@ export function TripSheetTab() {
   const { data: buses = [] } = useQuery({
     queryKey: ["ts-buses"],
     queryFn: async () =>
-      ((await supabase.from("buses").select("id,name,bus_number,capacity").order("bus_number")).data ?? []) as Array<{
+      ((await supabase.from("buses").select("id,name,bus_number,capacity,plate,bus_type,details").order("bus_number"))
+        .data ?? []) as Array<{
         id: string;
         name: string | null;
         bus_number: number;
         capacity: number;
+        plate: string | null;
+        bus_type: string | null;
+        details: string | null;
       }>,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["ts-settings"],
+    queryFn: async () =>
+      (await supabase.from("app_settings").select("company_name").eq("id", 1).maybeSingle()).data as {
+        company_name: string;
+      } | null,
   });
 
   // Hotels (packages) + their sale prices per room type (pricing matrix).
   const { data: hotelRows = [] } = useQuery({
     queryKey: ["ts-hotels"],
     queryFn: async () =>
-      ((await supabase.from("packages").select("id,name,active").order("display_order")).data ?? []) as Array<{
+      ((await supabase.from("packages").select("id,name,active,extension_price").order("display_order")).data ??
+        []) as Array<{
         id: string;
         name: string;
         active: boolean;
+        extension_price: number | null;
       }>,
   });
 
@@ -113,6 +127,7 @@ export function TripSheetTab() {
         active: boolean;
       }>,
   });
+
 
   // Representatives (used for the commission lookup table in sheet "#").
   const { data: repProfiles = [] } = useQuery({
