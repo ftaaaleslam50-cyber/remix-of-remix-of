@@ -1467,7 +1467,6 @@ function StepTripBus({
                       const available = Math.max(0, cap - blocked - used);
                       const full = available <= 0;
                       const selected = busId === b.id;
-                      const busPrice = busPriceFor(b as unknown as Record<string, unknown>, tripMode);
                       return (
                         <div
                           key={b.id}
@@ -1501,9 +1500,6 @@ function StepTripBus({
                                 <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
                                   {full ? "مكتملة" : `${available} متاح`}
                                 </span>
-                                {busPrice > 0 && (
-                                  <span className="text-red-600 font-bold text-base">• {sar(busPrice)} للفرد</span>
-                                )}
                               </div>
                             </div>
                             {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
