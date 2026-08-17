@@ -1347,6 +1347,24 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
   );
 }
 
+/** نوع الرحلة داخل بطاقة الحافلة */
+type TripMode = "round" | "outbound" | "return";
+
+const TRIP_MODE_LABEL: Record<TripMode, string> = {
+  round: "ذهاب وعودة",
+  outbound: "ذهاب فقط",
+  return: "عودة فقط",
+};
+
+/** سعر الحافلة للفرد حسب نوع الرحلة (مع رجوع للسعر القديم عند عدم التعبئة). */
+function busPriceFor(bus: Record<string, unknown> | null, mode: TripMode): number {
+  if (!bus) return 0;
+  const legacy = Number((bus as { price_addition?: number }).price_addition ?? 0) || 0;
+  const key = mode === "outbound" ? "outbound_price" : mode === "return" ? "return_price" : "round_trip_price";
+  const v = Number((bus as Record<string, number | undefined>)[key] ?? 0) || 0;
+  return v > 0 ? v : mode === "round" ? legacy : v;
+}
+
 function StepTripBus({
   trips,
   tripId,
@@ -1360,6 +1378,8 @@ function StepTripBus({
   returnOptions,
   actualReturnDay,
   setActualReturnDay,
+  tripMode,
+  onTripModeChange,
 }: {
   trips: Trip[];
   tripId: string | null;
@@ -1373,6 +1393,8 @@ function StepTripBus({
   returnOptions: string[];
   actualReturnDay: string;
   setActualReturnDay: (v: string) => void;
+  tripMode: TripMode;
+  onTripModeChange: (m: TripMode) => void;
 }) {
   const hasMultipleReturns = returnOptions && returnOptions.length > 1;
   return (
