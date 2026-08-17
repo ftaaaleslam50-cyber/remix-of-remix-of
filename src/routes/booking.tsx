@@ -1467,44 +1467,115 @@ function StepTripBus({
                       const available = Math.max(0, cap - blocked - used);
                       const full = available <= 0;
                       const selected = busId === b.id;
-                      const busPrice = Number(b.price_addition ?? 0);
+                      const busPrice = busPriceFor(b as unknown as Record<string, unknown>, tripMode);
                       return (
-                        <button
+                        <div
                           key={b.id}
-                          type="button"
-                          disabled={full}
-                          onClick={() => onSelectBus(b.id)}
-                          className={`w-full text-right rounded-2xl border-2 p-3 flex items-center gap-3 transition-all bg-white ${
+                          className={`rounded-2xl border-2 transition-all bg-white ${
                             selected
                               ? "border-primary shadow-[var(--shadow-red)]"
                               : "border-border hover:border-primary/40"
-                          } ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${full ? "opacity-50" : ""}`}
                         >
-                          <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                            {b.image_url ? (
-                              <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center text-2xl">🚌</div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-extrabold text-sm text-[color:var(--color-navy)] truncate">
-                              {b.name || `الحافلة رقم ${b.bus_number}`}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {b.bus_type ? `${b.bus_type} • ` : ""}السعة: {cap}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1 text-xs">
-                              <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
-                                {full ? "مكتملة" : `${available} متاح`}
-                              </span>
-                              {busPrice > 0 && (
-                                <span className="text-red-600 font-bold text-base">• {sar(busPrice)} للفرد</span>
+                          <button
+                            type="button"
+                            disabled={full}
+                            onClick={() => onSelectBus(b.id)}
+                            className={`w-full text-right p-3 flex items-center gap-3 ${full ? "cursor-not-allowed" : "cursor-pointer"}`}
+                          >
+                            <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                              {b.image_url ? (
+                                <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-2xl">🚌</div>
                               )}
                             </div>
-                          </div>
-                          {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
-                        </button>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-extrabold text-sm text-[color:var(--color-navy)] truncate">
+                                {b.name || `الحافلة رقم ${b.bus_number}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {b.bus_type ? `${b.bus_type} • ` : ""}السعة: {cap}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 text-xs">
+                                <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
+                                  {full ? "مكتملة" : `${available} متاح`}
+                                </span>
+                                {busPrice > 0 && (
+                                  <span className="text-red-600 font-bold text-base">• {sar(busPrice)} للفرد</span>
+                                )}
+                              </div>
+                            </div>
+                            {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
+                          </button>
+
+                          {selected && (
+                            <div className="border-t border-border p-3 space-y-3">
+                              <div>
+                                <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-2">نوع الرحلة</p>
+                                <div className="grid gap-2 sm:grid-cols-3">
+                                  {(["round", "outbound", "return"] as TripMode[]).map((m) => {
+                                    const price = busPriceFor(b as unknown as Record<string, unknown>, m);
+                                    const on = tripMode === m;
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={m}
+                                        onClick={() => onTripModeChange(m)}
+                                        className={`rounded-xl border-2 p-2 text-right transition-all bg-white ${
+                                          on ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className={`h-4 w-4 rounded-full border-2 shrink-0 ${on ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
+                                          />
+                                          <span className="text-xs font-bold">{TRIP_MODE_LABEL[m]}</span>
+                                        </div>
+                                        <div className="text-[11px] text-red-600 font-bold mt-1">
+                                          {price > 0 ? `${sar(price)} للفرد` : "—"}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {hasMultipleReturns && tripMode !== "outbound" && (
+                                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
+                                  <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-1">
+                                    اختر موعد العودة
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mb-2">
+                                    هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
+                                  </p>
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    {returnOptions.map((d) => {
+                                      const sel = actualReturnDay === d;
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={d}
+                                          onClick={() => setActualReturnDay(d)}
+                                          className={`rounded-xl border-2 p-2 text-right transition-all bg-white ${
+                                            sel
+                                              ? "border-primary shadow-[var(--shadow-red)]"
+                                              : "border-border hover:border-primary/40"
+                                          }`}
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="font-bold text-xs">{d}</span>
+                                            {sel && <Check className="h-4 w-4 text-primary" />}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       );
                     })
                   )}
@@ -1514,35 +1585,6 @@ function StepTripBus({
           );
         })}
       </div>
-
-      {tripId && hasMultipleReturns && !noBus && (
-        <div className="mt-5 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-extrabold text-[color:var(--color-navy)] mb-2">اختر موعد العودة</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {returnOptions.map((d) => {
-              const sel = actualReturnDay === d;
-              return (
-                <button
-                  type="button"
-                  key={d}
-                  onClick={() => setActualReturnDay(d)}
-                  className={`rounded-xl border-2 p-3 text-right transition-all bg-white ${
-                    sel ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-sm">{d}</span>
-                    {sel && <Check className="h-4 w-4 text-primary" />}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
