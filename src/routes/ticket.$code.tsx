@@ -10,6 +10,7 @@ import { sar, formatDate } from "@/lib/format";
 import { returnDisplay } from "@/lib/return-display";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
+import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap";
 
 export const Route = createFileRoute("/ticket/$code")({
   head: () => ({
@@ -52,6 +53,7 @@ function TicketPage() {
   const [idImageUrl, setIdImageUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<LayoutJson | null>(null);
 
   useEffect(() => {
     (async () => {
