@@ -270,6 +270,99 @@ function TicketPage() {
           </div>
         </div>
       </div>
+
+      {layout && (
+        <div className="container-luxe max-w-3xl mt-6 print-break">
+          <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
+            <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>
+              <img src={BRAND.logoUrl} alt="logo" className="h-12 w-12 rounded-full bg-white p-1" />
+              <div>
+                <h2 className="text-lg font-extrabold">مخطط الحافلة</h2>
+                <p className="text-xs text-white/70">
+                  {booking.customer_name} — مقاعد: <span dir="ltr">{booking.seat_numbers.join(", ")}</span>
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-6">
+              <TicketSeatMap layout={layout} seats={booking.seat_numbers} name={booking.customer_name} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function defaultTicketLayout(): LayoutJson {
+  const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
+  const cells: LayoutCell[] = [];
+  rows.forEach((r, i) => {
+    const row = i + 1;
+    cells.push({ row, col: 1, kind: "seat", label: `${r}1` });
+    cells.push({ row, col: 2, kind: "seat", label: `${r}2` });
+    cells.push({ row, col: 4, kind: "seat", label: `${r}3` });
+    cells.push({ row, col: 5, kind: "seat", label: `${r}4` });
+  });
+  const mRow = rows.length + 1;
+  for (let c = 1; c <= 5; c++) cells.push({ row: mRow, col: c, kind: "seat", label: `M${c}` });
+  return { rows: mRow, cols: 5, cells };
+}
+
+/** Read-only seat map: only this booking's seats are coloured. */
+function TicketSeatMap({ layout, seats, name }: { layout: LayoutJson; seats: string[]; name: string }) {
+  const rows = Math.max(1, layout.rows || 1);
+  const cols = Math.max(1, layout.cols || 1);
+  const map = new Map<string, LayoutCell>();
+  for (const c of layout.cells) map.set(`${c.row}:${c.col}`, c);
+  const mine = new Set(seats);
+
+  return (
+    <div>
+      <div
+        className="grid gap-1.5 mx-auto"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, maxWidth: cols * 64 }}
+      >
+        {Array.from({ length: rows * cols }).map((_, i) => {
+          const r = Math.floor(i / cols) + 1;
+          const c = (i % cols) + 1;
+          const cell = map.get(`${r}:${c}`);
+          if (!cell || cell.kind === "empty") return <div key={i} className="aspect-square" />;
+          if (cell.kind !== "seat") {
+            const t = cell.kind === "driver" ? "السائق" : cell.kind === "door" ? "باب" : "دورة مياه";
+            return (
+              <div
+                key={i}
+                className="aspect-square rounded-lg border-2 border-border bg-muted text-[9px] font-bold text-muted-foreground flex items-center justify-center"
+              >
+                {cell.label || t}
+              </div>
+            );
+          }
+          const id = cell.label && cell.label.trim() ? cell.label : `${cell.row}-${cell.col}`;
+          const isMine = mine.has(id);
+          return (
+            <div
+              key={i}
+              className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center leading-tight ${
+                isMine
+                  ? "bg-primary text-primary-foreground border-primary font-extrabold"
+                  : "bg-white text-muted-foreground border-border"
+              }`}
+            >
+              <span className="text-[10px]">{id}</span>
+              {isMine && <span className="text-[7px] px-0.5 truncate max-w-full">{name.split(" ")[0]}</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-5 flex items-center justify-center gap-6 text-xs text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded bg-primary inline-block" /> مقاعدك ({name})
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded border-2 border-border bg-white inline-block" /> مقاعد أخرى
+        </span>
+      </div>
     </div>
   );
 }
