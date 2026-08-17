@@ -34,6 +34,9 @@ interface BusRow {
   bus_type: string | null;
   details: string | null;
   price_addition: number;
+  round_trip_price: number;
+  outbound_price: number;
+  return_price: number;
 }
 
 interface LayoutRow {
@@ -185,6 +188,9 @@ function AdminBuses() {
       layout_id: b.layout_id,
       image_url: b.image_url,
       price_addition: b.price_addition,
+      round_trip_price: b.round_trip_price,
+      outbound_price: b.outbound_price,
+      return_price: b.return_price,
       status: "active",
       active: true,
       trip_id: b.trip_id,
@@ -215,7 +221,10 @@ function AdminBuses() {
       image_url: b.image_url,
       bus_type: b.bus_type,
       details: b.details,
-      price_addition: Number(b.price_addition) || 0,
+      price_addition: Number(b.round_trip_price) || 0,
+      round_trip_price: Number(b.round_trip_price) || 0,
+      outbound_price: Number(b.outbound_price) || 0,
+      return_price: Number(b.return_price) || 0,
     };
 
     // مزامنة سعة الحافلة مع القالب المختار
@@ -365,7 +374,9 @@ function AdminBuses() {
                   <TableHead>القالب</TableHead>
                   <TableHead>السعة</TableHead>
                   <TableHead>المحجوز</TableHead>
-                  <TableHead>+سعر</TableHead>
+                  <TableHead>ذهاب وعودة</TableHead>
+                  <TableHead>ذهاب فقط</TableHead>
+                  <TableHead>عودة فقط</TableHead>
                   <TableHead>صورة</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead></TableHead>
@@ -552,13 +563,26 @@ function BusEditRow({
         <Input
           type="number"
           className="h-9 w-24"
-          value={local.price_addition ?? 0}
-          onChange={(e) =>
-            setLocal({
-              ...local,
-              price_addition: Number(e.target.value),
-            })
-          }
+          value={local.round_trip_price ?? 0}
+          onChange={(e) => setLocal({ ...local, round_trip_price: Number(e.target.value) })}
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={local.outbound_price ?? 0}
+          onChange={(e) => setLocal({ ...local, outbound_price: Number(e.target.value) })}
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={local.return_price ?? 0}
+          onChange={(e) => setLocal({ ...local, return_price: Number(e.target.value) })}
         />
       </TableCell>
 

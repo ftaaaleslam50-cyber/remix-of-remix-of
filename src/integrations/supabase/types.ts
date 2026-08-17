@@ -451,6 +451,7 @@ export type Database = {
           status: string
           total_price: number
           trip_id: string | null
+          trip_mode: string
           updated_at: string
           updated_by: string | null
           whatsapp_phone: string
@@ -493,6 +494,7 @@ export type Database = {
           status?: string
           total_price: number
           trip_id?: string | null
+          trip_mode?: string
           updated_at?: string
           updated_by?: string | null
           whatsapp_phone: string
@@ -535,6 +537,7 @@ export type Database = {
           status?: string
           total_price?: number
           trip_id?: string | null
+          trip_mode?: string
           updated_at?: string
           updated_by?: string | null
           whatsapp_phone?: string
@@ -614,9 +617,12 @@ export type Database = {
           layout_id: string | null
           model: string | null
           name: string | null
+          outbound_price: number
           plate: string | null
           price_addition: number
           priority: number
+          return_price: number
+          round_trip_price: number
           status: Database["public"]["Enums"]["bus_status"]
           trip_id: string | null
           updated_at: string
@@ -637,9 +643,12 @@ export type Database = {
           layout_id?: string | null
           model?: string | null
           name?: string | null
+          outbound_price?: number
           plate?: string | null
           price_addition?: number
           priority?: number
+          return_price?: number
+          round_trip_price?: number
           status?: Database["public"]["Enums"]["bus_status"]
           trip_id?: string | null
           updated_at?: string
@@ -660,9 +669,12 @@ export type Database = {
           layout_id?: string | null
           model?: string | null
           name?: string | null
+          outbound_price?: number
           plate?: string | null
           price_addition?: number
           priority?: number
+          return_price?: number
+          round_trip_price?: number
           status?: Database["public"]["Enums"]["bus_status"]
           trip_id?: string | null
           updated_at?: string

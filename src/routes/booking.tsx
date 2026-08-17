@@ -105,6 +105,8 @@ function BookingPage() {
   const [repName, setRepName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [actualReturnDay, setActualReturnDay] = useState<string>("");
+  // نوع الرحلة داخل بطاقة الحافلة: ذهاب وعودة / ذهاب فقط / عودة فقط
+  const [tripMode, setTripMode] = useState<TripMode>("round");
   // Hotel stay extension (0 = no extension, max 5 nights). Only applies when a hotel is selected.
   const [extensionNights, setExtensionNights] = useState<number>(0);
 
@@ -392,7 +394,7 @@ function BookingPage() {
   // Pricing = passengers × (bus per-person + hotel per-person).
   // Bus per-person = activeBus.price_addition (0 when noBus or no bus selected yet).
   // Hotel per-person = getPackagePrice(pkg, room, count, pricing) (0 when noHotel).
-  const busPerPerson = !noBus && activeBus?.price_addition ? Number(activeBus.price_addition) : 0;
+  const busPerPerson = !noBus && activeBus ? busPriceFor(activeBus as unknown as Record<string, unknown>, tripMode) : 0;
   const hotelPerPerson = useMemo(
     () => (noHotel || !selectedPackage ? 0 : getPackagePrice(selectedPackage, roomType, passengerCount, pricing)),
     [noHotel, selectedPackage, roomType, passengerCount, pricing],
@@ -493,7 +495,7 @@ function BookingPage() {
         if (!tripId) return "يجب اختيار الرحلة أولاً";
         if (!busId) return "يجب اختيار الحافلة للمتابعة";
         const ro = selectedTrip?.return_options ?? [];
-        if (ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
+        if (tripMode !== "outbound" && ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
         return null;
       }
       case "المقاعد":
@@ -577,7 +579,10 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
         notes: notes.trim() || null,
-        actual_return_day: (actualReturnDay || selectedTrip?.return_day || null) as string | null,
+        trip_mode: tripMode,
+        actual_return_day: (tripMode === "outbound"
+          ? null
+          : actualReturnDay || selectedTrip?.return_day || null) as string | null,
         extension_nights: effectiveExtensionNights,
       };
 
@@ -715,6 +720,7 @@ function BookingPage() {
                   onSelectBus={(id) => {
                     setNoBus(false);
                     setBusId(id);
+                    if (id !== busId) setTripMode("round");
                   }}
                   noBus={noBus}
                   onSelectNoBus={() => {
@@ -727,6 +733,11 @@ function BookingPage() {
                   returnOptions={selectedTrip?.return_options ?? []}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
+                  tripMode={tripMode}
+                  onTripModeChange={(m) => {
+                    setTripMode(m);
+                    if (m === "outbound") setActualReturnDay("");
+                  }}
                 />
               )}
               {stepName === "الفندق" && (
@@ -870,6 +881,12 @@ function BookingPage() {
         passengerCount={passengerCount}
         roomType={roomType}
         tripName={selectedTrip?.name}
+        departureLabel={tripMode === "return" ? "بدون ذهاب" : (selectedTrip?.departure_day || "")}
+        returnLabel={
+          tripMode === "outbound"
+            ? "بدون عودة"
+            : actualReturnDay || selectedTrip?.return_day || ""
+        }
         pricePerPerson={pricePerPerson}
         subtotal={subtotal}
         discount={discount}
@@ -1330,6 +1347,24 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
   );
 }
 
+/** نوع الرحلة داخل بطاقة الحافلة */
+type TripMode = "round" | "outbound" | "return";
+
+const TRIP_MODE_LABEL: Record<TripMode, string> = {
+  round: "ذهاب وعودة",
+  outbound: "ذهاب فقط",
+  return: "عودة فقط",
+};
+
+/** سعر الحافلة للفرد حسب نوع الرحلة (مع رجوع للسعر القديم عند عدم التعبئة). */
+function busPriceFor(bus: Record<string, unknown> | null, mode: TripMode): number {
+  if (!bus) return 0;
+  const legacy = Number((bus as { price_addition?: number }).price_addition ?? 0) || 0;
+  const key = mode === "outbound" ? "outbound_price" : mode === "return" ? "return_price" : "round_trip_price";
+  const v = Number((bus as Record<string, number | undefined>)[key] ?? 0) || 0;
+  return v > 0 ? v : mode === "round" ? legacy : v;
+}
+
 function StepTripBus({
   trips,
   tripId,
@@ -1343,6 +1378,8 @@ function StepTripBus({
   returnOptions,
   actualReturnDay,
   setActualReturnDay,
+  tripMode,
+  onTripModeChange,
 }: {
   trips: Trip[];
   tripId: string | null;
@@ -1356,6 +1393,8 @@ function StepTripBus({
   returnOptions: string[];
   actualReturnDay: string;
   setActualReturnDay: (v: string) => void;
+  tripMode: TripMode;
+  onTripModeChange: (m: TripMode) => void;
 }) {
   const hasMultipleReturns = returnOptions && returnOptions.length > 1;
   return (
@@ -1428,44 +1467,115 @@ function StepTripBus({
                       const available = Math.max(0, cap - blocked - used);
                       const full = available <= 0;
                       const selected = busId === b.id;
-                      const busPrice = Number(b.price_addition ?? 0);
+                      const busPrice = busPriceFor(b as unknown as Record<string, unknown>, tripMode);
                       return (
-                        <button
+                        <div
                           key={b.id}
-                          type="button"
-                          disabled={full}
-                          onClick={() => onSelectBus(b.id)}
-                          className={`w-full text-right rounded-2xl border-2 p-3 flex items-center gap-3 transition-all bg-white ${
+                          className={`rounded-2xl border-2 transition-all bg-white ${
                             selected
                               ? "border-primary shadow-[var(--shadow-red)]"
                               : "border-border hover:border-primary/40"
-                          } ${full ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          } ${full ? "opacity-50" : ""}`}
                         >
-                          <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                            {b.image_url ? (
-                              <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center text-2xl">🚌</div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-extrabold text-sm text-[color:var(--color-navy)] truncate">
-                              {b.name || `الحافلة رقم ${b.bus_number}`}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {b.bus_type ? `${b.bus_type} • ` : ""}السعة: {cap}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1 text-xs">
-                              <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
-                                {full ? "مكتملة" : `${available} متاح`}
-                              </span>
-                              {busPrice > 0 && (
-                                <span className="text-red-600 font-bold text-base">• {sar(busPrice)} للفرد</span>
+                          <button
+                            type="button"
+                            disabled={full}
+                            onClick={() => onSelectBus(b.id)}
+                            className={`w-full text-right p-3 flex items-center gap-3 ${full ? "cursor-not-allowed" : "cursor-pointer"}`}
+                          >
+                            <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                              {b.image_url ? (
+                                <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-2xl">🚌</div>
                               )}
                             </div>
-                          </div>
-                          {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
-                        </button>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-extrabold text-sm text-[color:var(--color-navy)] truncate">
+                                {b.name || `الحافلة رقم ${b.bus_number}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {b.bus_type ? `${b.bus_type} • ` : ""}السعة: {cap}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 text-xs">
+                                <span className={`font-bold ${full ? "text-destructive" : "text-primary"}`}>
+                                  {full ? "مكتملة" : `${available} متاح`}
+                                </span>
+                                {busPrice > 0 && (
+                                  <span className="text-red-600 font-bold text-base">• {sar(busPrice)} للفرد</span>
+                                )}
+                              </div>
+                            </div>
+                            {selected && <Check className="h-5 w-5 text-primary shrink-0" />}
+                          </button>
+
+                          {selected && (
+                            <div className="border-t border-border p-3 space-y-3">
+                              <div>
+                                <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-2">نوع الرحلة</p>
+                                <div className="grid gap-2 sm:grid-cols-3">
+                                  {(["round", "outbound", "return"] as TripMode[]).map((m) => {
+                                    const price = busPriceFor(b as unknown as Record<string, unknown>, m);
+                                    const on = tripMode === m;
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={m}
+                                        onClick={() => onTripModeChange(m)}
+                                        className={`rounded-xl border-2 p-2 text-right transition-all bg-white ${
+                                          on ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className={`h-4 w-4 rounded-full border-2 shrink-0 ${on ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
+                                          />
+                                          <span className="text-xs font-bold">{TRIP_MODE_LABEL[m]}</span>
+                                        </div>
+                                        <div className="text-[11px] text-red-600 font-bold mt-1">
+                                          {price > 0 ? `${sar(price)} للفرد` : "—"}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {hasMultipleReturns && tripMode !== "outbound" && (
+                                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
+                                  <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-1">
+                                    اختر موعد العودة
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mb-2">
+                                    هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
+                                  </p>
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    {returnOptions.map((d) => {
+                                      const sel = actualReturnDay === d;
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={d}
+                                          onClick={() => setActualReturnDay(d)}
+                                          className={`rounded-xl border-2 p-2 text-right transition-all bg-white ${
+                                            sel
+                                              ? "border-primary shadow-[var(--shadow-red)]"
+                                              : "border-border hover:border-primary/40"
+                                          }`}
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="font-bold text-xs">{d}</span>
+                                            {sel && <Check className="h-4 w-4 text-primary" />}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       );
                     })
                   )}
@@ -1475,35 +1585,6 @@ function StepTripBus({
           );
         })}
       </div>
-
-      {tripId && hasMultipleReturns && !noBus && (
-        <div className="mt-5 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-extrabold text-[color:var(--color-navy)] mb-2">اختر موعد العودة</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            هذه الرحلة تحتوي على أكثر من موعد للعودة — يجب اختيار الموعد المناسب لك للمتابعة.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {returnOptions.map((d) => {
-              const sel = actualReturnDay === d;
-              return (
-                <button
-                  type="button"
-                  key={d}
-                  onClick={() => setActualReturnDay(d)}
-                  className={`rounded-xl border-2 p-3 text-right transition-all bg-white ${
-                    sel ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-sm">{d}</span>
-                    {sel && <Check className="h-4 w-4 text-primary" />}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1978,6 +2059,8 @@ function PriceBar(props: {
   passengerCount: number;
   roomType: RoomType;
   tripName?: string;
+  departureLabel?: string;
+  returnLabel?: string;
   pricePerPerson: number;
   subtotal: number;
   discount: number;
@@ -1992,6 +2075,8 @@ function PriceBar(props: {
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
           <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
           {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
+          {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
+          {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
