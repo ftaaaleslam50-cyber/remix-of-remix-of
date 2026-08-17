@@ -385,10 +385,89 @@ export function TripSheetTab() {
     };
   }
 
+  /* -------- كشف الرحلة (reference layout, live site pricing) ------------- */
+  const sheetTitle = `كشف رحله — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}${
+    bus ? ` — ${bus.name || `حافلة ${bus.bus_number}`}` : ""
+  }`;
+
+  function pricePerPerson(b: SheetBooking): number {
+    const cell = pricing.find(
+      (p) => p.package_id === b.package_id && p.active && String(p.room_type) === String(b.room_type ?? ""),
+    );
+    return Number(cell?.price ?? 0);
+  }
+
+  function busSheetInput(manifest: boolean): BusSheetInput {
+    return {
+      manifest,
+      header: {
+        departureLabel: "ذهاب",
+        departureDay: tripInfo?.departure_day ?? dayNameFromDate(undefined),
+        returnLabel: "عوده",
+        returnDay: tripInfo?.return_day ?? "",
+        capacity: capacity || undefined,
+        vehicleType: bus?.bus_type ?? "باص",
+        busName: bus ? bus.name || `حافلة ${bus.bus_number}` : "",
+        plate: bus?.plate ?? "",
+        transportCompany: settings?.company_name ?? "",
+        driverName,
+        driverId,
+        driverPhone,
+        passengersTotal: passengers,
+        seatsRemaining: bus ? remaining : undefined,
+      },
+      rows: filtered.map((b, i) => {
+        const perPerson = pricePerPerson(b);
+        const count = b.passenger_count || 0;
+        const nights = Number(b.extension_nights ?? 0);
+        const extPrice = Number(hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
+        return {
+          index: i + 1,
+          rep: b.booking_source || "الموقع",
+          customer: b.customer_name ?? "",
+          idNumber: b.id_number ?? "",
+          nationality: b.nationality ?? "",
+          count,
+          returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
+          hotel: b.packages?.name ?? "توصيل فقط",
+          roomType: roomLabelOf(b),
+          roomNumber: "",
+          packageTotal: perPerson * count,
+          extensionNights: nights,
+          extensionTotal: extPrice * nights * count,
+          notes: b.notes ?? "",
+          perPerson,
+        };
+      }),
+      summary: {
+        expenses: Math.round(expenses),
+        bankTransfer: Number(bankTransfer) || 0,
+      },
+    };
+  }
+
+  async function downloadBusSheet(manifest: boolean) {
+    setBusySheet(true);
+    try {
+      const blob = await buildBusTripSheetWorkbook(busSheetInput(manifest));
+      downloadBlob(blob, `${manifest ? "tafwij" : "trip-sheet"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success(manifest ? "تم تنزيل كشف التفويج" : "تم تنزيل كشف الرحلة");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر التصدير");
+    } finally {
+      setBusySheet(false);
+    }
+  }
+
+  function pdfBusSheet(manifest: boolean) {
+    const ok = printBusTripSheet(busSheetInput(manifest), manifest ? "كشف التفويج" : sheetTitle);
+    if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
+  }
 
   return (
     <div className="surface-card p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
+
         <h2 className="text-lg font-extrabold flex items-center gap-2">
           <Table2 className="h-5 w-5" /> كشف الرحلة
           <span className="text-sm font-normal text-muted-foreground">({filtered.length} حجز)</span>
