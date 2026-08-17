@@ -394,7 +394,7 @@ function BookingPage() {
   // Pricing = passengers × (bus per-person + hotel per-person).
   // Bus per-person = activeBus.price_addition (0 when noBus or no bus selected yet).
   // Hotel per-person = getPackagePrice(pkg, room, count, pricing) (0 when noHotel).
-  const busPerPerson = !noBus && activeBus ? busPriceFor(activeBus, tripMode) : 0;
+  const busPerPerson = !noBus && activeBus ? busPriceFor(activeBus as unknown as Record<string, unknown>, tripMode) : 0;
   const hotelPerPerson = useMemo(
     () => (noHotel || !selectedPackage ? 0 : getPackagePrice(selectedPackage, roomType, passengerCount, pricing)),
     [noHotel, selectedPackage, roomType, passengerCount, pricing],
