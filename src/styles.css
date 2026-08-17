@@ -227,8 +227,53 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+  html,
+  body {
+    height: auto;
+  }
   .print-break {
     break-before: page;
     page-break-before: always;
   }
+  /* Force the ticket + seat map to exactly one A4 page each */
+  .print-sheet {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    max-height: 283mm;
+    overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .print-sheet .print-page {
+    border-radius: 0 !important;
+  }
+  /* Compact spacing so content fits a single page */
+  .print-compact {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .print-compact .px-8 {
+    padding-inline: 14px !important;
+  }
+  .print-compact .py-6 {
+    padding-block: 8px !important;
+  }
+  .print-compact .py-5 {
+    padding-block: 7px !important;
+  }
+  .print-compact .py-4 {
+    padding-block: 6px !important;
+  }
+  .print-compact .gap-y-4 {
+    row-gap: 6px !important;
+  }
+  .print-compact img[alt="صورة الهوية"] {
+    max-height: 120px !important;
+  }
 }
+
