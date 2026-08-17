@@ -10,6 +10,7 @@ import { sar, formatDate } from "@/lib/format";
 import { returnDisplay } from "@/lib/return-display";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
+import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap";
 
 export const Route = createFileRoute("/ticket/$code")({
   head: () => ({
@@ -40,7 +41,7 @@ interface Booking {
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
-  buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
+  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
 }
 
 function TicketPage() {
@@ -52,13 +53,14 @@ function TicketPage() {
   const [idImageUrl, setIdImageUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<LayoutJson | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate)",
+          "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate,layout_id)",
         )
         .eq("booking_code", code)
         .maybeSingle();
@@ -87,6 +89,25 @@ function TicketPage() {
       if (data?.signedUrl) setIdImageUrl(data.signedUrl);
     })();
   }, [booking?.id_image_url]);
+
+  // Bus seat layout for the ticket's second (printable) page.
+  useEffect(() => {
+    (async () => {
+      const layoutId = booking?.buses?.layout_id;
+      if (!layoutId) {
+        if (booking?.buses) setLayout(defaultTicketLayout());
+        return;
+      }
+      const { data } = await supabase
+        .from("bus_layouts")
+        .select("layout_json")
+        .eq("id", layoutId)
+        .maybeSingle();
+      const lj = (data as { layout_json: LayoutJson } | null)?.layout_json;
+      setLayout(lj ?? defaultTicketLayout());
+    })();
+  }, [booking?.buses?.layout_id, booking?.buses]);
+
 
   if (loading)
     return (
@@ -248,6 +269,99 @@ function TicketPage() {
             يرجى إبراز التذكرة عند الصعود للباص. شكراً لاختياركم {BRAND.name}.
           </div>
         </div>
+      </div>
+
+      {layout && (
+        <div className="container-luxe max-w-3xl mt-6 print-break">
+          <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
+            <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>
+              <img src={BRAND.logoUrl} alt="logo" className="h-12 w-12 rounded-full bg-white p-1" />
+              <div>
+                <h2 className="text-lg font-extrabold">مخطط الحافلة</h2>
+                <p className="text-xs text-white/70">
+                  {booking.customer_name} — مقاعد: <span dir="ltr">{booking.seat_numbers.join(", ")}</span>
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-6">
+              <TicketSeatMap layout={layout} seats={booking.seat_numbers} name={booking.customer_name} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function defaultTicketLayout(): LayoutJson {
+  const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
+  const cells: LayoutCell[] = [];
+  rows.forEach((r, i) => {
+    const row = i + 1;
+    cells.push({ row, col: 1, kind: "seat", label: `${r}1` });
+    cells.push({ row, col: 2, kind: "seat", label: `${r}2` });
+    cells.push({ row, col: 4, kind: "seat", label: `${r}3` });
+    cells.push({ row, col: 5, kind: "seat", label: `${r}4` });
+  });
+  const mRow = rows.length + 1;
+  for (let c = 1; c <= 5; c++) cells.push({ row: mRow, col: c, kind: "seat", label: `M${c}` });
+  return { rows: mRow, cols: 5, cells };
+}
+
+/** Read-only seat map: only this booking's seats are coloured. */
+function TicketSeatMap({ layout, seats, name }: { layout: LayoutJson; seats: string[]; name: string }) {
+  const rows = Math.max(1, layout.rows || 1);
+  const cols = Math.max(1, layout.cols || 1);
+  const map = new Map<string, LayoutCell>();
+  for (const c of layout.cells) map.set(`${c.row}:${c.col}`, c);
+  const mine = new Set(seats);
+
+  return (
+    <div>
+      <div
+        className="grid gap-1.5 mx-auto"
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, maxWidth: cols * 64 }}
+      >
+        {Array.from({ length: rows * cols }).map((_, i) => {
+          const r = Math.floor(i / cols) + 1;
+          const c = (i % cols) + 1;
+          const cell = map.get(`${r}:${c}`);
+          if (!cell || cell.kind === "empty") return <div key={i} className="aspect-square" />;
+          if (cell.kind !== "seat") {
+            const t = cell.kind === "driver" ? "السائق" : cell.kind === "door" ? "باب" : "دورة مياه";
+            return (
+              <div
+                key={i}
+                className="aspect-square rounded-lg border-2 border-border bg-muted text-[9px] font-bold text-muted-foreground flex items-center justify-center"
+              >
+                {cell.label || t}
+              </div>
+            );
+          }
+          const id = cell.label && cell.label.trim() ? cell.label : `${cell.row}-${cell.col}`;
+          const isMine = mine.has(id);
+          return (
+            <div
+              key={i}
+              className={`aspect-square rounded-lg border-2 flex flex-col items-center justify-center leading-tight ${
+                isMine
+                  ? "bg-primary text-primary-foreground border-primary font-extrabold"
+                  : "bg-white text-muted-foreground border-border"
+              }`}
+            >
+              <span className="text-[10px]">{id}</span>
+              {isMine && <span className="text-[7px] px-0.5 truncate max-w-full">{name.split(" ")[0]}</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-5 flex items-center justify-center gap-6 text-xs text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded bg-primary inline-block" /> مقاعدك ({name})
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded border-2 border-border bg-white inline-block" /> مقاعد أخرى
+        </span>
       </div>
     </div>
   );
