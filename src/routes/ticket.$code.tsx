@@ -88,6 +88,25 @@ function TicketPage() {
     })();
   }, [booking?.id_image_url]);
 
+  // Bus seat layout for the ticket's second (printable) page.
+  useEffect(() => {
+    (async () => {
+      const layoutId = booking?.buses?.layout_id;
+      if (!layoutId) {
+        if (booking?.buses) setLayout(defaultTicketLayout());
+        return;
+      }
+      const { data } = await supabase
+        .from("bus_layouts")
+        .select("layout_json")
+        .eq("id", layoutId)
+        .maybeSingle();
+      const lj = (data as { layout_json: LayoutJson } | null)?.layout_json;
+      setLayout(lj ?? defaultTicketLayout());
+    })();
+  }, [booking?.buses?.layout_id, booking?.buses]);
+
+
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center">
