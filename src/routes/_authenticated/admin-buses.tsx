@@ -188,6 +188,9 @@ function AdminBuses() {
       layout_id: b.layout_id,
       image_url: b.image_url,
       price_addition: b.price_addition,
+      round_trip_price: b.round_trip_price,
+      outbound_price: b.outbound_price,
+      return_price: b.return_price,
       status: "active",
       active: true,
       trip_id: b.trip_id,
@@ -218,7 +221,10 @@ function AdminBuses() {
       image_url: b.image_url,
       bus_type: b.bus_type,
       details: b.details,
-      price_addition: Number(b.price_addition) || 0,
+      price_addition: Number(b.round_trip_price) || 0,
+      round_trip_price: Number(b.round_trip_price) || 0,
+      outbound_price: Number(b.outbound_price) || 0,
+      return_price: Number(b.return_price) || 0,
     };
 
     // مزامنة سعة الحافلة مع القالب المختار
