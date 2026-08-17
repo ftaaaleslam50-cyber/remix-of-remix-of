@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
-import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
+import { dayNameFromDate, downloadBlob } from "@/lib/export/trip-sheet-template";
+import { toast } from "sonner";
+import {
+  buildBusTripSheetWorkbook,
+  printBusTripSheet,
+  type BusSheetInput,
+} from "@/lib/export/bus-trip-sheet";
+
 import {
   ROOM_ROWS,
   ROOM_CAPACITY,
