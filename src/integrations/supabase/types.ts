@@ -1527,6 +1527,7 @@ export type Database = {
           source: string
         }[]
       }
+      get_ticket: { Args: { _code: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
