@@ -144,7 +144,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_id,bus_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_id,bus_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
