@@ -42,10 +42,12 @@ interface SheetBooking {
   extension_nights?: number | null;
   trip_id: string | null;
   bus_id: string | null;
+  package_id: string | null;
   packages: { name: string } | null;
   trips: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses: { id: string; name: string | null; bus_number: number; capacity: number; expenses: number | null } | null;
 }
+
 
 const ROOM_LABELS: Record<string, string> = {
   "1": "فردي",
