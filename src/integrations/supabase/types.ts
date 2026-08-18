@@ -1027,6 +1027,7 @@ export type Database = {
           cat_coupons: boolean
           cat_hotels: boolean
           cat_system: boolean
+          cat_users: boolean
           created_at: string
           dnd_enabled: boolean
           dnd_end: string
@@ -1047,6 +1048,7 @@ export type Database = {
           cat_coupons?: boolean
           cat_hotels?: boolean
           cat_system?: boolean
+          cat_users?: boolean
           created_at?: string
           dnd_enabled?: boolean
           dnd_end?: string
@@ -1067,6 +1069,7 @@ export type Database = {
           cat_coupons?: boolean
           cat_hotels?: boolean
           cat_system?: boolean
+          cat_users?: boolean
           created_at?: string
           dnd_enabled?: boolean
           dnd_end?: string
