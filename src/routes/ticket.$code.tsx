@@ -11,6 +11,7 @@ import { returnDisplay } from "@/lib/return-display";
 import { ROOM_LABEL } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap";
+import ticketNotes from "@/assets/ticket-notes.png.asset.json";
 
 export const Route = createFileRoute("/ticket/$code")({
   head: () => ({
@@ -338,9 +339,16 @@ function TicketPage() {
           </div>
         </div>
       )}
+
+      <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
+        <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
+          <img src={ticketNotes.url} alt="تنبيهات هامة" className="w-full h-auto object-contain" />
+        </div>
+      </div>
     </div>
   );
 }
+
 
 function defaultTicketLayout(): LayoutJson {
   const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
