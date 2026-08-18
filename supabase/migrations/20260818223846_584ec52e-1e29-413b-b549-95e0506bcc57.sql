@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.tg_profile_notify() FROM anon, authenticated, PUBLIC;
