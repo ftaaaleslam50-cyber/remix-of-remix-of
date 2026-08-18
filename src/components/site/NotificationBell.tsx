@@ -13,6 +13,7 @@ import {
   Bus,
   Hotel,
   Cog,
+  UserPlus,
   Play,
   Volume2,
 } from "lucide-react";
@@ -34,7 +35,7 @@ import { formatDate } from "@/lib/format";
 
 /* ============================ types ============================ */
 
-export type NotifCategory = "bookings" | "coupons" | "buses" | "hotels" | "system";
+export type NotifCategory = "bookings" | "coupons" | "buses" | "hotels" | "users" | "system";
 
 interface Notif {
   id: string;
@@ -60,6 +61,7 @@ interface NotifSettings {
   cat_coupons: boolean;
   cat_buses: boolean;
   cat_hotels: boolean;
+  cat_users: boolean;
   cat_system: boolean;
   dnd_enabled: boolean;
   dnd_start: string;
@@ -78,11 +80,12 @@ const CATEGORIES: {
   { key: "coupons", label: "الخصومات", icon: Ticket, color: "text-amber-600", bg: "bg-amber-50" },
   { key: "buses", label: "الحافلات", icon: Bus, color: "text-sky-600", bg: "bg-sky-50" },
   { key: "hotels", label: "الفنادق", icon: Hotel, color: "text-violet-600", bg: "bg-violet-50" },
+  { key: "users", label: "الحسابات", icon: UserPlus, color: "text-rose-600", bg: "bg-rose-50" },
   { key: "system", label: "النظام", icon: Cog, color: "text-slate-600", bg: "bg-slate-100" },
 ];
 
 function catMeta(cat: string) {
-  return CATEGORIES.find((c) => c.key === cat) ?? CATEGORIES[4];
+  return CATEGORIES.find((c) => c.key === cat) ?? CATEGORIES[5];
 }
 
 /** Bucket a notification into today / yesterday / this week / older. */
@@ -126,6 +129,8 @@ function categoryEnabled(s: NotifSettings, cat: string): boolean {
       return s.cat_buses;
     case "hotels":
       return s.cat_hotels;
+    case "users":
+      return s.cat_users ?? true;
     default:
       return s.cat_system;
   }
@@ -576,6 +581,7 @@ function SettingsPanel({
         <Toggle label="الخصومات" checked={settings.cat_coupons} onChange={(v) => onChange({ cat_coupons: v })} />
         <Toggle label="الحافلات" checked={settings.cat_buses} onChange={(v) => onChange({ cat_buses: v })} />
         <Toggle label="الفنادق" checked={settings.cat_hotels} onChange={(v) => onChange({ cat_hotels: v })} />
+        <Toggle label="الحسابات" checked={settings.cat_users} onChange={(v) => onChange({ cat_users: v })} />
         <Toggle label="النظام" checked={settings.cat_system} onChange={(v) => onChange({ cat_system: v })} />
       </section>
 
