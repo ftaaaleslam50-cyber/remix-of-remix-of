@@ -95,6 +95,7 @@ interface BookingRow {
   nationality?: string | null;
   booking_source?: string | null;
   extension_nights?: number | null;
+  trip_mode?: string | null;
   bus_id?: string | null;
   trip_id?: string | null;
   packages?: { name: string } | null;
@@ -147,7 +148,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -220,7 +221,7 @@ function Dashboard() {
       المقاعد: b.seat_numbers.join(", "),
       الذكور: Number(b.male_count ?? 0),
       الإناث: Number(b.female_count ?? 0),
-      "العودة الفعلية": returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights),
+      "العودة الفعلية": returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "-", b.trip_mode),
       الخصم: Number(b.discount_amount ?? 0),
       الكود: b.coupon_code ?? "",
       السعر: Number(b.total_price),
@@ -630,7 +631,7 @@ function UnifiedBookingsTab(props: {
       "اسم الفندق": b.packages?.name ?? "-",
       الذهاب: b.trips?.departure_day ?? "-",
       العودة: b.trips?.return_day ?? "-",
-      "العودة الفعلية": returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights),
+      "العودة الفعلية": returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "-", b.trip_mode),
       "إجمالي المبلغ": Number(b.total_price),
       ملاحظات: b.notes ?? "",
     }));
@@ -669,7 +670,7 @@ function UnifiedBookingsTab(props: {
         idNumber: b.id_number ?? "",
         nationality: b.nationality ?? "",
         count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
+        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
         hotel: b.packages?.name ?? "بدون فندق",
         roomType: ROOM_TXT[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
         total: Number(b.total_price || 0),
@@ -995,7 +996,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
                 <TableCell className="text-xs">{(b.extension_nights ?? 0) > 0 ? `${b.extension_nights} ليلة` : "بدون"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
-                <TableCell className="text-xs">{returnDisplay(b.actual_return_day ?? b.trips?.return_day, b.extension_nights)}</TableCell>
+                <TableCell className="text-xs">{returnDisplay(b.actual_return_day ?? b.trips?.return_day, b.extension_nights, "-", b.trip_mode)}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
                 <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
