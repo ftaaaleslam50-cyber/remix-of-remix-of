@@ -192,6 +192,20 @@ export function ManualBookingRow({
         .data as unknown as Package[]) ?? [],
   });
 
+  // دليل المناديب — للتعبئة التلقائية لرقم الجوال والواتساب
+  const { data: reps = [] } = useQuery({
+    queryKey: ["representatives", "active"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("representatives")
+        .select("id,name,phone,whatsapp")
+        .eq("active", true)
+        .order("name");
+      return (data as { id: string; name: string; phone: string; whatsapp: string }[]) ?? [];
+    },
+    staleTime: 60_000,
+  });
+
   const { data: pricing = [] } = useQuery({
     queryKey: ["mb-pricing"],
     queryFn: async () =>
@@ -557,7 +571,31 @@ export function ManualBookingRow({
               <Input className={cell} value={d.booking_source} onChange={(e) => set("booking_source", e.target.value)} />
             </Field>
             <Field label="اسم المندوب">
-              <Input className={cell} value={d.rep_name} onChange={(e) => set("rep_name", e.target.value)} />
+              <Input
+                className={cell}
+                list="rep-directory"
+                value={d.rep_name}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  const match = reps.find((r) => r.name === name);
+                  if (match) {
+                    setD((p) => ({
+                      ...p,
+                      rep_name: name,
+                      rep_phone: match.phone || p.rep_phone,
+                      rep_whatsapp: match.whatsapp || match.phone || p.rep_whatsapp,
+                      booking_source: match.name,
+                    }));
+                  } else {
+                    set("rep_name", name);
+                  }
+                }}
+              />
+              <datalist id="rep-directory">
+                {reps.map((r) => (
+                  <option key={r.id} value={r.name} />
+                ))}
+              </datalist>
             </Field>
             <Field label="جوال المندوب">
               <Input className={cell} dir="ltr" value={d.rep_phone} onChange={(e) => set("rep_phone", e.target.value)} />

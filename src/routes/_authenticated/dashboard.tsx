@@ -36,6 +36,7 @@ import {
 import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
+import { RepresentativesTab } from "@/components/admin/RepresentativesTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
@@ -380,6 +381,9 @@ function Dashboard() {
             <TabsTrigger value="bookingctl" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> التحكم في الحجز
             </TabsTrigger>
+            <TabsTrigger value="reps" className="rounded-xl">
+              <Share2 className="h-4 w-4 ml-1" /> المناديب
+            </TabsTrigger>
             <TabsTrigger value="site" className="rounded-xl">
               <Layout className="h-4 w-4 ml-1" /> إعدادات الموقع
             </TabsTrigger>
@@ -421,6 +425,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="bookingctl" className="mt-4">
             <BookingControlTab />
+          </TabsContent>
+          <TabsContent value="reps" className="mt-4">
+            <RepresentativesTab />
           </TabsContent>
           <TabsContent value="site" className="mt-4">
             <SiteTab />
