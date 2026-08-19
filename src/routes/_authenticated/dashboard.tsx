@@ -1104,7 +1104,8 @@ function UnifiedBookingsTab(props: {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              ),
+            )}
 
           </TableBody>
         </Table>
