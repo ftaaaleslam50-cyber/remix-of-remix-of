@@ -1944,6 +1944,7 @@ function StepConfirm(props: {
 }) {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
+    ["نوع الغرفة", roomDisplayLabel(props.roomType, props.bookingType)],
     ["عدد الأفراد", String(props.passengerCount)],
     ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
