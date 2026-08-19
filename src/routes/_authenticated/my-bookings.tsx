@@ -109,11 +109,34 @@ function MyBookingsPage() {
           <h1 className="text-2xl md:text-3xl font-extrabold flex items-center gap-2">
             <Ticket className="h-6 w-6 text-primary" /> حجوزاتي
           </h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link to="/booking"><Button className="btn-primary-glow rounded-xl">حجز جديد</Button></Link>
+            {isRep && (
+              <Button variant="secondary" className="rounded-xl gap-1" onClick={() => setManualOpen((v) => !v)}>
+                <PlusCircle className="h-4 w-4" /> حجز يدوي
+              </Button>
+            )}
             <Link to="/"><Button variant="outline" className="rounded-xl gap-1"><ArrowRight className="h-4 w-4" /> الرئيسية</Button></Link>
           </div>
         </div>
+
+        {isRep && manualOpen && (
+          <div className="mb-6 overflow-x-auto">
+            <table className="w-full"><tbody>
+              <ManualBookingRow
+                colSpan={1}
+                ownerId={uid}
+                onClose={() => setManualOpen(false)}
+                onSaved={() => {
+                  setManualOpen(false);
+                  qc.invalidateQueries({ queryKey: ["my-bookings", uid] });
+                }}
+              />
+            </tbody></table>
+          </div>
+        )}
+
+
 
         {isLoading ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
