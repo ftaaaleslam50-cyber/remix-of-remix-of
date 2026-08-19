@@ -1558,6 +1558,13 @@ export type Database = {
       }
       booking_availability: { Args: never; Returns: Json }
       generate_booking_code: { Args: never; Returns: string }
+      get_bus_occupancy: {
+        Args: { _bus_id?: string; _exclude_code?: string; _trip_id?: string }
+        Returns: {
+          bus_id: string
+          seat_numbers: string[]
+        }[]
+      }
       get_coupon_for_ip: {
         Args: { _ip: string }
         Returns: {
