@@ -279,7 +279,7 @@ export function TripSheetTab() {
           ثلاثي: priceOf("3"),
           رباعي: priceOf("4"),
           خماسي: priceOf("5"),
-          "مشترك خماسي": priceOf("5"),
+          "خماسي مشترك": priceOf("5"),
           "مشترك رباعي": priceOf("4"),
           "مشترك مشرف": priceOf("4"),
         };
