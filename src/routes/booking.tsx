@@ -882,6 +882,7 @@ function BookingPage() {
 
       <PriceBar
         packageName={selectedPackage?.name}
+        hasHotel={!noHotel && !!selectedPackage}
         passengerCount={passengerCount}
         roomType={roomType}
         bookingType={bookingType}
