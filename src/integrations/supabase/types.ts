@@ -1587,6 +1587,13 @@ export type Database = {
         }
         Returns: Json
       }
+      profile_account_type_allowed: {
+        Args: {
+          _new_type: Database["public"]["Enums"]["account_type"]
+          _profile_id: string
+        }
+        Returns: boolean
+      }
       redeem_coupon: {
         Args: { _booking_code: string; _code: string }
         Returns: boolean
