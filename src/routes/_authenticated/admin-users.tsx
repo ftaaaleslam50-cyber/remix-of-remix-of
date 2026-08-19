@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { setUserPassword } from "@/lib/admin-passwords.functions";
 import { formatDate } from "@/lib/format";
+import { RepresentativesTab } from "@/components/admin/RepresentativesTab";
 
 
 export const Route = createFileRoute("/_authenticated/admin-users")({
@@ -75,6 +76,7 @@ function AdminUsers() {
     }
     toast.success("تم تحديث الصلاحيات");
     qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+    qc.invalidateQueries({ queryKey: ["representatives"] });
   }
 
   const filtered = profiles.filter((p) => {
@@ -90,8 +92,19 @@ function AdminUsers() {
       national_id: p.national_id, account_type: p.account_type, active: p.active,
     }).eq("id", p.id);
     if (error) return toast.error(error.message);
+
+    const hasRepresentativeRole = roles.some((r) => r.user_id === p.id && r.role === "representative");
+    if (p.account_type === "representative" && !hasRepresentativeRole) {
+      const { error: roleError } = await supabase.from("user_roles").insert({ user_id: p.id, role: "representative" });
+      if (roleError && !roleError.message.includes("duplicate")) return toast.error(roleError.message);
+    } else if (p.account_type === "customer" && hasRepresentativeRole) {
+      const { error: roleError } = await supabase.from("user_roles").delete().eq("user_id", p.id).eq("role", "representative");
+      if (roleError) return toast.error(roleError.message);
+    }
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-profiles"] });
+    qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+    qc.invalidateQueries({ queryKey: ["representatives"] });
   }
 
   async function toggleActive(p: ProfileRow) {
@@ -149,6 +162,9 @@ function AdminUsers() {
 
             </Table>
           </div>
+        </div>
+        <div className="mt-6">
+          <RepresentativesTab />
         </div>
       </main>
       <PasswordDialog profile={pwTarget} onClose={() => setPwTarget(null)} />
@@ -260,10 +276,10 @@ function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onT
           {ASSIGNABLE_ROLES.map(r => {
             const on = userRoles.includes(r);
             return (
-              <button key={r} type="button" onClick={() => onToggleRole(r, !on)}
-                className={`text-[10px] px-2 py-1 rounded-full border ${on ? 'bg-[color:var(--color-navy)] text-white border-transparent' : 'bg-white text-foreground/70 border-border hover:bg-muted'}`}>
+              <Button key={r} type="button" size="sm" variant={on ? "default" : "outline"} onClick={() => onToggleRole(r, !on)}
+                className="h-7 rounded-full px-2 text-[10px]">
                 {ROLE_LABELS[r]}
-              </button>
+              </Button>
             );
           })}
         </div>

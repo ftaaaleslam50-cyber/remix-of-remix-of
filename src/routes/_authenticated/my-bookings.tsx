@@ -55,9 +55,12 @@ function MyBookingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUid(user.id);
-      const { data: role } = await supabase
+      const [{ data: role }, { data: profile }] = await Promise.all([
+        supabase
         .from("user_roles").select("role").eq("user_id", user.id).eq("role", "representative").maybeSingle();
-      setIsRep(!!role);
+        supabase.from("profiles").select("account_type").eq("id", user.id).maybeSingle(),
+      ]);
+      setIsRep(!!role || profile?.account_type === "representative");
     })();
   }, []);
 
