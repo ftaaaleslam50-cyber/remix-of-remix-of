@@ -521,7 +521,9 @@ function BookingPage() {
   async function uploadIdImage(): Promise<string | null> {
     if (!idFile) return null;
     const ext = idFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const path = `${crypto.randomUUID()}.${ext}`;
+    const { data: auth } = await supabase.auth.getUser();
+    const folder = auth?.user?.id ?? "guest";
+    const path = `${folder}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("id-uploads").upload(path, idFile, {
       contentType: idFile.type,
       cacheControl: "3600",

@@ -47,6 +47,7 @@ interface SheetBooking {
   notes: string | null;
   actual_return_day: string | null;
   extension_nights?: number | null;
+  trip_mode?: string | null;
   trip_id: string | null;
   bus_id: string | null;
   package_id: string | null;
@@ -158,7 +159,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_id,bus_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -335,7 +336,7 @@ export function TripSheetTab() {
         idNumber: b.id_number ?? "",
         nationality: b.nationality ?? "",
         count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
+        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
         hotel: b.packages?.name ?? "توصيل فقط",
         roomType: roomLabelOf(b),
         roomNumber: "",
@@ -382,7 +383,7 @@ export function TripSheetTab() {
         idNumber: b.id_number ?? "",
         nationality: b.nationality ?? "",
         count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
+        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
         hotel: b.packages?.name ?? "بدون فندق",
         roomType: ROOM_LABELS[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
         total: Number(b.total_price || 0),
@@ -435,7 +436,7 @@ export function TripSheetTab() {
           idNumber: b.id_number ?? "",
           nationality: b.nationality ?? "",
           count,
-          returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, ""),
+          returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
           hotel: b.packages?.name ?? "توصيل فقط",
           roomType: roomLabelOf(b),
           roomNumber: "",
@@ -605,7 +606,7 @@ export function TripSheetTab() {
                   <td className="border p-2 text-center font-mono">{b.id_number}</td>
                   <td className="border p-2 text-center">{b.nationality ?? "—"}</td>
                   <td className="border p-2 text-center">{b.passenger_count}</td>
-                  <td className="border p-2 text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—")}</td>
+                  <td className="border p-2 text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—", b.trip_mode)}</td>
                   <td className="border p-2 text-center">{b.packages?.name ?? "بدون فندق"}</td>
                   <td className="border p-2 text-center">{ROOM_LABELS[String(b.room_type ?? "5")] ?? "—"}</td>
                   <td className="border p-2 text-center font-bold">{total}</td>
