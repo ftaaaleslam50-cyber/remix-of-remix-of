@@ -192,6 +192,20 @@ export function ManualBookingRow({
         .data as unknown as Package[]) ?? [],
   });
 
+  // دليل المناديب — للتعبئة التلقائية لرقم الجوال والواتساب
+  const { data: reps = [] } = useQuery({
+    queryKey: ["representatives", "active"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("representatives")
+        .select("id,name,phone,whatsapp")
+        .eq("active", true)
+        .order("name");
+      return (data as { id: string; name: string; phone: string; whatsapp: string }[]) ?? [];
+    },
+    staleTime: 60_000,
+  });
+
   const { data: pricing = [] } = useQuery({
     queryKey: ["mb-pricing"],
     queryFn: async () =>
