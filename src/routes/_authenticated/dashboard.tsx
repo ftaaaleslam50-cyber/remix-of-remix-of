@@ -37,7 +37,7 @@ import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
-import { ROOM_LABEL } from "@/lib/booking/pricing";
+import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import {
   buildDefaultLayout,
@@ -993,7 +993,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
                 <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
-                <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
+                <TableCell className="text-xs">{roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null) ?? "-"}</TableCell>
                 <TableCell className="text-xs">{(b.extension_nights ?? 0) > 0 ? `${b.extension_nights} ليلة` : "بدون"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
                 <TableCell className="text-xs">{returnDisplay(b.actual_return_day ?? b.trips?.return_day, b.extension_nights, "-", b.trip_mode)}</TableCell>
