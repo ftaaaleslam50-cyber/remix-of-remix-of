@@ -45,14 +45,21 @@ function MyBookingsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [uid, setUid] = useState<string>("");
+  const [isRep, setIsRep] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUid(user.id);
+      if (!user) return;
+      setUid(user.id);
+      const { data: role } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "representative").maybeSingle();
+      setIsRep(!!role);
     })();
   }, []);
+
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
