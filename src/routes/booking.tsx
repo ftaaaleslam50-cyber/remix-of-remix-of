@@ -281,7 +281,8 @@ function BookingPage() {
       if (acct === "representative") setRepName((prof.full_name ?? "").trim());
       setCustomer((c) => ({
         ...c,
-        customer_name: c.customer_name || (prof.full_name ?? ""),
+        // للمندوب: لا نملأ اسم المعتمر — يُستخدم اسمه في «مصدر الحجز» فقط
+        customer_name: acct === "representative" ? c.customer_name : c.customer_name || (prof.full_name ?? ""),
         id_number: c.id_number || (prof.national_id ?? ""),
         contact_phone: c.contact_phone || (prof.mobile_phone ?? ""),
         whatsapp_phone: c.whatsapp_phone || (prof.whatsapp_phone ?? prof.mobile_phone ?? ""),
