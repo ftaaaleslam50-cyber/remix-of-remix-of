@@ -8,11 +8,15 @@ export function extensionLabel(nights: number): string {
   return `تمديد ${nights} ليال`;
 }
 
+export const NO_RETURN_LABEL = "بدون عودة";
+
 export function returnDisplay(
   originalReturn: string | null | undefined,
   extensionNights: number | null | undefined,
-  fallback = "-"
+  fallback = "-",
+  tripMode?: string | null
 ): string {
+  if (tripMode === "outbound") return NO_RETURN_LABEL;
   const n = Number(extensionNights ?? 0);
   if (n > 0) return extensionLabel(n);
   return originalReturn || fallback;
