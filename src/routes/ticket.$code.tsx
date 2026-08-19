@@ -156,7 +156,7 @@ function TicketPage() {
     lines.push(`الفندق: ${b.packages?.name ?? b.hotels?.name ?? "-"}`);
     if (Number(b.extension_nights ?? 0) > 0) lines.push(`عدد ليال التمديد: ${b.extension_nights}`);
     lines.push(`نوع الحجز: ${b.booking_type === "individual" ? "أفراد" : "عوائل"}`);
-    lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type)}`);
+    lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`);
     lines.push(`عدد الأفراد: ${b.passenger_count}`);
     lines.push(
       `رقم الباص: ${b.buses?.bus_number ?? 1}${b.buses?.name ? ` (${b.buses.name})` : ""}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`,
@@ -265,7 +265,7 @@ function TicketPage() {
               <TicketRow label="عدد ليال التمديد" value={String(booking.extension_nights)} />
             )}
             <TicketRow label="نوع الحجز" value={booking.booking_type === "individual" ? "أفراد" : "عوائل"} />
-            <TicketRow label="نوع الغرفة" value={roomDisplayLabel(booking.room_type as RoomType, booking.booking_type)} />
+            <TicketRow label="نوع الغرفة" value={roomDisplayLabel(booking.room_type as RoomType, booking.booking_type, !!(booking.packages?.name ?? booking.hotels?.name))} />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
             <TicketRow label="رقم الباص" value={String(booking.buses?.bus_number ?? 1)} />
             {booking.buses?.name && <TicketRow label="اسم الباص" value={booking.buses.name} />}

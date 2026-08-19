@@ -1945,7 +1945,7 @@ function StepConfirm(props: {
 }) {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
-    ["نوع الغرفة", roomDisplayLabel(props.roomType, props.bookingType)],
+    ["نوع الغرفة", roomDisplayLabel(props.roomType, props.bookingType, !props.noHotel && !!props.pkg)],
     ["عدد الأفراد", String(props.passengerCount)],
     ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
@@ -2043,6 +2043,7 @@ function StepConfirm(props: {
 
 function PriceBar(props: {
   packageName?: string;
+  hasHotel?: boolean;
   passengerCount: number;
   roomType: RoomType;
   bookingType: BookingType | null;
@@ -2061,7 +2062,7 @@ function PriceBar(props: {
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
-          <PriceCell label="الغرفة" value={roomDisplayLabel(props.roomType, props.bookingType)} />
+          <PriceCell label="الغرفة" value={roomDisplayLabel(props.roomType, props.bookingType, props.hasHotel)} />
           {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
           {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
           {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}

@@ -405,7 +405,7 @@ export function ManualBookingRow({
             <Field label="إناث">
               <Input type="number" className={cell} value={d.female_count} readOnly />
             </Field>
-            <Field label={`نوع الغرفة (${roomDisplayLabel(d.room_type, d.booking_type)})`}>
+            <Field label={`نوع الغرفة (${roomDisplayLabel(d.room_type, d.booking_type, !!d.package_id)})`}>
               <select
                 className={sel}
                 value={d.room_type}
