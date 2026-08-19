@@ -98,6 +98,7 @@ interface BookingRow {
   trip_mode?: string | null;
   bus_id?: string | null;
   trip_id?: string | null;
+  package_id?: string | null;
   packages?: { name: string } | null;
   trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses?: { id: string; name: string | null; bus_number: number; expenses: number | null } | null;
@@ -148,7 +149,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -1002,7 +1003,7 @@ function UnifiedBookingsTab(props: {
                     male_count: b.male_count ?? b.passenger_count ?? 1,
                     female_count: b.female_count ?? 0,
                     room_type: ((b.room_type ?? "1") as RoomType),
-                    package_id: null,
+                    package_id: b.package_id ?? null,
                     trip_id: b.trip_id ?? null,
                     bus_id: b.bus_id ?? null,
                     seat_numbers: b.seat_numbers ?? [],
