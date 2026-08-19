@@ -1293,6 +1293,42 @@ export type Database = {
         }
         Relationships: []
       }
+      representatives: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       trip_buses: {
         Row: {
           bus_id: string
