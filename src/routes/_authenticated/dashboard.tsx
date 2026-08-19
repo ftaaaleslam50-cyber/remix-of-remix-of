@@ -425,6 +425,9 @@ function Dashboard() {
           <TabsContent value="bookingctl" className="mt-4">
             <BookingControlTab />
           </TabsContent>
+          <TabsContent value="reps" className="mt-4">
+            <RepresentativesTab />
+          </TabsContent>
           <TabsContent value="site" className="mt-4">
             <SiteTab />
           </TabsContent>
