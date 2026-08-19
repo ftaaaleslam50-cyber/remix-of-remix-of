@@ -1002,7 +1002,7 @@ function StepHeader({ title, desc }: { title: string; desc?: string }) {
 
 function StepBookingType({ value, onChange }: { value: BookingType | null; onChange: (v: BookingType) => void }) {
   const options: { value: BookingType; label: string; desc: string; icon: typeof User }[] = [
-    { value: "individual", label: " أفراد(عزاب)", desc: "حجز بمقعد فردي في غرفة خماسية مشتركة", icon: User },
+    { value: "individual", label: " أفراد(عزاب)", desc: "حجز بمقعد فردي في غرفة خماسي مشترك", icon: User },
     { value: "family", label: " عوائل أو غرفة خاصة", desc: "حجز عائلي أو حجز غرفة خاصة ", icon: Users },
   ];
   return (
@@ -1323,11 +1323,11 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
     <div>
       <StepHeader
         title="نوع الغرفة"
-        desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة" : "اختر نوع الغرفة المناسبة لعائلتك"}
+        desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسي مشترك" : "اختر نوع الغرفة المناسبة لعائلتك"}
       />
       {forced && (
         <div className="mb-4 rounded-2xl bg-accent/60 border border-[color:var(--color-gold)]/40 p-4 text-sm">
-          🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة.
+          🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسي مشترك.
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
