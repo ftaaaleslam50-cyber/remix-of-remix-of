@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User } from "lucide-react";
+import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User, PlusCircle } from "lucide-react";
+import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,14 +46,21 @@ function MyBookingsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [uid, setUid] = useState<string>("");
+  const [isRep, setIsRep] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUid(user.id);
+      if (!user) return;
+      setUid(user.id);
+      const { data: role } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "representative").maybeSingle();
+      setIsRep(!!role);
     })();
   }, []);
+
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -102,11 +110,34 @@ function MyBookingsPage() {
           <h1 className="text-2xl md:text-3xl font-extrabold flex items-center gap-2">
             <Ticket className="h-6 w-6 text-primary" /> حجوزاتي
           </h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link to="/booking"><Button className="btn-primary-glow rounded-xl">حجز جديد</Button></Link>
+            {isRep && (
+              <Button variant="secondary" className="rounded-xl gap-1" onClick={() => setManualOpen((v) => !v)}>
+                <PlusCircle className="h-4 w-4" /> حجز يدوي
+              </Button>
+            )}
             <Link to="/"><Button variant="outline" className="rounded-xl gap-1"><ArrowRight className="h-4 w-4" /> الرئيسية</Button></Link>
           </div>
         </div>
+
+        {isRep && manualOpen && (
+          <div className="mb-6 overflow-x-auto">
+            <table className="w-full"><tbody>
+              <ManualBookingRow
+                colSpan={1}
+                ownerId={uid}
+                onClose={() => setManualOpen(false)}
+                onSaved={() => {
+                  setManualOpen(false);
+                  qc.invalidateQueries({ queryKey: ["my-bookings", uid] });
+                }}
+              />
+            </tbody></table>
+          </div>
+        )}
+
+
 
         {isLoading ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>

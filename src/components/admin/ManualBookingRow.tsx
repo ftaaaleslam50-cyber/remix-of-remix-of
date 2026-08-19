@@ -130,6 +130,7 @@ export function ManualBookingRow({
   initial,
   defaultTripId,
   defaultBusId,
+  ownerId,
   onClose,
   onSaved,
 }: {
@@ -137,6 +138,8 @@ export function ManualBookingRow({
   initial?: Partial<ManualBookingDraft> | null;
   defaultTripId?: string;
   defaultBusId?: string;
+  /** ربط الحجز الجديد بحساب المُنشئ (المندوب) ليظهر في "حجوزاتي". */
+  ownerId?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -308,7 +311,9 @@ export function ManualBookingRow({
 
     const { error } = d.id
       ? await supabase.from("bookings").update(payload as never).eq("id", d.id)
-      : await supabase.from("bookings").insert(payload as never);
+      : await supabase
+          .from("bookings")
+          .insert((ownerId ? { ...payload, created_by: ownerId } : payload) as never);
     setSaving(false);
     if (error) return toast.error(error.message);
     void writeAudit(d.id ? "booking.manual_update" : "booking.manual_create", "bookings", d.id ?? code, { code });
