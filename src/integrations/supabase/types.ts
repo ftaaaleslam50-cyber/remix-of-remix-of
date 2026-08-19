@@ -1303,6 +1303,7 @@ export type Database = {
           notes: string | null
           phone: string
           updated_at: string
+          user_id: string | null
           whatsapp: string
         }
         Insert: {
@@ -1314,6 +1315,7 @@ export type Database = {
           notes?: string | null
           phone?: string
           updated_at?: string
+          user_id?: string | null
           whatsapp?: string
         }
         Update: {
@@ -1325,6 +1327,7 @@ export type Database = {
           notes?: string | null
           phone?: string
           updated_at?: string
+          user_id?: string | null
           whatsapp?: string
         }
         Relationships: []
@@ -1583,6 +1586,13 @@ export type Database = {
           _user_id: string
         }
         Returns: Json
+      }
+      profile_account_type_allowed: {
+        Args: {
+          _new_type: Database["public"]["Enums"]["account_type"]
+          _profile_id: string
+        }
+        Returns: boolean
       }
       redeem_coupon: {
         Args: { _booking_code: string; _code: string }

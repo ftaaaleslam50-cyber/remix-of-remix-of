@@ -198,10 +198,10 @@ export function ManualBookingRow({
     queryFn: async () => {
       const { data } = await supabase
         .from("representatives")
-        .select("id,name,phone,whatsapp")
+        .select("id,user_id,name,phone,whatsapp")
         .eq("active", true)
         .order("name");
-      return (data as { id: string; name: string; phone: string; whatsapp: string }[]) ?? [];
+      return (data as { id: string; user_id: string | null; name: string; phone: string; whatsapp: string }[]) ?? [];
     },
     staleTime: 60_000,
   });
@@ -323,11 +323,13 @@ export function ManualBookingRow({
       actual_return_day: d.trip_mode === "outbound" ? null : d.actual_return_day || selectedTrip?.return_day || null,
     };
 
+    const linkedRepresentative = reps.find((r) => r.name === d.rep_name.trim() && r.user_id);
+    const trustedOwnerId = ownerId ?? linkedRepresentative?.user_id ?? undefined;
     const { error } = d.id
       ? await supabase.from("bookings").update(payload as never).eq("id", d.id)
       : await supabase
           .from("bookings")
-          .insert((ownerId ? { ...payload, created_by: ownerId } : payload) as never);
+          .insert((trustedOwnerId ? { ...payload, created_by: trustedOwnerId } : payload) as never);
     setSaving(false);
     if (error) return toast.error(error.message);
     void writeAudit(d.id ? "booking.manual_update" : "booking.manual_create", "bookings", d.id ?? code, { code });
