@@ -182,21 +182,26 @@ function BookingPage() {
     },
   });
 
-  // Load reserved-seat counts for all candidate buses to pick the first with room.
+  // Load reserved seats for all candidate buses via a SECURITY DEFINER RPC so
+  // guests and normal users see the same occupancy as admins (RLS on `bookings`
+  // hides other people's rows, which used to make full buses look empty).
   const { data: busReserved = {} } = useQuery({
     queryKey: ["bus_reserved_all", tripId, editingCode],
     enabled: !!tripId && buses.length > 0,
+    retry: 2,
     queryFn: async () => {
-      let q = supabase
-        .from("bookings")
-        .select("bus_id,seat_numbers,booking_code")
-        .eq("trip_id", tripId!)
-        .neq("status", "cancelled");
-      if (editingCode) q = q.neq("booking_code", editingCode);
-      const { data, error } = await q;
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: { bus_id: string; seat_numbers: string[] }[] | null; error: unknown }>)(
+        "get_bus_occupancy",
+        { _trip_id: tripId, _bus_id: null, _exclude_code: editingCode ?? null },
+      );
+      // Never swallow a failure into "no bookings" — surface it so the seat map
+      // does not render a full bus as empty.
       if (error) throw error;
       const map: Record<string, string[]> = {};
-      for (const b of (data ?? []) as { bus_id: string; seat_numbers: string[] }[]) {
+      for (const b of data ?? []) {
         if (!b.bus_id) continue;
         (map[b.bus_id] ??= []).push(...(b.seat_numbers ?? []));
       }
