@@ -1323,11 +1323,11 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
     <div>
       <StepHeader
         title="نوع الغرفة"
-        desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة" : "اختر نوع الغرفة المناسبة لعائلتك"}
+        desc={forced ? "حجز الأفراد يكون تلقائيًا في غرفة خماسي فقط" : "اختر نوع الغرفة المناسبة لعائلتك"}
       />
       {forced && (
         <div className="mb-4 rounded-2xl bg-accent/60 border border-[color:var(--color-gold)]/40 p-4 text-sm">
-          🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسية مشتركة.
+          🛈 حجز الأفراد يكون تلقائيًا في غرفة خماسي فقط.
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
