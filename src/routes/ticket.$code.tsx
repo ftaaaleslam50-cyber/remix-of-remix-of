@@ -39,6 +39,7 @@ interface Booking {
   notes?: string | null;
   actual_return_day?: string | null;
   extension_nights?: number | null;
+  trip_mode?: string | null;
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
   trips?: { name: string; departure_day: string; return_day: string } | null;
@@ -69,7 +70,7 @@ function TicketPage() {
         const { data } = await supabase
           .from("bookings")
           .select(
-            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate,layout_id)",
+            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate,layout_id)",
           )
           .eq("booking_code", code)
           .maybeSingle();
@@ -162,8 +163,8 @@ function TicketPage() {
     );
     lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
     if (b.trips?.departure_day) lines.push(`الذهاب: ${b.trips.departure_day}`);
-    if (b.trips?.return_day) lines.push(`العودة: ${returnDisplay(b.trips.return_day, b.extension_nights)}`);
-    if (Number(b.extension_nights ?? 0) === 0 && b.actual_return_day)
+    if (b.trips?.return_day) lines.push(`العودة: ${returnDisplay(b.trips.return_day, b.extension_nights, "-", b.trip_mode)}`);
+    if (Number(b.extension_nights ?? 0) === 0 && b.trip_mode !== "outbound" && b.actual_return_day)
       lines.push(`العودة الفعلية: ${b.actual_return_day}`);
     lines.push(`تاريخ الحجز: ${formatDate(b.created_at)}`);
     if (b.notes) lines.push(`ملاحظات: ${b.notes}`);
@@ -272,9 +273,9 @@ function TicketPage() {
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
             {booking.trips?.departure_day && <TicketRow label="الذهاب" value={booking.trips.departure_day} />}
             {booking.trips?.return_day && (
-              <TicketRow label="العودة" value={returnDisplay(booking.trips.return_day, booking.extension_nights)} />
+              <TicketRow label="العودة" value={returnDisplay(booking.trips.return_day, booking.extension_nights, "-", booking.trip_mode)} />
             )}
-            {Number(booking.extension_nights ?? 0) === 0 && booking.actual_return_day && (
+            {Number(booking.extension_nights ?? 0) === 0 && booking.trip_mode !== "outbound" && booking.actual_return_day && (
               <TicketRow label="العودة الفعلية" value={booking.actual_return_day} />
             )}
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
