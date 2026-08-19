@@ -16,8 +16,15 @@ import type { BookingType } from "./types";
  * Individual (أفراد) bookings always use the shared quintuple room,
  * so we surface it as "خماسي مشترك" everywhere instead of plain "خماسي".
  */
-export function roomDisplayLabel(roomType: RoomType, bookingType?: BookingType | null): string {
-  if (bookingType === "individual") return "خماسي مشترك";
+export function roomDisplayLabel(
+  roomType: RoomType,
+  bookingType?: BookingType | null,
+  hasHotel?: boolean | null,
+): string {
+  if (bookingType === "individual") {
+    if (hasHotel === false) return "بدون فندق";
+    return "خماسي مشترك";
+  }
   return ROOM_LABEL[roomType];
 }
 

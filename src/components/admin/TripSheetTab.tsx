@@ -309,8 +309,8 @@ export function TripSheetTab() {
   );
 
   function roomLabelOf(b: SheetBooking): string {
+    if (b.booking_type === "individual") return b.packages?.name ? "خماسي مشترك" : "بدون فندق";
     if (!b.packages?.name) return "ذهاب وعوده فقط";
-    if (b.booking_type === "individual") return "خماسي مشترك";
     return ROOM_LABELS[String(b.room_type ?? "5")] ?? "خماسي";
   }
 
@@ -385,7 +385,7 @@ export function TripSheetTab() {
         count: b.passenger_count || 0,
         returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
         hotel: b.packages?.name ?? "بدون فندق",
-        roomType: ROOM_LABELS[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
+        roomType: roomLabelOf(b),
         total: Number(b.total_price || 0),
         notes: b.notes ?? "",
       })),
@@ -608,7 +608,7 @@ export function TripSheetTab() {
                   <td className="border p-2 text-center">{b.passenger_count}</td>
                   <td className="border p-2 text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—", b.trip_mode)}</td>
                   <td className="border p-2 text-center">{b.packages?.name ?? "بدون فندق"}</td>
-                  <td className="border p-2 text-center">{ROOM_LABELS[String(b.room_type ?? "5")] ?? "—"}</td>
+                  <td className="border p-2 text-center">{roomLabelOf(b)}</td>
                   <td className="border p-2 text-center font-bold">{total}</td>
                   <td className="border p-2 text-center">{Math.round(perPerson)}</td>
                   <td className="border p-2 text-center">{Math.round(seats)}</td>
