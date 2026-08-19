@@ -1046,11 +1046,17 @@ function UnifiedBookingsTab(props: {
                         <Ticket className="h-3 w-3" />
                       </Button>
                     </Link>
-                    <Link to="/admin-bookings" title="تعديل">
-                      <Button size="sm" variant="outline">
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    </Link>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="تعديل سريع"
+                      onClick={() => {
+                        setManualOpen(false);
+                        setEditId(b.id);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
                     {b.whatsapp_phone && (
                       <a
                         href={`https://wa.me/${b.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`مرحباً ${b.customer_name}، بخصوص حجزك ${b.booking_code}`)}`}
