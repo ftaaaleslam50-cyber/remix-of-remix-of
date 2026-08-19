@@ -98,6 +98,7 @@ interface BookingRow {
   trip_mode?: string | null;
   bus_id?: string | null;
   trip_id?: string | null;
+  package_id?: string | null;
   packages?: { name: string } | null;
   trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses?: { id: string; name: string | null; bus_number: number; expenses: number | null } | null;
@@ -148,7 +149,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -471,6 +472,7 @@ function UnifiedBookingsTab(props: {
   const [tripId, setTripId] = useState<string>("");
   const [busId, setBusId] = useState<string>("");
   const [manualOpen, setManualOpen] = useState<boolean>(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
@@ -982,7 +984,41 @@ function UnifiedBookingsTab(props: {
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((b) => (
+            {filtered.map((b) =>
+              editId === b.id ? (
+                <ManualBookingRow
+                  key={b.id}
+                  colSpan={17}
+                  initial={{
+                    id: b.id,
+                    booking_code: b.booking_code,
+                    customer_name: b.customer_name ?? "",
+                    contact_phone: b.contact_phone ?? "",
+                    whatsapp_phone: b.whatsapp_phone ?? "",
+                    id_number: b.id_number ?? "",
+                    nationality: b.nationality ?? "",
+                    booking_source: b.booking_source ?? "Admin",
+                    booking_type: (b.booking_type as "individual" | "family") ?? "family",
+                    passenger_count: b.passenger_count ?? 1,
+                    male_count: b.male_count ?? b.passenger_count ?? 1,
+                    female_count: b.female_count ?? 0,
+                    room_type: ((b.room_type ?? "1") as RoomType),
+                    package_id: b.package_id ?? null,
+                    trip_id: b.trip_id ?? null,
+                    bus_id: b.bus_id ?? null,
+                    seat_numbers: b.seat_numbers ?? [],
+                    actual_return_day: b.actual_return_day ?? "",
+                    notes: b.notes ?? "",
+                    status: b.status ?? "confirmed",
+                    total_price: Number(b.total_price),
+                  }}
+                  onClose={() => setEditId(null)}
+                  onSaved={() => {
+                    setEditId(null);
+                    qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+                  }}
+                />
+              ) : (
               <TableRow key={b.id} className={b.deleted_at ? "opacity-60" : ""}>
                 <TableCell className="font-bold" dir="ltr">
                   {b.booking_code}
@@ -1011,11 +1047,17 @@ function UnifiedBookingsTab(props: {
                         <Ticket className="h-3 w-3" />
                       </Button>
                     </Link>
-                    <Link to="/admin-bookings" title="تعديل">
-                      <Button size="sm" variant="outline">
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    </Link>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="تعديل سريع"
+                      onClick={() => {
+                        setManualOpen(false);
+                        setEditId(b.id);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
                     {b.whatsapp_phone && (
                       <a
                         href={`https://wa.me/${b.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`مرحباً ${b.customer_name}، بخصوص حجزك ${b.booking_code}`)}`}
@@ -1069,7 +1111,8 @@ function UnifiedBookingsTab(props: {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              ),
+            )}
 
           </TableBody>
         </Table>
