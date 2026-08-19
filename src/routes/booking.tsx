@@ -884,6 +884,7 @@ function BookingPage() {
         packageName={selectedPackage?.name}
         passengerCount={passengerCount}
         roomType={roomType}
+        bookingType={bookingType}
         tripName={selectedTrip?.name}
         departureLabel={tripMode === "return" ? "بدون ذهاب" : (selectedTrip?.departure_day || "")}
         returnLabel={
@@ -2042,6 +2043,7 @@ function PriceBar(props: {
   packageName?: string;
   passengerCount: number;
   roomType: RoomType;
+  bookingType: BookingType | null;
   tripName?: string;
   departureLabel?: string;
   returnLabel?: string;
@@ -2057,7 +2059,7 @@ function PriceBar(props: {
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
-          <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
+          <PriceCell label="الغرفة" value={roomDisplayLabel(props.roomType, props.bookingType)} />
           {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
           {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
           {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}
