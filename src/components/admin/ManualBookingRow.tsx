@@ -311,7 +311,9 @@ export function ManualBookingRow({
 
     const { error } = d.id
       ? await supabase.from("bookings").update(payload as never).eq("id", d.id)
-      : await supabase.from("bookings").insert(payload as never);
+      : await supabase
+          .from("bookings")
+          .insert((ownerId ? { ...payload, created_by: ownerId } : payload) as never);
     setSaving(false);
     if (error) return toast.error(error.message);
     void writeAudit(d.id ? "booking.manual_update" : "booking.manual_create", "bookings", d.id ?? code, { code });
