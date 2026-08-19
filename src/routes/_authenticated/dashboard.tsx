@@ -983,7 +983,6 @@ function UnifiedBookingsTab(props: {
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((b) => (
             {filtered.map((b) =>
               editId === b.id ? (
                 <ManualBookingRow
