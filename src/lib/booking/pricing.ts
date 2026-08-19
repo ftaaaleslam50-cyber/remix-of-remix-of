@@ -9,6 +9,18 @@ export const ROOM_LABEL: Record<RoomType, string> = {
   "5": "خماسي",
 };
 
+import type { BookingType } from "./types";
+
+/**
+ * Display name for a room, accounting for booking type.
+ * Individual (أفراد) bookings always use the shared quintuple room,
+ * so we surface it as "خماسي مشترك" everywhere instead of plain "خماسي".
+ */
+export function roomDisplayLabel(roomType: RoomType, bookingType?: BookingType | null): string {
+  if (bookingType === "individual") return "خماسي مشترك";
+  return ROOM_LABEL[roomType];
+}
+
 // Price per person = the exact value stored for the selected room_type column.
 //
 // Pricing logic:

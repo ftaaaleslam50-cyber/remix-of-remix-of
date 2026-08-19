@@ -37,7 +37,7 @@ import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
-import { ROOM_LABEL } from "@/lib/booking/pricing";
+import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import {
   buildDefaultLayout,
@@ -215,7 +215,7 @@ function Dashboard() {
       الجوال: b.contact_phone,
       واتساب: b.whatsapp_phone,
       الفندق: b.packages?.name ?? "-",
-      الغرفة: b.room_type,
+      الغرفة: roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null),
       الرحلة: b.trips?.name ?? "-",
       الباص: b.buses?.bus_number ?? "-",
       المقاعد: b.seat_numbers.join(", "),
@@ -624,7 +624,7 @@ function UnifiedBookingsTab(props: {
       "رقم الجوال": b.contact_phone,
       "رقم الهوية": b.id_number,
       الجنسية: b.nationality ?? "-",
-      "نوع الغرفة": b.room_type,
+      "نوع الغرفة": roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null),
       الذكور: Number(b.male_count ?? 0),
       الإناث: Number(b.female_count ?? 0),
       المقاعد: (b.seat_numbers ?? []).join(", "),
@@ -672,7 +672,7 @@ function UnifiedBookingsTab(props: {
         count: b.passenger_count || 0,
         returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
         hotel: b.packages?.name ?? "بدون فندق",
-        roomType: ROOM_TXT[String(b.room_type ?? "5")] ?? String(b.room_type ?? ""),
+        roomType: roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null) ?? String(b.room_type ?? ""),
         total: Number(b.total_price || 0),
         notes: b.notes ?? "",
       })),
@@ -993,7 +993,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell>{b.customer_name}</TableCell>
                 <TableCell dir="ltr">{b.contact_phone}</TableCell>
                 <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
-                <TableCell className="text-xs">{ROOM_LABEL[(b.room_type ?? "5") as RoomType] ?? "-"}</TableCell>
+                <TableCell className="text-xs">{roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null) ?? "-"}</TableCell>
                 <TableCell className="text-xs">{(b.extension_nights ?? 0) > 0 ? `${b.extension_nights} ليلة` : "بدون"}</TableCell>
                 <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
                 <TableCell className="text-xs">{returnDisplay(b.actual_return_day ?? b.trips?.return_day, b.extension_nights, "-", b.trip_mode)}</TableCell>

@@ -45,7 +45,7 @@ import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { extensionLabel } from "@/lib/return-display";
 import { sar } from "@/lib/format";
-import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
+import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 
@@ -884,6 +884,7 @@ function BookingPage() {
         packageName={selectedPackage?.name}
         passengerCount={passengerCount}
         roomType={roomType}
+        bookingType={bookingType}
         tripName={selectedTrip?.name}
         departureLabel={tripMode === "return" ? "بدون ذهاب" : (selectedTrip?.departure_day || "")}
         returnLabel={
@@ -1943,6 +1944,7 @@ function StepConfirm(props: {
 }) {
   const rows: [string, string][] = [
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
+    ["نوع الغرفة", roomDisplayLabel(props.roomType, props.bookingType)],
     ["عدد الأفراد", String(props.passengerCount)],
     ["الذكور / الإناث", `${props.maleCount} / ${props.femaleCount}`],
     ["الفندق", props.noHotel ? "بدون فندق" : (props.pkg?.name ?? "—")],
@@ -2042,6 +2044,7 @@ function PriceBar(props: {
   packageName?: string;
   passengerCount: number;
   roomType: RoomType;
+  bookingType: BookingType | null;
   tripName?: string;
   departureLabel?: string;
   returnLabel?: string;
@@ -2057,7 +2060,7 @@ function PriceBar(props: {
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
-          <PriceCell label="الغرفة" value={ROOM_LABEL[props.roomType]} />
+          <PriceCell label="الغرفة" value={roomDisplayLabel(props.roomType, props.bookingType)} />
           {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
           {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
           {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}

@@ -279,7 +279,7 @@ export function TripSheetTab() {
           ثلاثي: priceOf("3"),
           رباعي: priceOf("4"),
           خماسي: priceOf("5"),
-          "مشترك خماسي": priceOf("5"),
+          "خماسي مشترك": priceOf("5"),
           "مشترك رباعي": priceOf("4"),
           "مشترك مشرف": priceOf("4"),
         };
@@ -310,7 +310,7 @@ export function TripSheetTab() {
 
   function roomLabelOf(b: SheetBooking): string {
     if (!b.packages?.name) return "ذهاب وعوده فقط";
-    if (b.booking_type === "individual") return "مشترك خماسي";
+    if (b.booking_type === "individual") return "خماسي مشترك";
     return ROOM_LABELS[String(b.room_type ?? "5")] ?? "خماسي";
   }
 
