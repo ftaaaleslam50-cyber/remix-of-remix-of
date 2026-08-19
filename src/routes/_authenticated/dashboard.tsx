@@ -984,6 +984,41 @@ function UnifiedBookingsTab(props: {
               </TableRow>
             )}
             {filtered.map((b) => (
+            {filtered.map((b) =>
+              editId === b.id ? (
+                <ManualBookingRow
+                  key={b.id}
+                  colSpan={17}
+                  initial={{
+                    id: b.id,
+                    booking_code: b.booking_code,
+                    customer_name: b.customer_name ?? "",
+                    contact_phone: b.contact_phone ?? "",
+                    whatsapp_phone: b.whatsapp_phone ?? "",
+                    id_number: b.id_number ?? "",
+                    nationality: b.nationality ?? "",
+                    booking_source: b.booking_source ?? "Admin",
+                    booking_type: (b.booking_type as "individual" | "family") ?? "family",
+                    passenger_count: b.passenger_count ?? 1,
+                    male_count: b.male_count ?? b.passenger_count ?? 1,
+                    female_count: b.female_count ?? 0,
+                    room_type: ((b.room_type ?? "1") as RoomType),
+                    package_id: null,
+                    trip_id: b.trip_id ?? null,
+                    bus_id: b.bus_id ?? null,
+                    seat_numbers: b.seat_numbers ?? [],
+                    actual_return_day: b.actual_return_day ?? "",
+                    notes: b.notes ?? "",
+                    status: b.status ?? "confirmed",
+                    total_price: Number(b.total_price),
+                  }}
+                  onClose={() => setEditId(null)}
+                  onSaved={() => {
+                    setEditId(null);
+                    qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+                  }}
+                />
+              ) : (
               <TableRow key={b.id} className={b.deleted_at ? "opacity-60" : ""}>
                 <TableCell className="font-bold" dir="ltr">
                   {b.booking_code}
