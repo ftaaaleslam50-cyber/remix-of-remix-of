@@ -57,7 +57,7 @@ function MyBookingsPage() {
       setUid(user.id);
       const [{ data: role }, { data: profile }] = await Promise.all([
         supabase
-        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "representative").maybeSingle();
+          .from("user_roles").select("role").eq("user_id", user.id).eq("role", "representative").maybeSingle(),
         supabase.from("profiles").select("account_type").eq("id", user.id).maybeSingle(),
       ]);
       setIsRep(!!role || profile?.account_type === "representative");
