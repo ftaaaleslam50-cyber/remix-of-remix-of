@@ -45,7 +45,7 @@ import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { extensionLabel } from "@/lib/return-display";
 import { sar } from "@/lib/format";
-import { getPackagePrice, ROOM_LABEL } from "@/lib/booking/pricing";
+import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 
