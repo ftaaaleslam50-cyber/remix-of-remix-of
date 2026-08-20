@@ -224,16 +224,22 @@ export function ManualBookingRow({
   });
 
   // Seats already taken on this bus (excluding the booking being edited).
+  // Uses the public occupancy RPC so non-admin staff (representatives) also
+  // see the real occupancy instead of an empty bus.
   const { data: reserved = [] } = useQuery({
     queryKey: ["mb-reserved", d.bus_id, d.booking_code ?? ""],
     enabled: !!d.bus_id,
     queryFn: async () => {
-      let q = supabase.from("bookings").select("seat_numbers,booking_code").eq("bus_id", d.bus_id!).neq("status", "cancelled").is("deleted_at", null);
-      if (d.booking_code) q = q.neq("booking_code", d.booking_code);
-      const { data } = await q;
+      const { data, error } = await supabase.rpc("get_bus_occupancy" as never, {
+        _trip_id: d.trip_id ?? null,
+        _bus_id: d.bus_id,
+        _exclude_code: d.booking_code ?? null,
+      } as never);
+      if (error) throw error;
       return ((data ?? []) as { seat_numbers: string[] }[]).flatMap((r) => r.seat_numbers ?? []);
     },
   });
+
 
   // Individual bookings always price off the shared 5-bed column.
   useEffect(() => {

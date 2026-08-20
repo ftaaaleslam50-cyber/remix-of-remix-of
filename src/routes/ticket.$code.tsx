@@ -46,7 +46,14 @@ interface Booking {
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
 }
 
+/** Direct PDF download link: opens the ticket and triggers the print/save-as-PDF dialog. */
+function pdfLink(code: string) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/ticket/${code}?pdf=1`;
+}
+
 function TicketPage() {
+
   const { code } = useParams({ from: "/ticket/$code" });
   const navigate = useNavigate();
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -120,6 +127,14 @@ function TicketPage() {
     })();
   }, [booking]);
 
+  // ?pdf=1 → open the print/save-as-PDF dialog automatically (direct download link).
+  useEffect(() => {
+    if (!booking || !layout) return;
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("pdf") !== "1") return;
+    const t = setTimeout(() => window.print(), 800);
+    return () => clearTimeout(t);
+  }, [booking, layout]);
 
 
   if (loading)
@@ -174,7 +189,7 @@ function TicketPage() {
     if (b.coupon_code) lines.push(`كود الخصم: ${b.coupon_code}`);
     lines.push(`الإجمالي: ${sar(Number(b.total_price))}`);
     lines.push("——————————————");
-    lines.push(`رابط التذكرة: ${typeof window !== "undefined" ? window.location.href : ""}`);
+    lines.push(`رابط تحميل التذكرة PDF: ${pdfLink(b.booking_code)}`);
     lines.push("يرجى إبراز التذكرة عند الصعود للباص.");
     return lines.join("\n");
   }
