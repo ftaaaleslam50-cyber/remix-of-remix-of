@@ -127,6 +127,14 @@ function TicketPage() {
     })();
   }, [booking]);
 
+  // ?pdf=1 → open the print/save-as-PDF dialog automatically (direct download link).
+  useEffect(() => {
+    if (!booking || !layout) return;
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("pdf") !== "1") return;
+    const t = setTimeout(() => window.print(), 800);
+    return () => clearTimeout(t);
+  }, [booking, layout]);
 
 
   if (loading)
