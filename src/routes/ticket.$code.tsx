@@ -174,7 +174,7 @@ function TicketPage() {
     if (b.coupon_code) lines.push(`كود الخصم: ${b.coupon_code}`);
     lines.push(`الإجمالي: ${sar(Number(b.total_price))}`);
     lines.push("——————————————");
-    lines.push(`رابط التذكرة: ${typeof window !== "undefined" ? window.location.href : ""}`);
+    lines.push(`رابط تحميل التذكرة PDF: ${pdfLink(b.booking_code)}`);
     lines.push("يرجى إبراز التذكرة عند الصعود للباص.");
     return lines.join("\n");
   }
