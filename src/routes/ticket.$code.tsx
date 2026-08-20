@@ -46,7 +46,14 @@ interface Booking {
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
 }
 
+/** Direct PDF download link: opens the ticket and triggers the print/save-as-PDF dialog. */
+function pdfLink(code: string) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/ticket/${code}?pdf=1`;
+}
+
 function TicketPage() {
+
   const { code } = useParams({ from: "/ticket/$code" });
   const navigate = useNavigate();
   const [booking, setBooking] = useState<Booking | null>(null);
