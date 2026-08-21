@@ -132,9 +132,15 @@ function TicketPage() {
     if (!booking || !layout) return;
     if (typeof window === "undefined") return;
     if (new URLSearchParams(window.location.search).get("pdf") !== "1") return;
+    const prevTitle = document.title;
+    document.title = `ticket-${booking.booking_code}`;
     const t = setTimeout(() => window.print(), 800);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      document.title = prevTitle;
+    };
   }, [booking, layout]);
+
 
 
   if (loading)
