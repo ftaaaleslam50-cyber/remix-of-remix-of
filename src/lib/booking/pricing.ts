@@ -21,12 +21,12 @@ export function roomDisplayLabel(
   bookingType?: BookingType | null,
   hasHotel?: boolean | null,
 ): string {
-  if (bookingType === "individual") {
-    if (hasHotel === false) return "بدون فندق";
-    return "خماسي مشترك";
-  }
+  // No hotel selected → there is no room at all.
+  if (hasHotel === false) return "بدون فندق";
+  if (bookingType === "individual") return "خماسي مشترك";
   return ROOM_LABEL[roomType];
 }
+
 
 // Price per person = the exact value stored for the selected room_type column.
 //
