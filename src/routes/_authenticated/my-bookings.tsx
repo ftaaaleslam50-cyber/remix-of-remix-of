@@ -173,6 +173,10 @@ function MyBookingsPage() {
                         {b.no_hotel && <Badge variant="outline">بدون فندق</Badge>}
                         {b.no_bus && <Badge variant="outline">بدون حافلة</Badge>}
                       </div>
+                      <p className="mt-2 flex items-center gap-2 font-bold text-base">
+                        <User className="h-4 w-4 text-primary" /> {b.customer_name || "—"}
+                      </p>
+
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{new Date(b.created_at).toLocaleDateString("ar")}</b></span>
                         {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{new Date(b.trips.departure_day).toLocaleDateString("ar")}</b></span>}
