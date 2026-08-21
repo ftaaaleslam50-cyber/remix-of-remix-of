@@ -132,9 +132,15 @@ function TicketPage() {
     if (!booking || !layout) return;
     if (typeof window === "undefined") return;
     if (new URLSearchParams(window.location.search).get("pdf") !== "1") return;
+    const prevTitle = document.title;
+    document.title = `ticket-${booking.booking_code}`;
     const t = setTimeout(() => window.print(), 800);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      document.title = prevTitle;
+    };
   }, [booking, layout]);
+
 
 
   if (loading)
@@ -249,15 +255,15 @@ function TicketPage() {
         <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
 
           <div className="px-8 py-6 text-white flex items-center gap-4" style={{ background: "var(--gradient-navy)" }}>
-            <img src={BRAND.logoUrl} alt="logo" className="h-16 w-16 rounded-full bg-white p-1" />
             <div className="flex-1">
-              <h2 className="text-xl font-extrabold">{BRAND.name}</h2>
-              <p className="text-xs text-white/70">الرقم الموحد: {BRAND.nationalNumber}</p>
+              <h2 className="text-xl font-extrabold">تذكرة حجز</h2>
+              <p className="text-xs text-white/70">رقم الحجز: <span dir="ltr">{booking.booking_code}</span></p>
             </div>
             <div className="rounded-full bg-[color:var(--color-gold)]/90 text-[color:var(--color-navy)] text-xs font-extrabold px-3 py-1.5">
               مؤكَّد
             </div>
           </div>
+
 
           <div className="px-8 py-6 border-b border-dashed border-border flex items-center justify-between">
             <div>
@@ -332,7 +338,7 @@ function TicketPage() {
           </div>
 
           <div className="px-8 py-5 text-center text-xs text-muted-foreground">
-            يرجى إبراز التذكرة عند الصعود للباص. شكراً لاختياركم {BRAND.name}.
+            يرجى إبراز التذكرة عند الصعود للباص.
           </div>
         </div>
       </div>
@@ -341,7 +347,7 @@ function TicketPage() {
         <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
           <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
             <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>
-              <img src={BRAND.logoUrl} alt="logo" className="h-12 w-12 rounded-full bg-white p-1" />
+
               <div>
                 <h2 className="text-lg font-extrabold">مخطط الحافلة</h2>
                 <p className="text-xs text-white/70">
