@@ -22,11 +22,7 @@ function shape(input: string): string {
   const reshaped = ArabicReshaper.convertArabic(text);
   // pdf-lib reverses the full string when drawing RTL text; reversing each
   // Latin/digit run beforehand keeps "180" and "ZT-2026-1234" in order.
-  return reshaped.replace(LTR_RUN_RE, (run) => {
-    const trimmed = run.replace(/[.,:)/-]+$/, "");
-    const tail = run.slice(trimmed.length);
-    return Array.from(trimmed).reverse().join("") + tail;
-  });
+  return reshaped.replace(LTR_RUN_RE, (run) => Array.from(run).reverse().join(""));
 }
 
 
