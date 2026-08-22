@@ -32,6 +32,7 @@ import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
 import { Route as AuthenticatedAdminBookingsRouteImport } from './routes/_authenticated/admin-bookings'
 import { Route as AuthenticatedAdminAssetsRouteImport } from './routes/_authenticated/admin-assets'
+import { Route as ApiPublicTicketCodeDownloadRouteImport } from './routes/api/public/ticket.$code.download'
 
 const PackagesRoute = PackagesRouteImport.update({
   id: '/packages',
@@ -154,6 +155,12 @@ const AuthenticatedAdminAssetsRoute =
     path: '/admin-assets',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicTicketCodeDownloadRoute =
+  ApiPublicTicketCodeDownloadRouteImport.update({
+    id: '/api/public/ticket/$code/download',
+    path: '/api/public/ticket/$code/download',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/my-bookings': typeof AuthenticatedMyBookingsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
+  '/api/public/ticket/$code/download': typeof ApiPublicTicketCodeDownloadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -202,6 +210,7 @@ export interface FileRoutesByTo {
   '/my-bookings': typeof AuthenticatedMyBookingsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
+  '/api/public/ticket/$code/download': typeof ApiPublicTicketCodeDownloadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -228,6 +237,7 @@ export interface FileRoutesById {
   '/_authenticated/my-bookings': typeof AuthenticatedMyBookingsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
+  '/api/public/ticket/$code/download': typeof ApiPublicTicketCodeDownloadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/my-bookings'
     | '/profile'
     | '/ticket/$code'
+    | '/api/public/ticket/$code/download'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/my-bookings'
     | '/profile'
     | '/ticket/$code'
+    | '/api/public/ticket/$code/download'
   id:
     | '__root__'
     | '/'
@@ -303,6 +315,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-bookings'
     | '/_authenticated/profile'
     | '/ticket/$code'
+    | '/api/public/ticket/$code/download'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -315,6 +328,7 @@ export interface RootRouteChildren {
   GalleryRoute: typeof GalleryRoute
   PackagesRoute: typeof PackagesRoute
   TicketCodeRoute: typeof TicketCodeRoute
+  ApiPublicTicketCodeDownloadRoute: typeof ApiPublicTicketCodeDownloadRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -480,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAssetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/ticket/$code/download': {
+      id: '/api/public/ticket/$code/download'
+      path: '/api/public/ticket/$code/download'
+      fullPath: '/api/public/ticket/$code/download'
+      preLoaderRoute: typeof ApiPublicTicketCodeDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -530,6 +551,7 @@ const rootRouteChildren: RootRouteChildren = {
   GalleryRoute: GalleryRoute,
   PackagesRoute: PackagesRoute,
   TicketCodeRoute: TicketCodeRoute,
+  ApiPublicTicketCodeDownloadRoute: ApiPublicTicketCodeDownloadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
