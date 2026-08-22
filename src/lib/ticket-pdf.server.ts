@@ -140,7 +140,7 @@ const M = 40; // page margin
 export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
-  const font = await pdf.embedFont(await loadArabicFont(), { subset: true });
+  const font = await pdf.embedFont(await loadArabicFont(), { subset: false });
   pdf.setTitle(`ticket-${b.booking_code}`);
 
   const page = pdf.addPage(A4);
