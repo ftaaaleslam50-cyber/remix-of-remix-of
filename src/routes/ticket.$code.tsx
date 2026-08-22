@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Printer, MessageCircle, Copy, Check, Loader2, FileImage, Home, Pencil } from "lucide-react";
+import { Download, Share2, Copy, Check, Loader2, FileImage, Home, Pencil } from "lucide-react";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { BRAND, whatsappLink } from "@/lib/brand";
+import { BRAND } from "@/lib/brand";
 import { sar, formatDate } from "@/lib/format";
 import { returnDisplay } from "@/lib/return-display";
 import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
@@ -46,10 +46,10 @@ interface Booking {
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
 }
 
-/** Direct PDF download link: opens the ticket and triggers the print/save-as-PDF dialog. */
+/** Direct server-generated PDF download link (no browser print dialog). */
 function pdfLink(code: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/ticket/${code}?pdf=1`;
+  return `${origin}/api/public/ticket/${code}/download`;
 }
 
 function TicketPage() {
@@ -200,8 +200,19 @@ function TicketPage() {
     return lines.join("\n");
   }
 
-  function shareWhatsApp() {
-    window.open(whatsappLink(summaryText()), "_blank");
+  /** Share the direct PDF download link via the device's native share sheet. */
+  async function shareBooking() {
+    const url = pdfLink(booking!.booking_code);
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ text: url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success("تم نسخ رابط تحميل التذكرة");
+    } catch {
+      /* المستخدم ألغى المشاركة */
+    }
   }
 
   function copyDetails() {
@@ -217,16 +228,15 @@ function TicketPage() {
       <div className="no-print container-luxe mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">تذكرة حجز رحلة العمرة</h1>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => window.print()} className="btn-primary-glow rounded-full">
-            <Printer className="h-4 w-4 ml-2" /> تحميل التذكرة PDF
+          <Button
+            onClick={() => window.open(pdfLink(booking!.booking_code), "_blank")}
+            className="btn-primary-glow rounded-full"
+          >
+            <Download className="h-4 w-4 ml-2" /> تحميل التذكرة PDF
           </Button>
 
-          <Button
-            onClick={shareWhatsApp}
-            variant="outline"
-            className="rounded-full bg-[#25D366] text-white border-0 hover:bg-[#25D366]/90 hover:text-white"
-          >
-            <MessageCircle className="h-4 w-4 ml-2" /> مشاركة عبر واتساب
+          <Button onClick={shareBooking} variant="outline" className="rounded-full">
+            <Share2 className="h-4 w-4 ml-2" /> مشاركة الحجز
           </Button>
           <Button onClick={copyDetails} variant="outline" className="rounded-full">
             {copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />} نسخ البيانات

@@ -1,26 +1,32 @@
 // Server-side ticket PDF generation (Cloudflare Worker friendly).
-// Arabic support: text is reshaped to presentation forms and reordered with a
-// bidi algorithm, then drawn with an embedded Amiri TTF (no HTML/browser print).
+// Arabic support: text is reshaped to presentation forms and drawn with an
+// embedded Amiri TTF (no HTML/browser print). pdf-lib reverses the whole
+// string for RTL text, so embedded Latin/digit runs are pre-reversed here.
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import ArabicReshaper from "arabic-reshaper";
-import bidiFactory from "bidi-js";
 import QRCode from "qrcode";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { returnDisplay } from "@/lib/return-display";
 import { roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 
-const bidi = bidiFactory();
+const ARABIC_RE = /[\u0600-\u06FF\uFB50-\uFEFF]/;
+const LTR_RUN_RE = /[A-Za-z0-9][A-Za-z0-9\-_.:/+٫,()]*/g;
 
-/** Reshape + visually reorder a mixed Arabic/Latin string for PDF drawing. */
+/** Reshape Arabic to presentation forms and keep Latin/digit runs readable. */
 function shape(input: string): string {
   const text = String(input ?? "");
   if (!text) return "";
+  if (!ARABIC_RE.test(text)) return text;
   const reshaped = ArabicReshaper.convertArabic(text);
-  const levels = bidi.getEmbeddingLevels(reshaped, "rtl");
-  return bidi.getReorderedString(reshaped, levels);
+  // pdf-lib reverses the full string when drawing RTL text; reversing each
+  // Latin/digit run beforehand keeps "180" and "ZT-2026-1234" in order.
+  const withRuns = reshaped.replace(LTR_RUN_RE, (run: string) => Array.from(run).reverse().join(""));
+  // Brackets are mirrored by the RTL reversal, so pre-swap them.
+  return withRuns.replace(/[()[\]]/g, (c: string) => (c === "(" ? ")" : c === ")" ? "(" : c === "[" ? "]" : "["));
 }
+
 
 const NAVY = rgb(0.05, 0.13, 0.26);
 const GOLD = rgb(0.78, 0.63, 0.29);
@@ -105,13 +111,13 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
 }
 
 function sar(n: number): string {
-  return `${Number(n || 0).toLocaleString("en-US")} ر.س`;
+  return `ر.س ${Number(n || 0).toLocaleString("en-US")}`;
 }
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+  return new Intl.DateTimeFormat("en-GB", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -190,7 +196,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   ];
   if (Number(b.extension_nights ?? 0) > 0) rows.push(["عدد ليال التمديد", String(b.extension_nights)]);
   rows.push(["نوع الحجز", b.booking_type === "individual" ? "أفراد" : "عوائل"]);
-  rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type, hasHotel)]);
+  rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type as "individual" | "family", hasHotel)]);
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
   rows.push([
     "رقم الباص",

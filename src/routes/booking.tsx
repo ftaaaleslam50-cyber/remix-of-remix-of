@@ -390,7 +390,9 @@ function BookingPage() {
       }
     : null;
   const transportOnly = noHotel;
-  const STEPS: readonly string[] = noBus ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
+  // "عودة فقط" لا يحتاج اختيار مقاعد، وكذلك «بدون حافلة».
+  const skipSeats = noBus || tripMode === "return";
+  const STEPS: readonly string[] = skipSeats ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
 
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
@@ -506,6 +508,7 @@ function BookingPage() {
         return null;
       }
       case "المقاعد":
+        if (skipSeats) return null;
         return seats.length === passengerCount
           ? null
           : `يجب اختيار ${passengerCount} مقعد (تم اختيار ${seats.length})`;
@@ -571,7 +574,7 @@ function BookingPage() {
         package_id: noHotel ? null : selectedPackage!.id,
         trip_id: tripId,
         bus_id: noBus ? null : activeBus!.id,
-        seat_numbers: noBus ? [] : seats,
+        seat_numbers: skipSeats ? [] : seats,
         no_hotel: noHotel,
         no_bus: noBus,
         customer_name: customer.customer_name.trim(),
