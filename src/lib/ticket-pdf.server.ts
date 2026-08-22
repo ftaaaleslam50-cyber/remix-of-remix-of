@@ -44,6 +44,16 @@ async function loadArabicFont(): Promise<Uint8Array> {
   return fontCache;
 }
 
+let notesCache: Uint8Array | null = null;
+/** Third ticket page: "تنبيهات هامة" infographic stored in the fonts bucket. */
+async function loadNotesImage(): Promise<Uint8Array | null> {
+  if (notesCache) return notesCache;
+  const { data, error } = await supabaseAdmin.storage.from("fonts").download("ticket-notes.jpg");
+  if (error || !data) return null;
+  notesCache = new Uint8Array(await data.arrayBuffer());
+  return notesCache;
+}
+
 export interface TicketBooking {
   booking_code: string;
   booking_type: string;
@@ -320,6 +330,21 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   rtl(p2, `مقاعدك (${b.customer_name})`, right - 22, legendY + 2, 10, GREY);
   p2.drawRectangle({ x: right - 190, y: legendY, width: 12, height: 12, color: rgb(1, 1, 1), borderColor: BORDER, borderWidth: 1 });
   rtl(p2, "مقاعد أخرى", right - 198, legendY + 2, 10, GREY);
+
+  // ---- Page 3: important notices image ----
+  try {
+    const notes = await loadNotesImage();
+    if (notes) {
+      const img = await pdf.embedJpg(notes);
+      const p3 = pdf.addPage(A4);
+      const scale = Math.min((A4[0] - 2 * 12) / img.width, (A4[1] - 2 * 12) / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      p3.drawImage(img, { x: (A4[0] - w) / 2, y: (A4[1] - h) / 2, width: w, height: h });
+    }
+  } catch (err) {
+    console.error("notes page failed", err);
+  }
 
   return await pdf.save();
 }
