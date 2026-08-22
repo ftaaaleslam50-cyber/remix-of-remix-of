@@ -12,4 +12,14 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    resolve: {
+      alias: {
+        // pdf-lib pulls tslib's UMD/CJS build, whose default export is undefined
+        // once bundled for the Cloudflare worker ("Cannot destructure property
+        // '__extends'"). Force the ESM build so the helpers resolve.
+        tslib: "tslib/tslib.es6.mjs",
+      },
+    },
+  },
 });
