@@ -22,7 +22,9 @@ function shape(input: string): string {
   const reshaped = ArabicReshaper.convertArabic(text);
   // pdf-lib reverses the full string when drawing RTL text; reversing each
   // Latin/digit run beforehand keeps "180" and "ZT-2026-1234" in order.
-  return reshaped.replace(LTR_RUN_RE, (run) => Array.from(run).reverse().join(""));
+  const withRuns = reshaped.replace(LTR_RUN_RE, (run) => Array.from(run).reverse().join(""));
+  // Brackets are mirrored by the RTL reversal, so pre-swap them.
+  return withRuns.replace(/[()[\]]/g, (c) => (c === "(" ? ")" : c === ")" ? "(" : c === "[" ? "]" : "["));
 }
 
 
@@ -109,13 +111,13 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
 }
 
 function sar(n: number): string {
-  return `${Number(n || 0).toLocaleString("en-US")} ر.س`;
+  return `ر.س ${Number(n || 0).toLocaleString("en-US")}`;
 }
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+  return new Intl.DateTimeFormat("en-GB", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
