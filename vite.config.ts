@@ -5,6 +5,12 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { fileURLToPath } from "node:url";
+
+// pdf-lib pulls tslib's UMD/CJS build, whose default export is undefined once
+// bundled for the Cloudflare worker ("Cannot destructure property '__extends'").
+// Force the ESM build so the helpers resolve at runtime.
+const tslibEsm = fileURLToPath(new URL("./node_modules/tslib/tslib.es6.mjs", import.meta.url));
 
 export default defineConfig({
   tanstackStart: {
@@ -15,10 +21,7 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        // pdf-lib pulls tslib's UMD/CJS build, whose default export is undefined
-        // once bundled for the Cloudflare worker ("Cannot destructure property
-        // '__extends'"). Force the ESM build so the helpers resolve.
-        tslib: "tslib/tslib.es6.mjs",
+        tslib: tslibEsm,
       },
     },
   },
