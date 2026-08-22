@@ -200,16 +200,16 @@ function TicketPage() {
     return lines.join("\n");
   }
 
-  /** Share the direct PDF download link via the device's native share sheet. */
+  /** Share the full booking summary (same content as the copy button). */
   async function shareBooking() {
-    const url = pdfLink(booking!.booking_code);
+    const text = summaryText();
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ text: url });
+        await navigator.share({ title: `حجز ${booking!.booking_code}`, text });
         return;
       }
-      await navigator.clipboard.writeText(url);
-      toast.success("تم نسخ رابط تحميل التذكرة");
+      await navigator.clipboard.writeText(text);
+      toast.success("تم نسخ بيانات الحجز كاملة");
     } catch {
       /* المستخدم ألغى المشاركة */
     }
