@@ -44,6 +44,16 @@ async function loadArabicFont(): Promise<Uint8Array> {
   return fontCache;
 }
 
+let notesCache: Uint8Array | null = null;
+/** Third ticket page: "تنبيهات هامة" infographic stored in the fonts bucket. */
+async function loadNotesImage(): Promise<Uint8Array | null> {
+  if (notesCache) return notesCache;
+  const { data, error } = await supabaseAdmin.storage.from("fonts").download("ticket-notes.jpg");
+  if (error || !data) return null;
+  notesCache = new Uint8Array(await data.arrayBuffer());
+  return notesCache;
+}
+
 export interface TicketBooking {
   booking_code: string;
   booking_type: string;
