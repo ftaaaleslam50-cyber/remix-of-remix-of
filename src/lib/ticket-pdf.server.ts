@@ -22,9 +22,9 @@ function shape(input: string): string {
   const reshaped = ArabicReshaper.convertArabic(text);
   // pdf-lib reverses the full string when drawing RTL text; reversing each
   // Latin/digit run beforehand keeps "180" and "ZT-2026-1234" in order.
-  const withRuns = reshaped.replace(LTR_RUN_RE, (run) => Array.from(run).reverse().join(""));
+  const withRuns = reshaped.replace(LTR_RUN_RE, (run: string) => Array.from(run).reverse().join(""));
   // Brackets are mirrored by the RTL reversal, so pre-swap them.
-  return withRuns.replace(/[()[\]]/g, (c) => (c === "(" ? ")" : c === ")" ? "(" : c === "[" ? "]" : "["));
+  return withRuns.replace(/[()[\]]/g, (c: string) => (c === "(" ? ")" : c === ")" ? "(" : c === "[" ? "]" : "["));
 }
 
 
@@ -196,7 +196,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   ];
   if (Number(b.extension_nights ?? 0) > 0) rows.push(["عدد ليال التمديد", String(b.extension_nights)]);
   rows.push(["نوع الحجز", b.booking_type === "individual" ? "أفراد" : "عوائل"]);
-  rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type, hasHotel)]);
+  rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type as "individual" | "family", hasHotel)]);
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
   rows.push([
     "رقم الباص",
