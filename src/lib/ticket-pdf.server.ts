@@ -3,7 +3,6 @@
 // bidi algorithm, then drawn with an embedded Amiri TTF (no HTML/browser print).
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import ArabicReshaper from "arabic-reshaper";
 import bidiFactory from "bidi-js";
 import QRCode from "qrcode";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -13,13 +12,21 @@ import type { RoomType } from "@/lib/booking/types";
 
 const bidi = bidiFactory();
 
-/** Reshape + visually reorder a mixed Arabic/Latin string for PDF drawing. */
+/** Reorder a mixed Arabic/Latin string to visual order (fontkit handles glyph shaping). */
 function shape(input: string): string {
   const text = String(input ?? "");
   if (!text) return "";
-  const reshaped = ArabicReshaper.convertArabic(text);
-  const levels = bidi.getEmbeddingLevels(reshaped, "rtl");
-  return bidi.getReorderedString(reshaped, levels);
+  const levels = bidi.getEmbeddingLevels(text, "rtl");
+  // fontkit shapes + reverses RTL runs itself, so hand it logical-order runs
+  // arranged visually: reorder segments, keeping each run's characters logical.
+  const segments = bidi.getReorderSegments(text, levels);
+  if (!segments.length) return text;
+  const chars = Array.from(text);
+  for (const [start, end] of segments) {
+    const slice = chars.slice(start, end + 1).reverse();
+    for (let i = 0; i < slice.length; i++) chars[start + i] = slice[i]!;
+  }
+  return chars.join("");
 }
 
 const NAVY = rgb(0.05, 0.13, 0.26);
