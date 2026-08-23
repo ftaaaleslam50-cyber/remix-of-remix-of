@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.notify_bus_occupancy() FROM PUBLIC, anon, authenticated;
