@@ -1979,10 +1979,11 @@ function StepConfirm(props: {
       <StepHeader title="مراجعة الحجز" desc="تأكد من البيانات قبل التأكيد" />
       <div className="grid md:grid-cols-2 gap-3">
         {rows.map(([k, v]) => (
-          <div key={k} className="surface-card p-4 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">{k}</span>
-            <span className="font-bold text-left">{v}</span>
+          <div key={k} className="surface-card p-4 flex items-center justify-between gap-3">
+            <span className="shrink-0 text-sm text-muted-foreground">{k}</span>
+            <span className="min-w-0 break-words text-left font-bold">{v}</span>
           </div>
+
         ))}
       </div>
 
