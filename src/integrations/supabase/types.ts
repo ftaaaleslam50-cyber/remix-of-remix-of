@@ -600,6 +600,24 @@ export type Database = {
         }
         Relationships: []
       }
+      bus_occupancy_alerts: {
+        Row: {
+          bus_id: string
+          created_at: string
+          threshold: number
+        }
+        Insert: {
+          bus_id: string
+          created_at?: string
+          threshold: number
+        }
+        Update: {
+          bus_id?: string
+          created_at?: string
+          threshold?: number
+        }
+        Relationships: []
+      }
       buses: {
         Row: {
           active: boolean
