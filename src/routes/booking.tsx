@@ -1878,7 +1878,7 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
   const [dragging, setDragging] = useState(false);
   return (
     <label
-      className={`mt-2 block rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+      className={`mt-2 block w-full max-w-full overflow-hidden rounded-2xl border-2 border-dashed p-5 sm:p-8 text-center cursor-pointer transition-colors ${dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -1898,10 +1898,13 @@ function IdUploader({ file, onChange }: { file: File | null; onChange: (f: File 
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
       />
       {file ? (
-        <div className="flex flex-col items-center gap-2">
-          <CheckCircle2 className="h-10 w-10 text-success" />
-          <p className="font-semibold">{file.name}</p>
+        <div className="flex min-w-0 flex-col items-center gap-2">
+          <CheckCircle2 className="h-10 w-10 shrink-0 text-success" />
+          <p className="w-full max-w-full truncate px-2 text-sm font-semibold" dir="ltr" title={file.name}>
+            {file.name}
+          </p>
           <p className="text-xs text-muted-foreground">{Math.round(file.size / 1024)} KB</p>
+
           <button
             type="button"
             onClick={(e) => {
