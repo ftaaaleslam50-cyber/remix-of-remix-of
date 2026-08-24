@@ -155,7 +155,7 @@ function put(
   row: number,
   col: number,
   value: ExcelJS.CellValue,
-  o: { fill?: string; color?: string; size?: number; bold?: boolean } = {},
+  o: { fill?: string; color?: string; size?: number; bold?: boolean; wrap?: boolean } = {},
 ) {
   const cell = ws.getCell(row, col);
   cell.value = value;
@@ -166,7 +166,12 @@ function put(
     bold: o.bold ?? true,
     color: { argb: `FF${o.color ?? "000000"}` },
   };
-  cell.alignment = { horizontal: "center", vertical: "middle", readingOrder: "rtl", wrapText: true };
+  cell.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+    readingOrder: "rtl",
+    wrapText: o.wrap ?? true,
+  };
   if (o.fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${o.fill}` } };
   return cell;
 }
