@@ -398,7 +398,7 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(input.title ?? "كشف رحله")}</title>
 <style>
-  @page { size: 297mm 210mm landscape; margin: 6mm; }
+  @page { size: A4 landscape; margin: 6mm; }
   html, body { width: 285mm; }
   * { box-sizing: border-box; }
   body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color:#000; margin:0;
@@ -533,7 +533,7 @@ export function printRawSheet(input: OfficialSheetInput): boolean {
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(input.title ?? "بيانات كشف الرحلة")}</title>
 <style>
-  @page { size: 297mm 210mm landscape; margin: 8mm; }
+  @page { size: A4 landscape; margin: 8mm; }
   body { font-family: Tahoma, Arial, sans-serif; color:#000; margin:0; font-size:11px; }
   h1 { font-size:14px; margin:0 0 6px; }
   table { border-collapse:collapse; width:100%; }
