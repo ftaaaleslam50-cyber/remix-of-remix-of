@@ -18,13 +18,7 @@ import {
 } from "@/lib/export/official-bus-sheet";
 import { toast } from "sonner";
 
-import {
-  ROOM_ROWS,
-  ROOM_CAPACITY,
-  type HotelPricing,
-  type RepCommission,
-  type SettlementInput,
-} from "@/lib/export/trip-settlement-workbook";
+import { ROOM_ROWS, ROOM_CAPACITY, type HotelPricing, type RepCommission } from "@/lib/export/rooming";
 
 /**
  * "كشف الرحلة" — an Excel-like, auto-filled trip settlement sheet.
