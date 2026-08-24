@@ -7,9 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
-import type { ExportPayload } from "@/components/admin/ExportSheetDialog";
+import { type ExportPayload, useSheetLogo } from "@/components/admin/ExportSheetDialog";
 import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
-import { buildOfficialSheetWorkbook, printOfficialSheet, downloadBlob } from "@/lib/export/official-bus-sheet";
+import {
+  buildOfficialSheetWorkbook,
+  printOfficialSheet,
+  buildRawWorkbook,
+  printRawSheet,
+  downloadBlob,
+} from "@/lib/export/official-bus-sheet";
 import { toast } from "sonner";
 
 import {
