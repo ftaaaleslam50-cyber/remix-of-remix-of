@@ -310,14 +310,22 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   // Passengers table — dynamic, one row per booking
   const HEAD = 11;
   TABLE_COLUMNS.forEach((c, i) =>
-    put(ws, HEAD, i + 1, c, { fill: C.cream, color: C.darkRed, size: 14 }),
+    put(ws, HEAD, i + 1, c, { fill: C.cream, color: C.darkRed, size: 12 }),
   );
-  ws.getRow(HEAD).height = 34;
+  ws.getRow(HEAD).height = 24;
 
+  // Only long free-text columns wrap; the rest stay single-line so Excel can
+  // auto-fit the row height to the real font size instead of a fixed height.
+  const WRAP_COLS = new Set([3, 15]);
   input.rows.forEach((r, i) => {
     const values = rowValues(r, i);
-    values.forEach((v, ci) => put(ws, HEAD + 1 + i, ci + 1, v as ExcelJS.CellValue, { size: 13, bold: false }));
-    ws.getRow(HEAD + 1 + i).height = 26;
+    values.forEach((v, ci) =>
+      put(ws, HEAD + 1 + i, ci + 1, v as ExcelJS.CellValue, {
+        size: 11,
+        bold: false,
+        wrap: WRAP_COLS.has(ci + 1),
+      }),
+    );
   });
 
   const lastRow = HEAD + input.rows.length;
