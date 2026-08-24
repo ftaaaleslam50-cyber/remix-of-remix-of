@@ -819,8 +819,15 @@ function UnifiedBookingsTab(props: {
           "5": "خماسي",
         };
         const byHotel = new Map<string, { rooms: Record<string, number>; shared: number }>();
+        let noHotelPeople = 0;
+        let noHotelBookings = 0;
         for (const b of filtered) {
-          const hotel = b.packages?.name || "بدون فندق";
+          const hotel = b.packages?.name;
+          if (!hotel) {
+            noHotelPeople += b.passenger_count || 0;
+            noHotelBookings += 1;
+            continue;
+          }
           const entry = byHotel.get(hotel) ?? { rooms: {}, shared: 0 };
           if (b.booking_type === "individual") {
             entry.shared += b.passenger_count || 0;
@@ -869,6 +876,15 @@ function UnifiedBookingsTab(props: {
                   <p className="text-xs text-muted-foreground pb-1">+ {sharedPeople} أفراد مشترك</p>
                 )}
               </div>
+              {noHotelPeople > 0 && (
+                <div className="mt-4 rounded-xl border-2 border-dashed bg-muted/40 p-3 max-w-xs">
+                  <p className="font-extrabold text-sm">بدون فندق (مقاعد فقط)</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{noHotelBookings} حجز</p>
+                  <p className="mt-1 text-xl font-extrabold text-[color:var(--color-navy)]">
+                    {noHotelPeople} <span className="text-xs font-semibold">فرد</span>
+                  </p>
+                </div>
+              )}
               {hotelStats.length === 0 ? (
                 <p className="mt-3 text-xs text-muted-foreground">لا توجد بيانات غرف.</p>
               ) : (
