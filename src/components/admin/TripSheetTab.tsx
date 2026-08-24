@@ -415,13 +415,25 @@ export function TripSheetTab() {
     return Number(cell?.price ?? 0);
   }
 
-  async function downloadOfficialExcel() {
+  function sheetInput() {
+    const d = payload();
+    return { d, input: { title: d.title, header: d.header, rows: d.rows, logoUrl } };
+  }
+
+  async function run(job: "excel" | "raw-excel" | "pdf" | "raw-pdf") {
     setBusySheet(true);
     try {
-      const d = payload();
-      const blob = await buildOfficialSheetWorkbook(d);
-      downloadBlob(blob, `${d.filename}.xlsx`);
-      toast.success("تم تنزيل نسخة Excel من كشف الرحلة");
+      const { d, input } = sheetInput();
+      if (job === "excel") {
+        downloadBlob(await buildOfficialSheetWorkbook(input), `${d.filename}.xlsx`);
+        toast.success("تم تنزيل نسخة Excel من كشف الرحلة");
+      } else if (job === "raw-excel") {
+        downloadBlob(await buildRawWorkbook(input), `${d.filename}-raw.xlsx`);
+        toast.success("تم تنزيل Excel خام");
+      } else {
+        const ok = job === "pdf" ? printOfficialSheet(input) : printRawSheet(input);
+        if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر التصدير");
     } finally {
@@ -429,24 +441,28 @@ export function TripSheetTab() {
     }
   }
 
-  function printOfficialPdf() {
-    const ok = printOfficialSheet(payload());
-    if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
-  }
-
   return (
     <div className="surface-card p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-extrabold flex items-center gap-2">
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="h-[100px] w-[100px] shrink-0 rounded-lg border object-contain" />
+          ) : null}
           <Table2 className="h-5 w-5" /> كشف الرحلة
           <span className="text-sm font-normal text-muted-foreground">({filtered.length} حجز)</span>
         </h2>
         <div className="flex flex-wrap gap-2">
-          <Button className="rounded-full" disabled={busySheet} onClick={downloadOfficialExcel}>
-            <Download className="h-4 w-4 ml-1" /> تصدير نسخة Excel
+          <Button className="rounded-full" disabled={busySheet} onClick={() => run("excel")}>
+            <Download className="h-4 w-4 ml-1" /> تصدير Excel
           </Button>
-          <Button variant="outline" className="rounded-full" onClick={printOfficialPdf}>
-            <Download className="h-4 w-4 ml-1" /> تصدير نسخة PDF
+          <Button variant="outline" className="rounded-full" disabled={busySheet} onClick={() => run("pdf")}>
+            <Download className="h-4 w-4 ml-1" /> تصدير PDF
+          </Button>
+          <Button variant="secondary" className="rounded-full" disabled={busySheet} onClick={() => run("raw-excel")}>
+            <Download className="h-4 w-4 ml-1" /> تنزيل Excel خام
+          </Button>
+          <Button variant="secondary" className="rounded-full" disabled={busySheet} onClick={() => run("raw-pdf")}>
+            <Download className="h-4 w-4 ml-1" /> تنزيل PDF خام
           </Button>
         </div>
       </div>
