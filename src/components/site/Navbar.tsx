@@ -6,6 +6,8 @@ import { NAV_LINKS } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { BookNowLink } from "@/components/site/BookNowLink";
 import { NotificationBell } from "@/components/site/NotificationBell";
+import { UserNotificationBell } from "@/components/site/UserNotificationBell";
+
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
@@ -78,7 +80,9 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-2">
           {isAdmin && <NotificationBell />}
+          {userId && <UserNotificationBell />}
           {userId ? (
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 h-11 pr-3 pl-1 rounded-full bg-white/80 backdrop-blur border shadow-sm hover:shadow-md transition">
@@ -91,6 +95,8 @@ export function Navbar() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild><Link to="/profile" className="cursor-pointer"><UserIcon className="h-4 w-4 ml-2" /> الملف الشخصي</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/my-bookings" className="cursor-pointer">🎫 حجوزاتي</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/notifications" className="cursor-pointer">🔔 الإشعارات</Link></DropdownMenuItem>
+
                 {isAdmin && (
                   <DropdownMenuItem asChild><Link to="/dashboard" className="cursor-pointer"><LayoutDashboard className="h-4 w-4 ml-2" /> لوحة التحكم</Link></DropdownMenuItem>
                 )}
@@ -106,6 +112,8 @@ export function Navbar() {
 
         <div className="md:hidden flex items-center gap-1">
         {isAdmin && <NotificationBell />}
+        {userId && <UserNotificationBell />}
+
         <button className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted" onClick={() => setOpen(!open)} aria-label="القائمة">
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -122,6 +130,8 @@ export function Navbar() {
               <>
                 <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الملف الشخصي</Link>
                 <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">حجوزاتي</Link>
+                <Link to="/notifications" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الإشعارات</Link>
+
                 {isAdmin && <Link to="/dashboard" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">لوحة التحكم</Link>}
                 <button onClick={signOut} className="text-right px-4 py-3 rounded-xl text-base font-semibold text-red-600 hover:bg-muted">خروج</button>
               </>
