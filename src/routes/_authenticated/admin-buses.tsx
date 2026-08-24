@@ -367,6 +367,7 @@ function AdminBuses() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>رقم الحافلة</TableHead>
                   <TableHead>الاسم</TableHead>
                   <TableHead>اللوحة</TableHead>
                   <TableHead>الطراز</TableHead>
@@ -453,6 +454,21 @@ function BusEditRow({
 
   return (
     <TableRow>
+      <TableCell>
+        <Input
+          type="number"
+          min={1}
+          className="h-9 w-20"
+          value={local.bus_number ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              bus_number: Number(e.target.value) || 0,
+            })
+          }
+        />
+      </TableCell>
+
       <TableCell>
         <Input
           className="h-9 w-32"
