@@ -54,6 +54,8 @@ export interface OfficialSheetInput {
   title?: string;
   header: OfficialSheetHeader;
   rows: OfficialSheetRow[];
+  /** Institution logo (uploaded from site settings) — top-right of the sheet. */
+  logoUrl?: string | null;
 }
 
 export const TABLE_COLUMNS = [
