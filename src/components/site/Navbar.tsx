@@ -76,6 +76,7 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
+          {isAdmin && <NotificationBell />}
           {userId ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
