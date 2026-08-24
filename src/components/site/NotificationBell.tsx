@@ -233,7 +233,7 @@ export function NotificationBell() {
   // Realtime: new notifications trigger the configured alerts.
   useEffect(() => {
     const ch = supabase
-      .channel("notif-bell")
+      .channel(`notif-bell-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
         const n = payload.new as unknown as Notif;
         setItems((prev) => [n, ...prev.filter((p) => p.id !== n.id)]);
