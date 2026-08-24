@@ -310,53 +310,6 @@ export function TripSheetTab() {
     return ROOM_LABELS[String(b.room_type ?? "5")] ?? "خماسي";
   }
 
-  function settlement(): SettlementInput {
-    return {
-      header: {
-        departureLabel: "ذهاب",
-        departureDay: tripInfo?.departure_day ?? "",
-        departureDate: "",
-        returnLabel: "عوده",
-        returnDay: tripInfo?.return_day ?? "",
-        returnDate: "",
-        capacity: capacity || 0,
-        vehicleType: "باص",
-        plate: bus?.name ?? "",
-        driverName: "",
-        driverId: "",
-        driverPhone: "",
-      },
-      rows: filtered.map((b) => ({
-        rep: b.booking_source || "الموقع",
-        customer: b.customer_name ?? "",
-        idNumber: b.id_number ?? "",
-        nationality: b.nationality ?? "",
-        count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
-        hotel: b.packages?.name ?? "توصيل فقط",
-        roomType: roomLabelOf(b),
-        roomNumber: "",
-        extensionNights: 0,
-        notes: b.notes ?? "",
-      })),
-      hotels: hotelPricings,
-      reps,
-      expenses: {
-        busRent: Number(busRent) || 0,
-        driverTip: Number(driverTip) || 0,
-        supervisor: Number(supervisor) || 0,
-        parking: Number(parking) || 0,
-        other: Number(other) || 0,
-        bankTransfer: Number(bankTransfer) || 0,
-      },
-      transferPrices: {
-        "ذهاب فقط": Number(ref.transfer["ذهاب فقط"] ?? 0),
-        "ذهاب وعوده فقط": Number(ref.transfer["ذهاب وعوده فقط"] ?? 0),
-        "ذهاب وعوده برحلة اخرى": Number(ref.transfer["ذهاب وعوده برحلة اخرى"] ?? 0),
-      },
-    };
-  }
-
   function payload(): ExportPayload {
     return {
       title: sheetTitle,
