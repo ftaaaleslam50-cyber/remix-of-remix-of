@@ -660,7 +660,6 @@ function UnifiedBookingsTab(props: {
         returnDate: info?.return_day ?? "",
         capacity: bus?.capacity,
         busNumber: bus ? bus.bus_number : "",
-        plate: bus?.plate ?? "",
         passengersTotal: totalPax,
         seatsRemaining: bus ? Math.max(0, (bus.capacity ?? 0) - totalPax) : undefined,
       },
