@@ -210,6 +210,7 @@ function AdminBuses() {
 
   async function save(b: BusRow) {
     const patch: Record<string, unknown> = {
+      bus_number: Number(b.bus_number) || 1,
       name: b.name,
       plate: b.plate,
       model: b.model,
