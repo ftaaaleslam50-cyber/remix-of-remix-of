@@ -7,14 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
-import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
-import { dayNameFromDate, downloadBlob } from "@/lib/export/trip-sheet-template";
+import type { ExportPayload } from "@/components/admin/ExportSheetDialog";
+import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
+import { buildOfficialSheetWorkbook, printOfficialSheet, downloadBlob } from "@/lib/export/official-bus-sheet";
 import { toast } from "sonner";
-import {
-  buildBusTripSheetWorkbook,
-  printBusTripSheet,
-  type BusSheetInput,
-} from "@/lib/export/bus-trip-sheet";
 
 import {
   ROOM_ROWS,
@@ -69,7 +65,6 @@ export function TripSheetTab() {
   const [tripId, setTripId] = useState("");
   const [busId, setBusId] = useState("");
   const [search, setSearch] = useState("");
-  const [exportOpen, setExportOpen] = useState(false);
   const [busySheet, setBusySheet] = useState(false);
 
   // Trip-sheet header fields that are not stored per bus.
@@ -362,34 +357,43 @@ export function TripSheetTab() {
   }
 
   function payload(): ExportPayload {
-    const title = `كشف رحلة — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}${bus ? ` — ${bus.name || `حافلة ${bus.bus_number}`}` : ""}`;
     return {
-      title,
+      title: sheetTitle,
       filename: `trip-sheet-${new Date().toISOString().slice(0, 10)}`,
       header: {
-        departureLabel: "ذهاب",
-        departureDay: tripInfo?.departure_day ?? dayNameFromDate(undefined),
-        returnLabel: "عودة",
-        returnDay: tripInfo?.return_day ?? "",
+        departureDate: tripInfo?.departure_day ?? dayNameFromDate(undefined),
+        returnDate: tripInfo?.return_day ?? "",
         capacity: capacity || undefined,
-        busNumber: bus?.bus_number,
+        transportCompany: settings?.company_name ?? "",
+        busNumber: bus ? bus.bus_number : "",
+        plate: bus?.plate ?? "",
+        driverName,
+        driverId,
+        driverPhone,
         passengersTotal: passengers,
-        seatsRemaining: remaining,
+        seatsRemaining: bus ? remaining : undefined,
       },
-      rows: filtered.map((b, i) => ({
-        index: i + 1,
-        rep: b.booking_source || "الموقع",
-        customer: b.customer_name ?? "",
-        idNumber: b.id_number ?? "",
-        nationality: b.nationality ?? "",
-        count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
-        hotel: b.packages?.name ?? "بدون فندق",
-        roomType: roomLabelOf(b),
-        total: Number(b.total_price || 0),
-        notes: b.notes ?? "",
-      })),
-      settlement: settlement(),
+      rows: filtered.map((b) => {
+        const perPerson = pricePerPerson(b);
+        const count = b.passenger_count || 0;
+        const nights = Number(b.extension_nights ?? 0);
+        const extPrice = Number(hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
+        return {
+          rep: b.booking_source || "الموقع",
+          customer: b.customer_name ?? "",
+          idNumber: b.id_number ?? "",
+          nationality: b.nationality ?? "",
+          count,
+          returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
+          hotel: b.packages?.name ?? "بدون فندق",
+          roomType: roomLabelOf(b),
+          roomNumber: "",
+          packageTotal: perPerson * count || Number(b.total_price || 0),
+          extensionNights: nights,
+          extensionTotal: extPrice * nights * count,
+          notes: b.notes ?? "",
+        };
+      }),
     };
   }
 
@@ -405,61 +409,13 @@ export function TripSheetTab() {
     return Number(cell?.price ?? 0);
   }
 
-  function busSheetInput(manifest: boolean): BusSheetInput {
-    return {
-      manifest,
-      header: {
-        departureLabel: "ذهاب",
-        departureDay: tripInfo?.departure_day ?? dayNameFromDate(undefined),
-        returnLabel: "عوده",
-        returnDay: tripInfo?.return_day ?? "",
-        capacity: capacity || undefined,
-        vehicleType: bus?.bus_type ?? "باص",
-        busName: bus ? bus.name || `حافلة ${bus.bus_number}` : "",
-        plate: bus?.plate ?? "",
-        transportCompany: settings?.company_name ?? "",
-        driverName,
-        driverId,
-        driverPhone,
-        passengersTotal: passengers,
-        seatsRemaining: bus ? remaining : undefined,
-      },
-      rows: filtered.map((b, i) => {
-        const perPerson = pricePerPerson(b);
-        const count = b.passenger_count || 0;
-        const nights = Number(b.extension_nights ?? 0);
-        const extPrice = Number(hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
-        return {
-          index: i + 1,
-          rep: b.booking_source || "الموقع",
-          customer: b.customer_name ?? "",
-          idNumber: b.id_number ?? "",
-          nationality: b.nationality ?? "",
-          count,
-          returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
-          hotel: b.packages?.name ?? "توصيل فقط",
-          roomType: roomLabelOf(b),
-          roomNumber: "",
-          packageTotal: perPerson * count,
-          extensionNights: nights,
-          extensionTotal: extPrice * nights * count,
-          notes: b.notes ?? "",
-          perPerson,
-        };
-      }),
-      summary: {
-        expenses: Math.round(expenses),
-        bankTransfer: Number(bankTransfer) || 0,
-      },
-    };
-  }
-
-  async function downloadBusSheet(manifest: boolean) {
+  async function downloadOfficialExcel() {
     setBusySheet(true);
     try {
-      const blob = await buildBusTripSheetWorkbook(busSheetInput(manifest));
-      downloadBlob(blob, `${manifest ? "tafwij" : "trip-sheet"}-${new Date().toISOString().slice(0, 10)}.xlsx`);
-      toast.success(manifest ? "تم تنزيل كشف التفويج" : "تم تنزيل كشف الرحلة");
+      const d = payload();
+      const blob = await buildOfficialSheetWorkbook(d);
+      downloadBlob(blob, `${d.filename}.xlsx`);
+      toast.success("تم تنزيل نسخة Excel من كشف الرحلة");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر التصدير");
     } finally {
@@ -467,8 +423,8 @@ export function TripSheetTab() {
     }
   }
 
-  function pdfBusSheet(manifest: boolean) {
-    const ok = printBusTripSheet(busSheetInput(manifest), manifest ? "كشف التفويج" : sheetTitle);
+  function printOfficialPdf() {
+    const ok = printOfficialSheet(payload());
     if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
   }
 
@@ -480,20 +436,11 @@ export function TripSheetTab() {
           <span className="text-sm font-normal text-muted-foreground">({filtered.length} حجز)</span>
         </h2>
         <div className="flex flex-wrap gap-2">
-          <Button className="rounded-full" disabled={busySheet} onClick={() => downloadBusSheet(false)}>
-            <Download className="h-4 w-4 ml-1" /> كشف الرحلة (Excel)
+          <Button className="rounded-full" disabled={busySheet} onClick={downloadOfficialExcel}>
+            <Download className="h-4 w-4 ml-1" /> تصدير نسخة Excel
           </Button>
-          <Button variant="outline" className="rounded-full" onClick={() => pdfBusSheet(false)}>
-            <Download className="h-4 w-4 ml-1" /> كشف الرحلة (PDF)
-          </Button>
-          <Button variant="outline" className="rounded-full" disabled={busySheet} onClick={() => downloadBusSheet(true)}>
-            <Download className="h-4 w-4 ml-1" /> كشف التفويج
-          </Button>
-          <Button variant="ghost" className="rounded-full" onClick={() => pdfBusSheet(true)}>
-            كشف التفويج (PDF)
-          </Button>
-          <Button variant="ghost" className="rounded-full" onClick={() => setExportOpen(true)}>
-            تصدير آخر
+          <Button variant="outline" className="rounded-full" onClick={printOfficialPdf}>
+            <Download className="h-4 w-4 ml-1" /> تصدير نسخة PDF
           </Button>
         </div>
       </div>
@@ -822,7 +769,6 @@ export function TripSheetTab() {
         </div>
       </div>
 
-      <ExportSheetDialog open={exportOpen} onOpenChange={setExportOpen} getData={payload} />
 
     </div>
   );

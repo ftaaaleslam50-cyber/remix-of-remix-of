@@ -656,17 +656,14 @@ function UnifiedBookingsTab(props: {
       title: `كشف رحلة${tripName ? ` — ${tripName}` : ""}${busLabel ? ` — ${busLabel}` : ""}`,
       filename: `trip-sheet-${busLabel || tripName || "all"}-${new Date().toISOString().slice(0, 10)}`,
       header: {
-        departureLabel: "ذهاب",
-        departureDay: info?.departure_day ?? "",
-        returnLabel: "عودة",
-        returnDay: info?.return_day ?? "",
+        departureDate: info?.departure_day ?? "",
+        returnDate: info?.return_day ?? "",
         capacity: bus?.capacity,
-        busNumber: bus?.bus_number,
+        busNumber: bus ? bus.bus_number : "",
         passengersTotal: totalPax,
         seatsRemaining: bus ? Math.max(0, (bus.capacity ?? 0) - totalPax) : undefined,
       },
-      rows: filtered.map((b, i) => ({
-        index: i + 1,
+      rows: filtered.map((b) => ({
         rep: b.booking_source || "الموقع",
         customer: b.customer_name ?? "",
         idNumber: b.id_number ?? "",
@@ -675,7 +672,8 @@ function UnifiedBookingsTab(props: {
         returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
         hotel: b.packages?.name ?? "بدون فندق",
         roomType: roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null, !!b.package_id) ?? String(b.room_type ?? ""),
-        total: Number(b.total_price || 0),
+        packageTotal: Number(b.total_price || 0),
+        extensionNights: Number(b.extension_nights ?? 0),
         notes: b.notes ?? "",
       })),
     };
@@ -687,7 +685,6 @@ function UnifiedBookingsTab(props: {
         open={exportOpen}
         onOpenChange={setExportOpen}
         getData={exportPayload}
-        onRawExcel={exportBusExcel}
       />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-extrabold">
