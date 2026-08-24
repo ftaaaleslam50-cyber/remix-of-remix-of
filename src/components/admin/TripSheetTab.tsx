@@ -7,18 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
-import type { ExportPayload } from "@/components/admin/ExportSheetDialog";
+import { type ExportPayload, useSheetLogo } from "@/components/admin/ExportSheetDialog";
 import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
-import { buildOfficialSheetWorkbook, printOfficialSheet, downloadBlob } from "@/lib/export/official-bus-sheet";
+import {
+  buildOfficialSheetWorkbook,
+  printOfficialSheet,
+  buildRawWorkbook,
+  printRawSheet,
+  downloadBlob,
+} from "@/lib/export/official-bus-sheet";
 import { toast } from "sonner";
 
-import {
-  ROOM_ROWS,
-  ROOM_CAPACITY,
-  type HotelPricing,
-  type RepCommission,
-  type SettlementInput,
-} from "@/lib/export/trip-settlement-workbook";
+import { ROOM_ROWS, ROOM_CAPACITY, type HotelPricing, type RepCommission } from "@/lib/export/rooming";
 
 /**
  * "كشف الرحلة" — an Excel-like, auto-filled trip settlement sheet.
@@ -66,6 +66,7 @@ export function TripSheetTab() {
   const [busId, setBusId] = useState("");
   const [search, setSearch] = useState("");
   const [busySheet, setBusySheet] = useState(false);
+  const { data: logoUrl } = useSheetLogo();
 
   // Trip-sheet header fields that are not stored per bus.
   const [driverName, setDriverName] = useState("");
@@ -309,53 +310,6 @@ export function TripSheetTab() {
     return ROOM_LABELS[String(b.room_type ?? "5")] ?? "خماسي";
   }
 
-  function settlement(): SettlementInput {
-    return {
-      header: {
-        departureLabel: "ذهاب",
-        departureDay: tripInfo?.departure_day ?? "",
-        departureDate: "",
-        returnLabel: "عوده",
-        returnDay: tripInfo?.return_day ?? "",
-        returnDate: "",
-        capacity: capacity || 0,
-        vehicleType: "باص",
-        plate: bus?.name ?? "",
-        driverName: "",
-        driverId: "",
-        driverPhone: "",
-      },
-      rows: filtered.map((b) => ({
-        rep: b.booking_source || "الموقع",
-        customer: b.customer_name ?? "",
-        idNumber: b.id_number ?? "",
-        nationality: b.nationality ?? "",
-        count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
-        hotel: b.packages?.name ?? "توصيل فقط",
-        roomType: roomLabelOf(b),
-        roomNumber: "",
-        extensionNights: 0,
-        notes: b.notes ?? "",
-      })),
-      hotels: hotelPricings,
-      reps,
-      expenses: {
-        busRent: Number(busRent) || 0,
-        driverTip: Number(driverTip) || 0,
-        supervisor: Number(supervisor) || 0,
-        parking: Number(parking) || 0,
-        other: Number(other) || 0,
-        bankTransfer: Number(bankTransfer) || 0,
-      },
-      transferPrices: {
-        "ذهاب فقط": Number(ref.transfer["ذهاب فقط"] ?? 0),
-        "ذهاب وعوده فقط": Number(ref.transfer["ذهاب وعوده فقط"] ?? 0),
-        "ذهاب وعوده برحلة اخرى": Number(ref.transfer["ذهاب وعوده برحلة اخرى"] ?? 0),
-      },
-    };
-  }
-
   function payload(): ExportPayload {
     return {
       title: sheetTitle,
@@ -409,13 +363,25 @@ export function TripSheetTab() {
     return Number(cell?.price ?? 0);
   }
 
-  async function downloadOfficialExcel() {
+  function sheetInput() {
+    const d = payload();
+    return { d, input: { title: d.title, header: d.header, rows: d.rows, logoUrl } };
+  }
+
+  async function run(job: "excel" | "raw-excel" | "pdf" | "raw-pdf") {
     setBusySheet(true);
     try {
-      const d = payload();
-      const blob = await buildOfficialSheetWorkbook(d);
-      downloadBlob(blob, `${d.filename}.xlsx`);
-      toast.success("تم تنزيل نسخة Excel من كشف الرحلة");
+      const { d, input } = sheetInput();
+      if (job === "excel") {
+        downloadBlob(await buildOfficialSheetWorkbook(input), `${d.filename}.xlsx`);
+        toast.success("تم تنزيل نسخة Excel من كشف الرحلة");
+      } else if (job === "raw-excel") {
+        downloadBlob(await buildRawWorkbook(input), `${d.filename}-raw.xlsx`);
+        toast.success("تم تنزيل Excel خام");
+      } else {
+        const ok = job === "pdf" ? printOfficialSheet(input) : printRawSheet(input);
+        if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر التصدير");
     } finally {
@@ -423,24 +389,28 @@ export function TripSheetTab() {
     }
   }
 
-  function printOfficialPdf() {
-    const ok = printOfficialSheet(payload());
-    if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
-  }
-
   return (
     <div className="surface-card p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-extrabold flex items-center gap-2">
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="h-[100px] w-[100px] shrink-0 rounded-lg border object-contain" />
+          ) : null}
           <Table2 className="h-5 w-5" /> كشف الرحلة
           <span className="text-sm font-normal text-muted-foreground">({filtered.length} حجز)</span>
         </h2>
         <div className="flex flex-wrap gap-2">
-          <Button className="rounded-full" disabled={busySheet} onClick={downloadOfficialExcel}>
-            <Download className="h-4 w-4 ml-1" /> تصدير نسخة Excel
+          <Button className="rounded-full" disabled={busySheet} onClick={() => run("excel")}>
+            <Download className="h-4 w-4 ml-1" /> تصدير Excel
           </Button>
-          <Button variant="outline" className="rounded-full" onClick={printOfficialPdf}>
-            <Download className="h-4 w-4 ml-1" /> تصدير نسخة PDF
+          <Button variant="outline" className="rounded-full" disabled={busySheet} onClick={() => run("pdf")}>
+            <Download className="h-4 w-4 ml-1" /> تصدير PDF
+          </Button>
+          <Button variant="secondary" className="rounded-full" disabled={busySheet} onClick={() => run("raw-excel")}>
+            <Download className="h-4 w-4 ml-1" /> تنزيل Excel خام
+          </Button>
+          <Button variant="secondary" className="rounded-full" disabled={busySheet} onClick={() => run("raw-pdf")}>
+            <Download className="h-4 w-4 ml-1" /> تنزيل PDF خام
           </Button>
         </div>
       </div>
@@ -534,7 +504,7 @@ export function TripSheetTab() {
                 "ربح الحجز",
                 "ملاحظات",
               ].map((h) => (
-                <th key={h} className="border p-2 whitespace-nowrap font-bold">
+                <th key={h} className="border px-2 py-0.5 leading-tight whitespace-nowrap font-bold">
                   {h}
                 </th>
               ))}
@@ -547,20 +517,20 @@ export function TripSheetTab() {
               const seats = (b.passenger_count || 0) * seatCost;
               return (
                 <tr key={b.id} className="odd:bg-white even:bg-muted/30">
-                  <td className="border p-2 text-center">{i + 1}</td>
-                  <td className="border p-2 text-center">{b.booking_source || "الموقع"}</td>
-                  <td className="border p-2">{b.customer_name}</td>
-                  <td className="border p-2 text-center font-mono">{b.id_number}</td>
-                  <td className="border p-2 text-center">{b.nationality ?? "—"}</td>
-                  <td className="border p-2 text-center">{b.passenger_count}</td>
-                  <td className="border p-2 text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—", b.trip_mode)}</td>
-                  <td className="border p-2 text-center">{b.packages?.name ?? "بدون فندق"}</td>
-                  <td className="border p-2 text-center">{roomLabelOf(b)}</td>
-                  <td className="border p-2 text-center font-bold">{total}</td>
-                  <td className="border p-2 text-center">{Math.round(perPerson)}</td>
-                  <td className="border p-2 text-center">{Math.round(seats)}</td>
-                  <td className="border p-2 text-center font-bold">{Math.round(total - seats)}</td>
-                  <td className="border p-2">{b.notes ?? ""}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{i + 1}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.booking_source || "الموقع"}</td>
+                  <td className="border px-2 py-0.5 leading-tight">{b.customer_name}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center font-mono">{b.id_number}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.nationality ?? "—"}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.passenger_count}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—", b.trip_mode)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.packages?.name ?? "بدون فندق"}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{roomLabelOf(b)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center font-bold">{total}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{Math.round(perPerson)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{Math.round(seats)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center font-bold">{Math.round(total - seats)}</td>
+                  <td className="border px-2 py-0.5 leading-tight">{b.notes ?? ""}</td>
                 </tr>
               );
             })}
@@ -574,13 +544,13 @@ export function TripSheetTab() {
           </tbody>
           <tfoot className="bg-muted font-bold">
             <tr>
-              <td className="border p-2 text-center" colSpan={5}>
+              <td className="border px-2 py-0.5 leading-tight text-center" colSpan={5}>
                 الإجمالي
               </td>
-              <td className="border p-2 text-center">{passengers}</td>
-              <td className="border p-2" colSpan={3} />
-              <td className="border p-2 text-center">{revenue}</td>
-              <td className="border p-2" colSpan={4} />
+              <td className="border px-2 py-0.5 leading-tight text-center">{passengers}</td>
+              <td className="border px-2 py-0.5 leading-tight" colSpan={3} />
+              <td className="border px-2 py-0.5 leading-tight text-center">{revenue}</td>
+              <td className="border px-2 py-0.5 leading-tight" colSpan={4} />
             </tr>
           </tfoot>
         </table>
@@ -657,23 +627,23 @@ export function TripSheetTab() {
           <table className="w-full text-xs border-collapse">
             <thead className="bg-muted">
               <tr>
-                <th className="border p-2">الفندق</th>
+                <th className="border px-2 py-0.5 leading-tight">الفندق</th>
                 {ROOM_ROWS.map((r) => (
-                  <th key={r} className="border p-2 whitespace-nowrap">
+                  <th key={r} className="border px-2 py-0.5 leading-tight whitespace-nowrap">
                     تكلفة {r}
                     <span className="block text-[10px] font-normal text-muted-foreground">
                       ÷ {ROOM_CAPACITY[r]}
                     </span>
                   </th>
                 ))}
-                <th className="border p-2">سعر ليلة التمديد</th>
-                <th className="border p-2">تكلفة ليلة التمديد</th>
+                <th className="border px-2 py-0.5 leading-tight">سعر ليلة التمديد</th>
+                <th className="border px-2 py-0.5 leading-tight">تكلفة ليلة التمديد</th>
               </tr>
             </thead>
             <tbody>
               {hotelPricings.map((h) => (
                 <tr key={h.hotel}>
-                  <td className="border p-2 font-bold whitespace-nowrap">{h.hotel}</td>
+                  <td className="border px-2 py-0.5 leading-tight font-bold whitespace-nowrap">{h.hotel}</td>
                   {ROOM_ROWS.map((r) => (
                     <td key={r} className="border p-1">
                       <Input

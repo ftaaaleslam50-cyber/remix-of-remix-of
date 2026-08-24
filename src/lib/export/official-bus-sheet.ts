@@ -54,6 +54,8 @@ export interface OfficialSheetInput {
   title?: string;
   header: OfficialSheetHeader;
   rows: OfficialSheetRow[];
+  /** Institution logo (uploaded from site settings) — top-right of the sheet. */
+  logoUrl?: string | null;
 }
 
 export const TABLE_COLUMNS = [
@@ -153,7 +155,7 @@ function put(
   row: number,
   col: number,
   value: ExcelJS.CellValue,
-  o: { fill?: string; color?: string; size?: number; bold?: boolean } = {},
+  o: { fill?: string; color?: string; size?: number; bold?: boolean; wrap?: boolean } = {},
 ) {
   const cell = ws.getCell(row, col);
   cell.value = value;
@@ -164,9 +166,31 @@ function put(
     bold: o.bold ?? true,
     color: { argb: `FF${o.color ?? "000000"}` },
   };
-  cell.alignment = { horizontal: "center", vertical: "middle", readingOrder: "rtl", wrapText: true };
+  cell.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+    readingOrder: "rtl",
+    wrapText: o.wrap ?? true,
+  };
   if (o.fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${o.fill}` } };
   return cell;
+}
+
+/** Fetch a logo image and return raw bytes + extension for embedding. */
+async function loadLogo(
+  url: string | null | undefined,
+): Promise<{ buffer: ArrayBuffer; ext: "png" | "jpeg" } | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const type = res.headers.get("content-type") ?? "";
+    const buffer = await res.arrayBuffer();
+    const ext = /jpe?g/i.test(type) || /\.jpe?g($|\?)/i.test(url) ? "jpeg" : "png";
+    return { buffer, ext };
+  } catch {
+    return null;
+  }
 }
 
 export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Promise<Blob> {
@@ -184,13 +208,27 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
     },
   });
   COL_WIDTHS.forEach((w, i) => (ws.getColumn(i + 1).width = w));
-  for (let r = 1; r <= 10; r++) ws.getRow(r).height = 30;
+  // Header block rows only — data rows are left to auto-fit their font size.
+  for (let r = 1; r <= 10; r++) ws.getRow(r).height = 24;
 
   const h = input.header;
 
+  // Logo slot (fixed 100×100) at the top-right, beside the title cell.
+  ws.mergeCells(1, 1, 3, 2);
+  put(ws, 1, 1, "", { fill: C.cream });
+  const logo = await loadLogo(input.logoUrl);
+  if (logo) {
+    const imgId = wb.addImage({ buffer: logo.buffer as ArrayBuffer, extension: logo.ext });
+    ws.addImage(imgId, {
+      tl: { col: 0.15, row: 0.05 },
+      ext: { width: 100, height: 100 },
+      editAs: "oneCell",
+    });
+  }
+
   // Title block
-  ws.mergeCells(1, 1, 6, 2);
-  put(ws, 1, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 36 });
+  ws.mergeCells(4, 1, 6, 2);
+  put(ws, 4, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
 
   const merge2 = (r: number, c1: number, c2: number) => ws.mergeCells(r, c1, r, c2);
 
@@ -277,14 +315,22 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   // Passengers table — dynamic, one row per booking
   const HEAD = 11;
   TABLE_COLUMNS.forEach((c, i) =>
-    put(ws, HEAD, i + 1, c, { fill: C.cream, color: C.darkRed, size: 14 }),
+    put(ws, HEAD, i + 1, c, { fill: C.cream, color: C.darkRed, size: 12 }),
   );
-  ws.getRow(HEAD).height = 34;
+  ws.getRow(HEAD).height = 24;
 
+  // Only long free-text columns wrap; the rest stay single-line so Excel can
+  // auto-fit the row height to the real font size instead of a fixed height.
+  const WRAP_COLS = new Set([3, 15]);
   input.rows.forEach((r, i) => {
     const values = rowValues(r, i);
-    values.forEach((v, ci) => put(ws, HEAD + 1 + i, ci + 1, v as ExcelJS.CellValue, { size: 13, bold: false }));
-    ws.getRow(HEAD + 1 + i).height = 26;
+    values.forEach((v, ci) =>
+      put(ws, HEAD + 1 + i, ci + 1, v as ExcelJS.CellValue, {
+        size: 11,
+        bold: false,
+        wrap: WRAP_COLS.has(ci + 1),
+      }),
+    );
   });
 
   const lastRow = HEAD + input.rows.length;
@@ -345,16 +391,26 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
     )
     .join("");
 
+  const logoBox = `<div class="logo">${
+    input.logoUrl ? `<img src="${esc(input.logoUrl)}" alt="">` : ""
+  }</div>`;
+
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(input.title ?? "كشف رحله")}</title>
 <style>
   @page { size: A4 landscape; margin: 6mm; }
+  html, body { width: 285mm; }
   * { box-sizing: border-box; }
-  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color:#000; margin:0; }
+  body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color:#000; margin:0;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .top { display:flex; gap:4px; align-items:stretch; margin-bottom:6px; }
-  .cell { border:1px solid #333; padding:4px 6px; text-align:center; font-weight:800;
-          display:flex; align-items:center; justify-content:center; }
-  .title { background:#${C.cream}; color:#${C.darkRed}; font-size:30px; min-width:150px; }
+  .cell { border:1px solid #333; padding:3px 5px; text-align:center; font-weight:800;
+          display:flex; align-items:center; justify-content:center; line-height:1.1; }
+  .logo { width:100px; height:100px; flex:0 0 100px; border:1px solid #333; background:#${C.cream};
+          display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .logo img { max-width:96px; max-height:96px; object-fit:contain; }
+  .titlewrap { display:flex; flex-direction:column; gap:2px; }
+  .title { background:#${C.cream}; color:#${C.darkRed}; font-size:26px; min-width:140px; flex:1; }
   .stack { display:flex; flex-direction:column; gap:2px; }
   .row { display:flex; gap:2px; }
   .cream { background:#${C.cream}; }
@@ -363,37 +419,40 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   .cyan { background:#${C.cyan}; color:#${C.blue}; }
   .pink { background:#${C.pink}; color:#${C.red}; }
   .val { color:#${C.blue}; }
-  .bus { font-size:34px; }
-  .big { font-size:34px; }
+  .bus { font-size:30px; }
+  .big { font-size:28px; }
   table { border-collapse:collapse; width:100%; }
-  th, td { border:1px solid #333; padding:3px 4px; text-align:center; }
-  table.main { font-size:12px; }
-  table.main thead th { background:#${C.cream}; color:#${C.darkRed}; font-size:14px; }
+  th, td { border:1px solid #333; padding:1px 3px; text-align:center; line-height:1.15;
+           height:auto; vertical-align:middle; }
+  table.main { font-size:11px; }
+  table.main thead th { background:#${C.cream}; color:#${C.darkRed}; font-size:12px; }
   table.main tfoot td { background:#${C.cream}; color:#${C.darkRed}; font-weight:800; }
-  table.rooms { font-size:11px; }
+  table.rooms { font-size:10px; }
   table.rooms th { background:#${C.roomsTable}; color:#${C.darkRed}; }
   table.rooms td { background:#${C.roomsTable}; }
   .retbox { border:1px solid #333; background:#${C.pink}; color:#${C.red}; text-align:center;
-            padding:3px 6px; font-weight:800; margin-bottom:4px; }
-  .retbox .lbl { font-size:12px; }
-  .retbox .day { font-size:16px; }
+            padding:2px 5px; font-weight:800; margin-bottom:3px; }
+  .retbox .lbl { font-size:11px; }
+  .retbox .day { font-size:14px; }
   .side { display:flex; gap:4px; }
+  thead { display:table-header-group; }
 </style></head><body>
 <div class="top">
-  <div class="cell title">كشف رحله</div>
+  ${logoBox}
+  <div class="titlewrap"><div class="cell title">كشف رحله</div></div>
   <div class="stack">
-    <div class="cell cream" style="font-size:18px">ذهاب</div>
-    <div class="cell cream val" style="font-size:18px">${esc(h.departureDate)}</div>
-    <div class="cell cream" style="font-size:18px">عوده</div>
-    <div class="cell cream val" style="font-size:18px">${esc(h.returnDate)}</div>
+    <div class="cell cream" style="font-size:16px">ذهاب</div>
+    <div class="cell cream val" style="font-size:16px">${esc(h.departureDate)}</div>
+    <div class="cell cream" style="font-size:16px">عوده</div>
+    <div class="cell cream val" style="font-size:16px">${esc(h.returnDate)}</div>
     <div class="row">
-      <div class="cell lime" style="font-size:13px">بيان مركبه حمولة</div>
-      <div class="cell lime" style="font-size:15px">${esc(h.capacity)}</div>
+      <div class="cell lime" style="font-size:12px">بيان مركبه حمولة</div>
+      <div class="cell lime" style="font-size:14px">${esc(h.capacity)}</div>
     </div>
-    <div class="cell lime" style="font-size:13px">${esc(h.transportCompany)}</div>
+    <div class="cell lime" style="font-size:12px">${esc(h.transportCompany)}</div>
   </div>
   <div class="row">
-    <div class="cell lblue" style="font-size:18px">باص</div>
+    <div class="cell lblue" style="font-size:16px">باص</div>
     <div class="cell lblue bus">${esc(h.busNumber)}</div>
   </div>
   <div class="stack">
@@ -427,14 +486,81 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
     <td>${sum(rowTotal)}</td><td></td>
   </tr></tfoot>
 </table>
-<script>window.onload=()=>{window.focus();window.print();}</script>
+<script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350);}</script>
 </body></html>`;
 
+  return openPrintWindow(html);
+}
+
+function openPrintWindow(html: string): boolean {
   const w = window.open("", "_blank", "width=1400,height=900");
   if (!w) return false;
   w.document.write(html);
   w.document.close();
   return true;
+}
+
+/* ------------------------------ raw exports ------------------------------ */
+/** Plain single-header data table — no template colours, merges or big fonts. */
+function rawRows(input: OfficialSheetInput) {
+  return input.rows.map((r, i) => rowValues(r, i));
+}
+
+export async function buildRawWorkbook(input: OfficialSheetInput): Promise<Blob> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("البيانات", { views: [{ rightToLeft: true }] });
+  ws.addRow([...TABLE_COLUMNS]);
+  ws.getRow(1).font = { bold: true, size: 11 };
+  for (const values of rawRows(input)) ws.addRow(values);
+  const sum = (pick: (r: OfficialSheetRow) => number) => input.rows.reduce((s, r) => s + (pick(r) || 0), 0);
+  const totals: Array<string | number> = new Array(TABLE_COLUMNS.length).fill("");
+  totals[0] = "الإجمالي";
+  totals[5] = sum((r) => r.count);
+  totals[10] = sum((r) => r.packageTotal ?? 0);
+  totals[12] = sum((r) => r.extensionTotal ?? 0);
+  totals[13] = sum(rowTotal);
+  const totalsRow = ws.addRow(totals);
+  totalsRow.font = { bold: true, size: 11 };
+  COL_WIDTHS.forEach((w, i) => (ws.getColumn(i + 1).width = Math.max(8, Math.round(w * 0.8))));
+  const out = await wb.xlsx.writeBuffer();
+  return new Blob([out], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}
+
+export function printRawSheet(input: OfficialSheetInput): boolean {
+  const sum = (pick: (r: OfficialSheetRow) => number) => input.rows.reduce((s, r) => s + (pick(r) || 0), 0);
+  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+<title>${esc(input.title ?? "بيانات كشف الرحلة")}</title>
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  body { font-family: Tahoma, Arial, sans-serif; color:#000; margin:0; font-size:11px; }
+  h1 { font-size:14px; margin:0 0 6px; }
+  table { border-collapse:collapse; width:100%; }
+  th, td { border:1px solid #999; padding:2px 4px; text-align:center; line-height:1.2; }
+  thead th { background:#eee; font-weight:700; }
+  tfoot td { font-weight:700; }
+  thead { display:table-header-group; }
+</style></head><body>
+<h1>${esc(input.title ?? "بيانات كشف الرحلة")}</h1>
+<table>
+  <thead><tr>${TABLE_COLUMNS.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+  <tbody>
+    ${input.rows
+      .map((r, i) => `<tr>${rowValues(r, i).map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`)
+      .join("")}
+  </tbody>
+  <tfoot><tr>
+    <td>الإجمالي</td><td></td><td></td><td></td><td></td>
+    <td>${sum((r) => r.count)}</td><td></td><td></td><td></td><td></td>
+    <td>${sum((r) => r.packageTotal ?? 0)}</td><td></td>
+    <td>${sum((r) => r.extensionTotal ?? 0)}</td>
+    <td>${sum(rowTotal)}</td><td></td>
+  </tr></tfoot>
+</table>
+<script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),250);}</script>
+</body></html>`;
+  return openPrintWindow(html);
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
