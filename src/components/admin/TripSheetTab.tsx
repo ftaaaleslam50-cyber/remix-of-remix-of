@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
-import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
+import type { ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { dayNameFromDate } from "@/lib/export/trip-sheet-template";
 import { buildOfficialSheetWorkbook, printOfficialSheet, downloadBlob } from "@/lib/export/official-bus-sheet";
 import { toast } from "sonner";
@@ -65,7 +65,6 @@ export function TripSheetTab() {
   const [tripId, setTripId] = useState("");
   const [busId, setBusId] = useState("");
   const [search, setSearch] = useState("");
-  const [exportOpen, setExportOpen] = useState(false);
   const [busySheet, setBusySheet] = useState(false);
 
   // Trip-sheet header fields that are not stored per bus.
@@ -770,7 +769,6 @@ export function TripSheetTab() {
         </div>
       </div>
 
-      <ExportSheetDialog open={exportOpen} onOpenChange={setExportOpen} getData={payload} />
 
     </div>
   );
