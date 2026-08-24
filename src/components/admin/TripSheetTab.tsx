@@ -557,7 +557,7 @@ export function TripSheetTab() {
                 "ربح الحجز",
                 "ملاحظات",
               ].map((h) => (
-                <th key={h} className="border p-2 whitespace-nowrap font-bold">
+                <th key={h} className="border px-2 py-0.5 leading-tight whitespace-nowrap font-bold">
                   {h}
                 </th>
               ))}
@@ -570,20 +570,20 @@ export function TripSheetTab() {
               const seats = (b.passenger_count || 0) * seatCost;
               return (
                 <tr key={b.id} className="odd:bg-white even:bg-muted/30">
-                  <td className="border p-2 text-center">{i + 1}</td>
-                  <td className="border p-2 text-center">{b.booking_source || "الموقع"}</td>
-                  <td className="border p-2">{b.customer_name}</td>
-                  <td className="border p-2 text-center font-mono">{b.id_number}</td>
-                  <td className="border p-2 text-center">{b.nationality ?? "—"}</td>
-                  <td className="border p-2 text-center">{b.passenger_count}</td>
-                  <td className="border p-2 text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—", b.trip_mode)}</td>
-                  <td className="border p-2 text-center">{b.packages?.name ?? "بدون فندق"}</td>
-                  <td className="border p-2 text-center">{roomLabelOf(b)}</td>
-                  <td className="border p-2 text-center font-bold">{total}</td>
-                  <td className="border p-2 text-center">{Math.round(perPerson)}</td>
-                  <td className="border p-2 text-center">{Math.round(seats)}</td>
-                  <td className="border p-2 text-center font-bold">{Math.round(total - seats)}</td>
-                  <td className="border p-2">{b.notes ?? ""}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{i + 1}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.booking_source || "الموقع"}</td>
+                  <td className="border px-2 py-0.5 leading-tight">{b.customer_name}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center font-mono">{b.id_number}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.nationality ?? "—"}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.passenger_count}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "—", b.trip_mode)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{b.packages?.name ?? "بدون فندق"}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{roomLabelOf(b)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center font-bold">{total}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{Math.round(perPerson)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center">{Math.round(seats)}</td>
+                  <td className="border px-2 py-0.5 leading-tight text-center font-bold">{Math.round(total - seats)}</td>
+                  <td className="border px-2 py-0.5 leading-tight">{b.notes ?? ""}</td>
                 </tr>
               );
             })}
@@ -597,13 +597,13 @@ export function TripSheetTab() {
           </tbody>
           <tfoot className="bg-muted font-bold">
             <tr>
-              <td className="border p-2 text-center" colSpan={5}>
+              <td className="border px-2 py-0.5 leading-tight text-center" colSpan={5}>
                 الإجمالي
               </td>
-              <td className="border p-2 text-center">{passengers}</td>
-              <td className="border p-2" colSpan={3} />
-              <td className="border p-2 text-center">{revenue}</td>
-              <td className="border p-2" colSpan={4} />
+              <td className="border px-2 py-0.5 leading-tight text-center">{passengers}</td>
+              <td className="border px-2 py-0.5 leading-tight" colSpan={3} />
+              <td className="border px-2 py-0.5 leading-tight text-center">{revenue}</td>
+              <td className="border px-2 py-0.5 leading-tight" colSpan={4} />
             </tr>
           </tfoot>
         </table>
@@ -680,23 +680,23 @@ export function TripSheetTab() {
           <table className="w-full text-xs border-collapse">
             <thead className="bg-muted">
               <tr>
-                <th className="border p-2">الفندق</th>
+                <th className="border px-2 py-0.5 leading-tight">الفندق</th>
                 {ROOM_ROWS.map((r) => (
-                  <th key={r} className="border p-2 whitespace-nowrap">
+                  <th key={r} className="border px-2 py-0.5 leading-tight whitespace-nowrap">
                     تكلفة {r}
                     <span className="block text-[10px] font-normal text-muted-foreground">
                       ÷ {ROOM_CAPACITY[r]}
                     </span>
                   </th>
                 ))}
-                <th className="border p-2">سعر ليلة التمديد</th>
-                <th className="border p-2">تكلفة ليلة التمديد</th>
+                <th className="border px-2 py-0.5 leading-tight">سعر ليلة التمديد</th>
+                <th className="border px-2 py-0.5 leading-tight">تكلفة ليلة التمديد</th>
               </tr>
             </thead>
             <tbody>
               {hotelPricings.map((h) => (
                 <tr key={h.hotel}>
-                  <td className="border p-2 font-bold whitespace-nowrap">{h.hotel}</td>
+                  <td className="border px-2 py-0.5 leading-tight font-bold whitespace-nowrap">{h.hotel}</td>
                   {ROOM_ROWS.map((r) => (
                     <td key={r} className="border p-1">
                       <Input
