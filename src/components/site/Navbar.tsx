@@ -5,6 +5,7 @@ import { Logo } from "./Logo";
 import { NAV_LINKS } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { BookNowLink } from "@/components/site/BookNowLink";
+import { NotificationBell } from "@/components/site/NotificationBell";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
@@ -33,7 +34,7 @@ export function Navbar() {
       if (!uid) { setDisplayName(""); setAvatarUrl(""); setIsAdmin(false); return; }
       const [{ data: prof }, { data: role }] = await Promise.all([
         supabase.from("profiles").select("full_name,avatar_url,mobile_phone").eq("id", uid).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", uid).in("role", ["admin", "manager", "user_manager"]).maybeSingle(),
       ]);
       setDisplayName(prof?.full_name || prof?.mobile_phone || "حسابي");
       setIsAdmin(!!role);
@@ -103,9 +104,12 @@ export function Navbar() {
           <BookNowLink className="btn-primary-glow hover:btn-primary-glow-hover rounded-full h-11 px-6 font-bold">احجز الآن</BookNowLink>
         </div>
 
-        <button className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted" onClick={() => setOpen(!open)} aria-label="القائمة">
+        <div className="md:hidden flex items-center gap-1">
+        {isAdmin && <NotificationBell />}
+        <button className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted" onClick={() => setOpen(!open)} aria-label="القائمة">
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
+        </div>
       </div>
 
       {open && (
