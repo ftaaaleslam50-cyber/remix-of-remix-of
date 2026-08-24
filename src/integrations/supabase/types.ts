@@ -1104,38 +1104,53 @@ export type Database = {
       }
       notifications: {
         Row: {
+          action_url: string | null
           archived: boolean
           body: string | null
+          booking_id: string | null
           category: string
           created_at: string
+          dedupe_key: string | null
           id: string
           link: string | null
           metadata: Json | null
           read: boolean
+          read_at: string | null
+          recipient_user_id: string | null
           title: string
           type: string
         }
         Insert: {
+          action_url?: string | null
           archived?: boolean
           body?: string | null
+          booking_id?: string | null
           category?: string
           created_at?: string
+          dedupe_key?: string | null
           id?: string
           link?: string | null
           metadata?: Json | null
           read?: boolean
+          read_at?: string | null
+          recipient_user_id?: string | null
           title: string
           type: string
         }
         Update: {
+          action_url?: string | null
           archived?: boolean
           body?: string | null
+          booking_id?: string | null
           category?: string
           created_at?: string
+          dedupe_key?: string | null
           id?: string
           link?: string | null
           metadata?: Json | null
           read?: boolean
+          read_at?: string | null
+          recipient_user_id?: string | null
           title?: string
           type?: string
         }
