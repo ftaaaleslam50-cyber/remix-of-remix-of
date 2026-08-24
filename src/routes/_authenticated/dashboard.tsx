@@ -861,11 +861,58 @@ function UnifiedBookingsTab(props: {
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
             <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
 
-            {/* Wide rooms counter: overall total + a mini counter per hotel */}
+            {/* Independent bus-number card */}
+            <div className="surface-card p-5 col-span-2 md:col-span-4 lg:col-span-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">رقم الحافلة</span>
+                <Bus className="h-5 w-5 text-primary" />
+              </div>
+              {bus ? (
+                <p className="mt-1 text-3xl font-extrabold text-[color:var(--color-navy)]">#{bus.bus_number}</p>
+              ) : buses.length === 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">لا توجد حافلات.</p>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {buses.map((bb) => (
+                    <span
+                      key={bb.id}
+                      className="rounded-full border bg-white px-3 py-1 text-sm font-extrabold text-[color:var(--color-navy)]"
+                    >
+                      #{bb.bus_number}
+                      {bb.name ? <span className="text-[11px] font-semibold text-muted-foreground"> — {bb.name}</span> : null}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Wide rooms counter: overall total + a mini counter per hotel (hotels only) */}
             <div className="surface-card p-5 col-span-2 md:col-span-4 lg:col-span-6">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">الغرف</span>
-                <HotelIcon className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full h-7 px-3 text-xs"
+                    onClick={() => {
+                      const lines = [
+                        `الغرف: ${rooms}${sharedPeople > 0 ? ` (+ ${sharedPeople} أفراد مشترك)` : ""}`,
+                        ...hotelStats.map(
+                          (h) =>
+                            `${h.hotel}: ${h.total} غرفة — ${h.lines.join("، ")}${h.shared > 0 ? ` — + ${h.shared} أفراد مشترك` : ""}`,
+                        ),
+                      ];
+                      navigator.clipboard
+                        .writeText(lines.join("\n"))
+                        .then(() => toast.success("تم نسخ بيان الغرف"))
+                        .catch(() => toast.error("تعذر النسخ"));
+                    }}
+                  >
+                    نسخ المعلومات
+                  </Button>
+                  <HotelIcon className="h-5 w-5 text-primary" />
+                </div>
               </div>
               <div className="mt-1 flex items-end gap-3 flex-wrap">
                 <p className="text-3xl font-extrabold text-[color:var(--color-navy)]">{rooms}</p>
@@ -873,15 +920,6 @@ function UnifiedBookingsTab(props: {
                   <p className="text-xs text-muted-foreground pb-1">+ {sharedPeople} أفراد مشترك</p>
                 )}
               </div>
-              {noHotelPeople > 0 && (
-                <div className="mt-4 rounded-xl border-2 border-dashed bg-muted/40 p-3 max-w-xs">
-                  <p className="font-extrabold text-sm">بدون فندق (مقاعد فقط)</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{noHotelBookings} حجز</p>
-                  <p className="mt-1 text-xl font-extrabold text-[color:var(--color-navy)]">
-                    {noHotelPeople} <span className="text-xs font-semibold">فرد</span>
-                  </p>
-                </div>
-              )}
               {hotelStats.length === 0 ? (
                 <p className="mt-3 text-xs text-muted-foreground">لا توجد بيانات غرف.</p>
               ) : (
@@ -905,6 +943,23 @@ function UnifiedBookingsTab(props: {
                 </div>
               )}
             </div>
+
+            {/* Standalone: no-hotel bookings are seats only, independent of room math */}
+            {noHotelPeople > 0 && (
+              <div className="surface-card p-5 col-span-2 md:col-span-4 lg:col-span-6 border-2 border-dashed">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">بدون فندق (مقاعد فقط)</span>
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <div className="mt-1 flex items-end gap-3 flex-wrap">
+                  <p className="text-3xl font-extrabold text-[color:var(--color-navy)]">
+                    {noHotelPeople} <span className="text-xs font-semibold">فرد</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground pb-1">{noHotelBookings} حجز</p>
+                </div>
+              </div>
+            )}
+
           </div>
         );
       })()}
