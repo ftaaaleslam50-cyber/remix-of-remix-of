@@ -72,6 +72,7 @@ export function TripSheetTab() {
   const [busId, setBusId] = useState("");
   const [search, setSearch] = useState("");
   const [busySheet, setBusySheet] = useState(false);
+  const { data: logoUrl } = useSheetLogo();
 
   // Trip-sheet header fields that are not stored per bus.
   const [driverName, setDriverName] = useState("");
