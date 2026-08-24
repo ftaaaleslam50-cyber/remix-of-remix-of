@@ -171,6 +171,23 @@ function put(
   return cell;
 }
 
+/** Fetch a logo image and return raw bytes + extension for embedding. */
+async function loadLogo(
+  url: string | null | undefined,
+): Promise<{ buffer: ArrayBuffer; ext: "png" | "jpeg" } | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const type = res.headers.get("content-type") ?? "";
+    const buffer = await res.arrayBuffer();
+    const ext = /jpe?g/i.test(type) || /\.jpe?g($|\?)/i.test(url) ? "jpeg" : "png";
+    return { buffer, ext };
+  } catch {
+    return null;
+  }
+}
+
 export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Promise<Blob> {
   const C = SHEET_COLORS;
   const wb = new ExcelJS.Workbook();
@@ -186,13 +203,27 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
     },
   });
   COL_WIDTHS.forEach((w, i) => (ws.getColumn(i + 1).width = w));
-  for (let r = 1; r <= 10; r++) ws.getRow(r).height = 30;
+  // Header block rows only — data rows are left to auto-fit their font size.
+  for (let r = 1; r <= 10; r++) ws.getRow(r).height = 24;
 
   const h = input.header;
 
+  // Logo slot (fixed 100×100) at the top-right, beside the title cell.
+  ws.mergeCells(1, 1, 3, 2);
+  put(ws, 1, 1, "", { fill: C.cream });
+  const logo = await loadLogo(input.logoUrl);
+  if (logo) {
+    const imgId = wb.addImage({ buffer: logo.buffer as ArrayBuffer, extension: logo.ext });
+    ws.addImage(imgId, {
+      tl: { col: 0.15, row: 0.05 },
+      ext: { width: 100, height: 100 },
+      editAs: "oneCell",
+    });
+  }
+
   // Title block
-  ws.mergeCells(1, 1, 6, 2);
-  put(ws, 1, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 36 });
+  ws.mergeCells(4, 1, 6, 2);
+  put(ws, 4, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
 
   const merge2 = (r: number, c1: number, c2: number) => ws.mergeCells(r, c1, r, c2);
 
