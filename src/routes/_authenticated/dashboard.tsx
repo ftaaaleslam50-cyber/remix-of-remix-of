@@ -33,7 +33,7 @@ import {
   XCircle,
   CheckCircle2,
 } from "lucide-react";
-import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
