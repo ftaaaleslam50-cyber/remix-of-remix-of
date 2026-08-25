@@ -608,12 +608,16 @@ function UnifiedBookingsTab(props: {
   }
 
   // ---- Bus seat chart (PNG / PDF) ----
+  const busLayoutId = bus?.layout_id ?? null;
   const { data: busLayout } = useQuery({
-    queryKey: ["ub-bus-layout", bus?.layout_id ?? null],
-    enabled: !!bus?.layout_id,
-    queryFn: async () =>
-      (await supabase.from("bus_layouts").select("layout_json").eq("id", bus!.layout_id!).maybeSingle())
-        .data as { layout_json: LayoutJson } | null,
+    queryKey: ["ub-bus-layout", busLayoutId],
+    enabled: !!busLayoutId,
+    queryFn: async () => {
+      if (!busLayoutId) return null;
+      return (await supabase.from("bus_layouts").select("layout_json").eq("id", busLayoutId).maybeSingle()).data as {
+        layout_json: LayoutJson;
+      } | null;
+    },
   });
 
   const activeSeatBookings = filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && (b.seat_numbers?.length ?? 0) > 0);
