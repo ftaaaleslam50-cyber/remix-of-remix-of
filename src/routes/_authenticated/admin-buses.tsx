@@ -33,6 +33,8 @@ interface BusRow {
   image_url: string | null;
   bus_type: string | null;
   details: string | null;
+  driver_phone: string | null;
+  driver_id_number: string | null;
   price_addition: number;
   round_trip_price: number;
   outbound_price: number;
@@ -183,6 +185,8 @@ function AdminBuses() {
       model: b.model,
       bus_type: b.bus_type,
       details: b.details,
+      driver_phone: b.driver_phone,
+      driver_id_number: b.driver_id_number,
       capacity: b.capacity,
       layout: b.layout,
       layout_id: b.layout_id,
@@ -222,6 +226,8 @@ function AdminBuses() {
       image_url: b.image_url,
       bus_type: b.bus_type,
       details: b.details,
+      driver_phone: b.driver_phone,
+      driver_id_number: b.driver_id_number,
       price_addition: Number(b.round_trip_price) || 0,
       round_trip_price: Number(b.round_trip_price) || 0,
       outbound_price: Number(b.outbound_price) || 0,
@@ -380,6 +386,8 @@ function AdminBuses() {
                   <TableHead>ذهاب فقط</TableHead>
                   <TableHead>عودة فقط</TableHead>
                   <TableHead>صورة</TableHead>
+                  <TableHead>جوال السائق</TableHead>
+                  <TableHead>هوية السائق</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -388,7 +396,7 @@ function AdminBuses() {
               <TableBody>
                 {buses.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
                       لا توجد حافلات
                     </TableCell>
                   </TableRow>
@@ -518,6 +526,34 @@ function BusEditRow({
             setLocal({
               ...local,
               bus_type: e.target.value,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          dir="ltr"
+          className="h-9 w-32"
+          value={local.driver_phone ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              driver_phone: e.target.value,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          dir="ltr"
+          className="h-9 w-32"
+          value={local.driver_id_number ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              driver_id_number: e.target.value,
             })
           }
         />
