@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import QRCode from "qrcode";
@@ -33,7 +33,7 @@ import {
   XCircle,
   CheckCircle2,
 } from "lucide-react";
-import type { LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
@@ -57,6 +57,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { returnDisplay } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/site/Logo";
@@ -101,7 +102,14 @@ interface BookingRow {
   package_id?: string | null;
   packages?: { name: string } | null;
   trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
-  buses?: { id: string; name: string | null; bus_number: number; expenses: number | null } | null;
+  buses?: {
+    id: string;
+    name: string | null;
+    bus_number: number;
+    expenses: number | null;
+    driver_phone?: string | null;
+    driver_id_number?: string | null;
+  } | null;
 }
 
 function Dashboard() {
@@ -149,7 +157,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -444,6 +452,26 @@ interface UBBusOpt {
   trip_id: string | null;
   layout?: string | null;
   layout_id?: string | null;
+  driver_phone?: string | null;
+  driver_id_number?: string | null;
+}
+
+interface ImportBookingDraft {
+  approved: boolean;
+  customer_name: string;
+  contact_phone: string;
+  whatsapp_phone: string;
+  id_number: string;
+  nationality: string;
+  passenger_count: number;
+  seat_numbers: string[];
+  booking_source: string;
+  hotel: string;
+  roomType: string;
+  returnDay: string;
+  extension_nights: number;
+  total_price: number;
+  notes: string;
 }
 
 function UnifiedBookingsTab(props: {
@@ -474,8 +502,12 @@ function UnifiedBookingsTab(props: {
   const [manualOpen, setManualOpen] = useState<boolean>(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState<boolean>(false);
+  const [importOpen, setImportOpen] = useState<boolean>(false);
+  const [importRows, setImportRows] = useState<ImportBookingDraft[]>([]);
+  const [importing, setImporting] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: trips = [] } = useQuery({
     queryKey: ["ub-trips"],
@@ -494,7 +526,7 @@ function UnifiedBookingsTab(props: {
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
         let q = supabase
           .from("buses")
-          .select("id,name,bus_number,capacity,trip_id,layout,layout_id")
+          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,driver_phone,driver_id_number")
           .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
@@ -504,10 +536,19 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id").order("bus_number"))
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,driver_phone,driver_id_number").order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
+  });
+
+  const { data: importHotels = [] } = useQuery({
+    queryKey: ["ub-import-hotels"],
+    queryFn: async () =>
+      ((await supabase.from("packages").select("id,name").eq("active", true).order("display_order")).data ?? []) as Array<{
+        id: string;
+        name: string;
+      }>,
   });
 
   // Filter bookings by bus_id when set (works across trips). When only a trip is
@@ -567,13 +608,28 @@ function UnifiedBookingsTab(props: {
   }
 
   // ---- Bus seat chart (PNG / PDF) ----
+  const busLayoutId = bus?.layout_id ?? null;
   const { data: busLayout } = useQuery({
-    queryKey: ["ub-bus-layout", bus?.layout_id ?? null],
-    enabled: !!bus?.layout_id,
-    queryFn: async () =>
-      (await supabase.from("bus_layouts").select("layout_json").eq("id", bus!.layout_id!).maybeSingle())
-        .data as { layout_json: LayoutJson } | null,
+    queryKey: ["ub-bus-layout", busLayoutId],
+    enabled: !!busLayoutId,
+    queryFn: async () => {
+      if (!busLayoutId) return null;
+      return (await supabase.from("bus_layouts").select("layout_json").eq("id", busLayoutId).maybeSingle()).data as {
+        layout_json: LayoutJson;
+      } | null;
+    },
   });
+
+  const activeSeatBookings = filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && (b.seat_numbers?.length ?? 0) > 0);
+  const liveSeatNumbers = activeSeatBookings.flatMap((b) => b.seat_numbers ?? []);
+  const liveSeatGenders = activeSeatBookings.reduce<Record<string, "male" | "female">>((acc, b) => {
+    const explicit = (b.seat_genders ?? {}) as Record<string, "male" | "female">;
+    for (const [idx, seat] of (b.seat_numbers ?? []).entries()) {
+      acc[seat] = explicit[seat] ?? (idx < Number(b.male_count ?? 0) ? "male" : "female");
+    }
+    return acc;
+  }, {});
+  const liveLayout = bus ? busLayout?.layout_json ?? buildDefaultLayout(bus.layout === "B" ? "B" : "A") : null;
 
   function buildChart() {
     if (!busId || !bus) {
@@ -644,6 +700,162 @@ function UnifiedBookingsTab(props: {
     XLSX.writeFile(wb, `${busLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  function normalizeImportText(v: unknown): string {
+    return String(v ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function importNumber(v: unknown): number {
+    const n = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function roomTypeFromLabel(label: string): RoomType {
+    if (label.includes("فرد")) return "1";
+    if (label.includes("ثن")) return "2";
+    if (label.includes("ثلاث")) return "3";
+    if (label.includes("ربع")) return "4";
+    return "5";
+  }
+
+  function findColumn(headers: string[], aliases: string[]): number {
+    return headers.findIndex((h) => aliases.some((a) => h.includes(a)));
+  }
+
+  async function handleImportFile(file: File | null | undefined) {
+    if (!file) return;
+    try {
+      const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      const sheetName = wb.SheetNames[0];
+      const sheet = sheetName ? wb.Sheets[sheetName] : null;
+      if (!sheet) throw new Error("تعذر قراءة الملف");
+      const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
+      const headerIndex = aoa.findIndex((row) => {
+        const text = row.map(normalizeImportText).join(" ");
+        return text.includes("العميل") && text.includes("العدد");
+      });
+      if (headerIndex < 0) throw new Error("لم يتم العثور على رأس جدول الركاب في الملف");
+
+      const headers = aoa[headerIndex].map(normalizeImportText);
+      const idx = {
+        customer: findColumn(headers, ["العميل", "الاسم"]),
+        phone: findColumn(headers, ["الجوال", "رقم الجوال", "الهاتف", "تليفون"]),
+        whatsapp: findColumn(headers, ["واتساب", "whatsapp"]),
+        id: findColumn(headers, ["الهوية", "الجواز"]),
+        nationality: findColumn(headers, ["جنسية", "الجنسية"]),
+        count: findColumn(headers, ["العدد", "الأفراد"]),
+        seats: findColumn(headers, ["المقاعد", "المقعد"]),
+        rep: findColumn(headers, ["المندوب", "مصدر"]),
+        hotel: findColumn(headers, ["الفندق"]),
+        room: findColumn(headers, ["نوع الغرفه", "نوع الغرفة", "الغرفة"]),
+        returnDay: findColumn(headers, ["العوده", "العودة"]),
+        extension: findColumn(headers, ["ليالي التمديد", "التمديد"]),
+        total: findColumn(headers, ["إجمالي", "اجمالي", "السعر"]),
+        notes: findColumn(headers, ["ملاحظات", "ملاحظة"]),
+      };
+
+      const parsed = aoa.slice(headerIndex + 1).flatMap((row): ImportBookingDraft[] => {
+        const at = (i: number) => (i >= 0 ? row[i] : "");
+        const customer = normalizeImportText(at(idx.customer));
+        const count = Math.max(1, importNumber(at(idx.count)) || 1);
+        const phone = normalizeImportText(at(idx.phone));
+        const seats = normalizeImportText(at(idx.seats))
+          .split(/[,،\s]+/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const hasUsefulData = customer || phone || seats.length > 0;
+        if (!hasUsefulData) return [];
+        return [
+          {
+            approved: true,
+            customer_name: customer,
+            contact_phone: phone,
+            whatsapp_phone: normalizeImportText(at(idx.whatsapp)) || phone,
+            id_number: normalizeImportText(at(idx.id)),
+            nationality: normalizeImportText(at(idx.nationality)),
+            passenger_count: count,
+            seat_numbers: seats,
+            booking_source: normalizeImportText(at(idx.rep)) || "Admin",
+            hotel: normalizeImportText(at(idx.hotel)),
+            roomType: normalizeImportText(at(idx.room)),
+            returnDay: normalizeImportText(at(idx.returnDay)),
+            extension_nights: Math.max(0, importNumber(at(idx.extension))),
+            total_price: importNumber(at(idx.total)),
+            notes: normalizeImportText(at(idx.notes)),
+          },
+        ];
+      });
+
+      if (parsed.length === 0) throw new Error("لم يتم العثور على حجوزات قابلة للاستيراد");
+      setImportRows(parsed);
+      setImportOpen(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر قراءة ملف الكشف");
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  }
+
+  async function approveImportedBookings() {
+    const rows = importRows.filter((r) => r.approved);
+    if (rows.length === 0) return toast.error("حدد حجزًا واحدًا على الأقل");
+    const invalid = rows.find((r) => !r.customer_name.trim() || !r.contact_phone.trim());
+    if (invalid) return toast.error("كل حجز معتمد يحتاج اسم العميل ورقم الجوال");
+
+    setImporting(true);
+    const stamp = Date.now();
+    const payloads = rows.map((r, i) => {
+      const hotel = importHotels.find((h) => h.name.trim() === r.hotel.trim());
+      const noHotel = !hotel;
+      const passengerCount = Math.max(1, Number(r.passenger_count) || 1);
+      const totalPrice = Math.max(0, Number(r.total_price) || 0);
+      const source = r.booking_source.trim() || "Admin";
+      return {
+        booking_code: `IMP-${stamp}-${i + 1}`,
+        booking_type: r.roomType.includes("مشترك") || noHotel ? "individual" : "family",
+        passenger_count: passengerCount,
+        male_count: passengerCount,
+        female_count: 0,
+        seat_genders: Object.fromEntries((r.seat_numbers ?? []).map((seat) => [seat, "male"])),
+        room_type: roomTypeFromLabel(r.roomType),
+        package_id: hotel?.id ?? null,
+        extension_nights: noHotel ? 0 : Math.max(0, Number(r.extension_nights) || 0),
+        trip_id: tripId || null,
+        bus_id: busId || null,
+        trip_mode: "round",
+        seat_numbers: r.seat_numbers ?? [],
+        no_hotel: noHotel,
+        no_bus: !busId,
+        customer_name: r.customer_name.trim(),
+        id_number: r.id_number.trim(),
+        id_image_url: null,
+        nationality: r.nationality.trim() || null,
+        booking_source: source,
+        contact_phone: r.contact_phone.trim(),
+        whatsapp_phone: (r.whatsapp_phone || r.contact_phone).trim(),
+        rep_name: source === "Admin" || source === "الموقع" ? null : source,
+        rep_phone: null,
+        rep_whatsapp: null,
+        price_per_person: Math.round(totalPrice / passengerCount),
+        total_price: totalPrice,
+        coupon_code: null,
+        discount_amount: 0,
+        status: "confirmed",
+        notes: r.notes.trim() || null,
+        actual_return_day: r.returnDay.trim() || null,
+      };
+    });
+
+    const { error } = await supabase.from("bookings").insert(payloads as never);
+    setImporting(false);
+    if (error) return toast.error(error.message);
+    toast.success(`تم استيراد ${payloads.length} حجز`);
+    setImportOpen(false);
+    setImportRows([]);
+    qcInner.invalidateQueries({ queryKey: ["admin-bookings"] });
+  }
+
   const ROOM_TXT: Record<string, string> = { "1": "فردي", "2": "ثنائي", "3": "ثلاثي", "4": "رباعي", "5": "خماسي" };
 
   // Data handed to the official-template exporter (Excel / PDF).
@@ -660,6 +872,8 @@ function UnifiedBookingsTab(props: {
         returnDate: info?.return_day ?? "",
         capacity: bus?.capacity,
         busNumber: bus ? bus.bus_number : "",
+        driverId: bus?.driver_id_number ?? "",
+        driverPhone: bus?.driver_phone ?? "",
         passengersTotal: totalPax,
         seatsRemaining: bus ? Math.max(0, (bus.capacity ?? 0) - totalPax) : undefined,
       },
@@ -1002,12 +1216,94 @@ function UnifiedBookingsTab(props: {
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2 flex-wrap">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,.xls,.xlsm"
+          className="hidden"
+          onChange={(e) => handleImportFile(e.target.files?.[0])}
+        />
+        <Button size="sm" variant="outline" className="rounded-full" onClick={() => importInputRef.current?.click()}>
+          <Download className="h-3 w-3 ml-1" /> رفع كشف
+        </Button>
         <Button size="sm" className="rounded-full" onClick={() => setManualOpen((v) => !v)}>
           <Plus className="h-3 w-3 ml-1" />
           حجز يدوي
         </Button>
       </div>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>مراجعة الحجوزات المستوردة</DialogTitle>
+            <DialogDescription>راجع الحجوزات المقروءة من الكشف، وعدّل الاسم أو الجوال عند الحاجة قبل الاعتماد.</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-xs border-collapse">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="border p-2">اعتماد</th>
+                  <th className="border p-2">الاسم</th>
+                  <th className="border p-2">الجوال</th>
+                  <th className="border p-2">الأفراد</th>
+                  <th className="border p-2">المقاعد</th>
+                  <th className="border p-2">الفندق</th>
+                  <th className="border p-2">الغرفة</th>
+                  <th className="border p-2">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importRows.map((r, i) => (
+                  <tr key={`${r.customer_name}-${i}`}>
+                    <td className="border p-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={r.approved}
+                        onChange={(e) =>
+                          setImportRows((prev) => prev.map((x, idx) => (idx === i ? { ...x, approved: e.target.checked } : x)))
+                        }
+                      />
+                    </td>
+                    <td className="border p-1 min-w-44">
+                      <Input
+                        className="h-8 text-xs"
+                        value={r.customer_name}
+                        onChange={(e) =>
+                          setImportRows((prev) => prev.map((x, idx) => (idx === i ? { ...x, customer_name: e.target.value } : x)))
+                        }
+                      />
+                    </td>
+                    <td className="border p-1 min-w-36">
+                      <Input
+                        dir="ltr"
+                        className="h-8 text-xs"
+                        value={r.contact_phone}
+                        onChange={(e) =>
+                          setImportRows((prev) => prev.map((x, idx) => (idx === i ? { ...x, contact_phone: e.target.value } : x)))
+                        }
+                      />
+                    </td>
+                    <td className="border p-2 text-center">{r.passenger_count}</td>
+                    <td className="border p-2 text-center font-mono">{r.seat_numbers.join(", ") || "—"}</td>
+                    <td className="border p-2 text-center">{r.hotel || "بدون فندق"}</td>
+                    <td className="border p-2 text-center">{r.roomType || "—"}</td>
+                    <td className="border p-2 text-center font-bold">{sar(r.total_price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setImportOpen(false)}>
+              إلغاء
+            </Button>
+            <Button className="rounded-full" disabled={importing} onClick={approveImportedBookings}>
+              {importing ? "جاري الاستيراد..." : "اعتماد الحجوزات"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="overflow-x-auto">
         <Table>
@@ -2940,6 +3236,27 @@ function BookingSchedulesCard() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {bus && liveLayout && (
+        <div className="surface-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="font-extrabold flex items-center gap-2">
+              <Bus className="h-4 w-4 text-primary" /> مخطط الحافلة الحي
+            </h3>
+            <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
+          </div>
+          <div className="pointer-events-none">
+            <LayoutSeatMap
+              layout={liveLayout}
+              selected={liveSeatNumbers}
+              reserved={[]}
+              maxSelectable={liveSeatNumbers.length}
+              genders={liveSeatGenders}
+              onChange={() => undefined}
+            />
+          </div>
         </div>
       )}
     </div>
