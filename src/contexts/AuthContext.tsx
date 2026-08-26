@@ -19,7 +19,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = subscribeAuthState(setAuth);
     void ensureAuthInitialized().then(setAuth);
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   return (
