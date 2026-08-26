@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureAuthInitialized, subscribeAuthState } from "@/lib/auth-session";
 
 export interface UserNotif {
   id: string;
