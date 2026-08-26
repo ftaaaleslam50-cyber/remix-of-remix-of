@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { ShieldCheck, LogIn, UserPlus, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 /**
@@ -22,21 +23,14 @@ export function BookNowLink({
   className?: string;
 }) {
   const navigate = useNavigate();
-  const [userId, setUserId] = useState<string | null | undefined>(undefined);
+  const { user, loading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-      setUserId(session?.user?.id ?? null)
-    );
-    return () => sub.subscription.unsubscribe();
-  }, []);
 
   async function handleClick() {
     const blocked = await bookingBlockedMessage();
     if (blocked) return toast.error(blocked);
-    if (userId) {
+    if (authLoading) return;
+    if (user) {
       navigate({ to: "/booking" });
     } else {
       setOpen(true);

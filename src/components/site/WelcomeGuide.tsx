@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { User as UserIcon, Ticket, Sparkles, ArrowRight, ArrowLeft, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const KEY_PREFIX = "welcome_guide_done_";
 
@@ -11,6 +11,7 @@ export function WelcomeGuide() {
   const [uid, setUid] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     function check(userId: string) {
@@ -19,14 +20,8 @@ export function WelcomeGuide() {
         setOpen(true);
       }
     }
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) check(user.id);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) check(session.user.id);
-    });
-    return () => { sub.subscription.unsubscribe(); };
-  }, []);
+    if (!loading && user) check(user.id);
+  }, [loading, user?.id]);
 
   function finish() {
     if (uid) localStorage.setItem(KEY_PREFIX + uid, "1");

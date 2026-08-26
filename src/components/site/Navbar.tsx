@@ -10,6 +10,7 @@ import { UserNotificationBell } from "@/components/site/UserNotificationBell";
 
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export function Navbar() {
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -45,10 +47,8 @@ export function Navbar() {
         if (data?.signedUrl) setAvatarUrl(data.signedUrl);
       } else setAvatarUrl("");
     }
-    supabase.auth.getUser().then(({ data }) => hydrate(data.user?.id ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => hydrate(session?.user?.id ?? null));
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    if (!authLoading) void hydrate(user?.id ?? null);
+  }, [authLoading, user?.id]);
 
   async function signOut() {
     await supabase.auth.signOut();

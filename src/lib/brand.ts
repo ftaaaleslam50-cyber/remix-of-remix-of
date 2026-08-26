@@ -1,10 +1,12 @@
+import logoUrl from "@/assets/brand-logo.png";
+
 export const BRAND = {
   name: "مؤسسة زهرة طيبة لتنظيم الرحلات",
   shortName: "زهرة طيبة",
   email: "zhrttybt888@gmail.com",
   nationalNumber: "7029663460",
   whatsapp: "966502728301",
-  logoUrl: "https://i.ibb.co/8ntds0qQ/image.png",
+  logoUrl,
   tagline: "انطلق من مسجد قباء إلى مكة المكرمة",
 };
 

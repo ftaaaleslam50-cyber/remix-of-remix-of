@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { BRAND, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/brand";
 import { WelcomeGuide } from "@/components/site/WelcomeGuide";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 function NotFoundComponent() {
   return (
@@ -115,9 +116,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <WelcomeGuide />
-      <Toaster richColors position="top-center" dir="rtl" />
+      <AuthProvider>
+        <Outlet />
+        <WelcomeGuide />
+        <Toaster richColors position="top-center" dir="rtl" />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
