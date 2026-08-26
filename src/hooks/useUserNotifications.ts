@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureAuthInitialized, subscribeAuthState } from "@/lib/auth-session";
 
 export interface UserNotif {
   id: string;
@@ -49,22 +50,22 @@ export function useUserNotifications() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!active) return;
-      const id = data.user?.id ?? null;
+    function apply(snapshot: { session: { user?: { id: string } } | null; loading: boolean }) {
+      const id = snapshot.session?.user?.id ?? null;
       setUid(id);
       if (id) load(id);
-      else { setItems([]); setLoading(false); }
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      const id = session?.user?.id ?? null;
-      setUid(id);
-      if (id) load(id);
-      else setItems([]);
-    });
-    return () => { active = false; sub.subscription.unsubscribe(); };
+      else {
+        setItems([]);
+        if (!snapshot.loading) setLoading(false);
+      }
+    }
+    const unsubscribe = subscribeAuthState(apply);
+    void ensureAuthInitialized().then(apply);
+    return () => {
+      unsubscribe();
+    };
   }, [load]);
+
 
   useEffect(() => {
     if (!uid) return;

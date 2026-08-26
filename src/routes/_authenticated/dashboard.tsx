@@ -1068,6 +1068,36 @@ function UnifiedBookingsTab(props: {
         ).length;
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="col-span-2 md:col-span-4 lg:col-span-6 flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full h-8 px-4 text-xs"
+                onClick={() => {
+                  const lines = [
+                    `الحجوزات: ${filtered.length}`,
+                    `المعتمرون: ${passengers}`,
+                    `الإيرادات (مؤكد): ${sar(revenue)}`,
+                    `حجوزات اليوم: ${todayCount}`,
+                    ...(tripId ? [`مواعيد العودة: ${returnCount}`] : []),
+                    `${tripId ? "حافلات الرحلة" : "إجمالي الحافلات"}: ${busesInScope}`,
+                    `الغرف: ${rooms}${sharedPeople > 0 ? ` (+ ${sharedPeople} أفراد مشترك)` : ""}`,
+                    ...hotelStats.map(
+                      (h) =>
+                        `${h.hotel}: ${h.total} غرفة — ${h.lines.join("، ")}${h.shared > 0 ? ` — + ${h.shared} أفراد مشترك` : ""}`,
+                    ),
+                    `بدون فندق: ${noHotelPeople} فرد (${noHotelBookings} حجز)`,
+                  ];
+                  navigator.clipboard
+                    .writeText(lines.join("\n"))
+                    .then(() => toast.success("تم نسخ جميع العدادات"))
+                    .catch(() => toast.error("تعذر النسخ"));
+                }}
+              >
+                نسخ جميع العدادات
+              </Button>
+            </div>
+
             <StatCard icon={CalendarCheck} label="الحجوزات" value={String(filtered.length)} />
             <StatCard icon={Users} label="المعتمرون" value={String(passengers)} />
             <StatCard icon={DollarSign} label="الإيرادات (مؤكد)" value={sar(revenue)} />
