@@ -1075,6 +1075,28 @@ function UnifiedBookingsTab(props: {
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
             <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
 
+            {bus && liveLayout && (
+              <div className="surface-card p-4 space-y-3 col-span-2 md:col-span-4 lg:col-span-6">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h3 className="font-extrabold flex items-center gap-2">
+                    <Bus className="h-4 w-4 text-primary" /> مخطط الحافلة الحي
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
+                </div>
+                <div className="pointer-events-none">
+                  <LayoutSeatMap
+                    layout={liveLayout}
+                    selected={liveSeatNumbers}
+                    reserved={[]}
+                    maxSelectable={liveSeatNumbers.length}
+                    genders={liveSeatGenders}
+                    onChange={() => undefined}
+                  />
+                </div>
+              </div>
+            )}
+
+
             {/* Independent bus-number card */}
             <div className="surface-card p-5 col-span-2 md:col-span-4 lg:col-span-6">
               <div className="flex items-center justify-between">
@@ -3239,26 +3261,6 @@ function BookingSchedulesCard() {
         </div>
       )}
 
-      {bus && liveLayout && (
-        <div className="surface-card p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h3 className="font-extrabold flex items-center gap-2">
-              <Bus className="h-4 w-4 text-primary" /> مخطط الحافلة الحي
-            </h3>
-            <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
-          </div>
-          <div className="pointer-events-none">
-            <LayoutSeatMap
-              layout={liveLayout}
-              selected={liveSeatNumbers}
-              reserved={[]}
-              maxSelectable={liveSeatNumbers.length}
-              genders={liveSeatGenders}
-              onChange={() => undefined}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
