@@ -32,6 +32,7 @@ import {
   Image as ImageIcon,
   XCircle,
   CheckCircle2,
+  FileDown,
 } from "lucide-react";
 import { LayoutSeatMap, mirrorLayout, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
