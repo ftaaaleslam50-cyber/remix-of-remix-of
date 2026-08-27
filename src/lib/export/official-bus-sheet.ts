@@ -233,22 +233,22 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
 
   const h = input.header;
 
-  // Logo slot (fixed 100×100) at the top-right, beside the title cell.
-  ws.mergeCells(1, 1, 3, 2);
-  put(ws, 1, 1, "", { fill: C.cream });
+  // Logo slot — merged block E1:H8.
+  ws.mergeCells(1, 5, 8, 8);
+  put(ws, 1, 5, "", { fill: C.cream });
   const logo = await loadLogo(input.logoUrl);
   if (logo) {
     const imgId = wb.addImage({ buffer: logo.buffer as ArrayBuffer, extension: logo.ext });
     ws.addImage(imgId, {
-      tl: { col: 0.15, row: 0.05 },
-      ext: { width: 100, height: 100 },
+      tl: { col: 4.1, row: 0.1 },
+      ext: { width: 260, height: 200 },
       editAs: "oneCell",
     });
   }
 
   // Title block
-  ws.mergeCells(4, 1, 6, 2);
-  put(ws, 4, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
+  ws.mergeCells(1, 1, 6, 2);
+  put(ws, 1, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
 
   const merge2 = (r: number, c1: number, c2: number) => ws.mergeCells(r, c1, r, c2);
 
