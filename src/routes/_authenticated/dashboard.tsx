@@ -1123,7 +1123,36 @@ function UnifiedBookingsTab(props: {
                     onChange={() => undefined}
                   />
                 </div>
+
+                {/* Detailed occupancy: seat → passenger name → representative */}
+                {activeSeatBookings.length > 0 && (
+                  <div className="rounded-2xl border overflow-hidden">
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] gap-2 bg-muted px-3 py-2 text-[11px] font-extrabold text-muted-foreground">
+                      <span>المقعد</span>
+                      <span>الاسم</span>
+                      <span>المندوب</span>
+                    </div>
+                    <div className="max-h-72 overflow-auto divide-y">
+                      {activeSeatBookings
+                        .flatMap((b) => (b.seat_numbers ?? []).map((seat) => ({ seat, b })))
+                        .sort((a, z) => a.seat.localeCompare(z.seat, "en", { numeric: true }))
+                        .map(({ seat, b }) => (
+                          <div
+                            key={`${b.id}-${seat}`}
+                            className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2 px-3 py-2 text-xs"
+                          >
+                            <span className="shrink-0 rounded-full bg-[color:var(--color-navy)] px-2 py-0.5 font-extrabold text-white">
+                              {seat}
+                            </span>
+                            <span className="truncate font-bold">{b.customer_name}</span>
+                            <span className="truncate text-muted-foreground">{b.booking_source || "الموقع"}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
             )}
 
 
