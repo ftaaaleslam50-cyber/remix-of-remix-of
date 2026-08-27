@@ -899,6 +899,8 @@ function UnifiedBookingsTab(props: {
         returnDate: info?.return_day ?? "",
         capacity: bus?.capacity,
         busNumber: bus ? bus.bus_number : "",
+        driverName: bus?.driver_name ?? "",
+        plate: bus?.plate ?? "",
         driverId: bus?.driver_id_number ?? "",
         driverPhone: bus?.driver_phone ?? "",
         passengersTotal: totalPax,
