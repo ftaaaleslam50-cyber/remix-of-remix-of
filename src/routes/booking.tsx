@@ -1447,22 +1447,22 @@ function StepTripBus({
           return (
             <div
               key={t.id}
-              className={`rounded-3xl border-2 bg-white transition-all ${
+              className={`overflow-hidden rounded-2xl sm:rounded-3xl border-2 bg-white transition-all ${
                 active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
               }`}
             >
-              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
-                    <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
-                    <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      الذهاب: {t.departure_day} • العودة: {t.return_day}
+              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-4 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
+                    <h3 className="mt-1 text-base sm:text-lg font-extrabold text-[color:var(--color-navy)] break-words">{t.name}</h3>
+                    <div className="mt-2 text-xs sm:text-sm text-muted-foreground flex items-start gap-2">
+                      <Calendar className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span className="break-words">الذهاب: {t.departure_day} • العودة: {t.return_day}</span>
                     </div>
                   </div>
                   {active && (
-                    <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-full btn-primary-glow text-white flex items-center justify-center">
                       <Check className="h-5 w-5" />
                     </div>
                   )}
@@ -1470,7 +1470,8 @@ function StepTripBus({
               </button>
 
               {active && (
-                <div className="border-t border-border p-4 space-y-2 bg-muted/30 rounded-b-3xl">
+                <div className="border-t border-border p-3 sm:p-4 space-y-2 bg-muted/30">
+
                   <p className="text-sm font-bold text-[color:var(--color-navy)] mb-1">
                     اختر حافلتك من الحافلات المتاحة
                   </p>
