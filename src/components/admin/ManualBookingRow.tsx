@@ -227,7 +227,7 @@ export function ManualBookingRow({
           .select(
             "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price",
           )
-          .eq("id", d.bus_id)
+          .eq("id", d.bus_id!)
           .maybeSingle()
       ).data as unknown as BusOpt) ?? null,
   });
