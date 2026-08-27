@@ -44,7 +44,9 @@ import {
   buildDefaultLayout,
   downloadSeatChartPdf,
   downloadSeatChartPng,
-  renderSeatChartCanvas,
+  renderSeatChartPages,
+  twoPartName,
+
   type SeatOccupant,
 } from "@/lib/bus-seat-chart";
 import { AssetField } from "@/components/admin/AssetField";
