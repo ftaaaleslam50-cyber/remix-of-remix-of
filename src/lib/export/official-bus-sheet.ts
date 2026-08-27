@@ -94,19 +94,39 @@ export function hotelsOf(rows: OfficialSheetRow[]): string[] {
   return [...new Set(rows.map((r) => (r.hotel || "").trim()).filter(Boolean))];
 }
 
-/** rooms matrix: room type × hotel → number of people */
+/** People per room, used to convert passenger counts into room counts. */
+export const ROOM_CAPACITY: Record<string, number> = {
+  فردي: 1,
+  ثنائي: 2,
+  ثلاثي: 3,
+  رباعي: 4,
+  خماسي: 5,
+  "رباعي مشترك": 4,
+  "خماسي مشترك": 5,
+  "مشترك مشرف": 4,
+};
+
+/** rooms matrix: room type × hotel → number of ROOMS (not people) */
 export function roomsMatrix(rows: OfficialSheetRow[]) {
   const hotels = hotelsOf(rows);
-  const matrix = new Map<string, Map<string, number>>();
-  for (const rt of ROOM_TYPES) matrix.set(rt, new Map(hotels.map((h) => [h, 0])));
+  const people = new Map<string, Map<string, number>>();
+  for (const rt of ROOM_TYPES) people.set(rt, new Map(hotels.map((h) => [h, 0])));
   for (const r of rows) {
     const rt = (r.roomType || "").trim();
     const h = (r.hotel || "").trim();
-    if (!matrix.has(rt) || !h) continue;
-    const inner = matrix.get(rt)!;
+    if (!people.has(rt) || !h) continue;
+    const inner = people.get(rt)!;
     inner.set(h, (inner.get(h) ?? 0) + (r.count || 0));
   }
-  return { hotels, matrix };
+  // Convert people → rooms using each room type's capacity.
+  const matrix = new Map<string, Map<string, number>>();
+  for (const rt of ROOM_TYPES) {
+    const cap = ROOM_CAPACITY[rt] || 1;
+    const inner = new Map<string, number>();
+    for (const h of hotels) inner.set(h, Math.ceil((people.get(rt)?.get(h) ?? 0) / cap));
+    matrix.set(rt, inner);
+  }
+  return { hotels, matrix, people };
 }
 
 /** total passengers per return day */
@@ -213,22 +233,22 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
 
   const h = input.header;
 
-  // Logo slot (fixed 100×100) at the top-right, beside the title cell.
-  ws.mergeCells(1, 1, 3, 2);
-  put(ws, 1, 1, "", { fill: C.cream });
+  // Logo slot — merged block E1:H8.
+  ws.mergeCells(1, 5, 8, 8);
+  put(ws, 1, 5, "", { fill: C.cream });
   const logo = await loadLogo(input.logoUrl);
   if (logo) {
     const imgId = wb.addImage({ buffer: logo.buffer as ArrayBuffer, extension: logo.ext });
     ws.addImage(imgId, {
-      tl: { col: 0.15, row: 0.05 },
-      ext: { width: 100, height: 100 },
+      tl: { col: 4.1, row: 0.1 },
+      ext: { width: 260, height: 200 },
       editAs: "oneCell",
     });
   }
 
   // Title block
-  ws.mergeCells(4, 1, 6, 2);
-  put(ws, 4, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
+  ws.mergeCells(1, 1, 6, 2);
+  put(ws, 1, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
 
   const merge2 = (r: number, c1: number, c2: number) => ws.mergeCells(r, c1, r, c2);
 
@@ -251,8 +271,8 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   put(ws, 7, 2, h.busNumber ?? "", { fill: C.lightBlue, color: C.darkRed, size: 34 });
 
   const driverPairs: Array<[string, ExcelJS.CellValue]> = [
-    ["لوحه", h.plate ?? ""],
     ["السائق", h.driverName ?? ""],
+    ["لوحه", h.plate ?? ""],
     ["هويته", h.driverId ?? ""],
     ["ت", h.driverPhone ?? ""],
   ];
@@ -359,6 +379,45 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
 const esc = (v: unknown) =>
   String(v ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!);
 
+interface GridCell {
+  r: number;
+  c: number;
+  rs?: number;
+  cs?: number;
+  v: string;
+  cls?: string;
+  style?: string;
+}
+
+/** Emit a header table that mirrors the Excel sheet cell-for-cell. */
+function headerGrid(cells: GridCell[], rows: number, cols: number): string {
+  const covered = new Set<string>();
+  for (const cell of cells) {
+    for (let r = cell.r; r < cell.r + (cell.rs ?? 1); r++)
+      for (let c = cell.c; c < cell.c + (cell.cs ?? 1); c++)
+        if (r !== cell.r || c !== cell.c) covered.add(`${r}:${c}`);
+  }
+  const at = new Map(cells.map((c) => [`${c.r}:${c.c}`, c]));
+  let html = "";
+  for (let r = 1; r <= rows; r++) {
+    html += "<tr>";
+    for (let c = 1; c <= cols; c++) {
+      if (covered.has(`${r}:${c}`)) continue;
+      const cell = at.get(`${r}:${c}`);
+      if (!cell) {
+        html += `<td class="blank"></td>`;
+        continue;
+      }
+      const span = `${cell.rs && cell.rs > 1 ? ` rowspan="${cell.rs}"` : ""}${
+        cell.cs && cell.cs > 1 ? ` colspan="${cell.cs}"` : ""
+      }`;
+      html += `<td class="${cell.cls ?? ""}"${span} style="${cell.style ?? ""}">${cell.v}</td>`;
+    }
+    html += "</tr>";
+  }
+  return html;
+}
+
 export function printOfficialSheet(input: OfficialSheetInput): boolean {
   const C = SHEET_COLORS;
   const h = input.header;
@@ -366,34 +425,87 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   const rc = returnCounts(input.rows).slice(0, 2);
   const sum = (pick: (r: OfficialSheetRow) => number) => input.rows.reduce((s, r) => s + (pick(r) || 0), 0);
 
-  const roomsTable = `
-  <table class="rooms">
-    <thead><tr><th>الغرف / الفندق</th>${hotels.map((x) => `<th>${esc(x)}</th>`).join("")}<th>الإجمالي</th></tr></thead>
-    <tbody>
-      ${ROOM_TYPES.map((rt) => {
-        let s = 0;
-        const cells = hotels
-          .map((hotel) => {
-            const v = matrix.get(rt)?.get(hotel) ?? 0;
-            s += v;
-            return `<td>${v || ""}</td>`;
-          })
-          .join("");
-        return `<tr><th>${esc(rt)}</th>${cells}<td>${s || ""}</td></tr>`;
-      }).join("")}
-    </tbody>
-  </table>`;
+  const COLS = TABLE_COLUMNS.length; // 15
+  const cells: GridCell[] = [
+    { r: 1, c: 1, rs: 6, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
+    { r: 1, c: 3, cs: 2, v: "ذهاب", cls: "cream red", style: "font-size:17px" },
+    { r: 2, c: 3, cs: 2, v: esc(h.departureDate), cls: "cream val", style: "font-size:17px" },
+    { r: 3, c: 3, cs: 2, v: "عوده", cls: "cream red", style: "font-size:17px" },
+    { r: 4, c: 3, cs: 2, v: esc(h.returnDate), cls: "cream val", style: "font-size:17px" },
+    { r: 5, c: 3, v: "بيان مركبه حمولة", cls: "lime", style: "font-size:12px" },
+    { r: 5, c: 4, v: esc(h.capacity), cls: "lime", style: "font-size:14px" },
+    { r: 6, c: 3, cs: 2, v: esc(h.transportCompany), cls: "lime", style: "font-size:13px" },
+    // Logo block E1:H8
+    {
+      r: 1,
+      c: 5,
+      rs: 8,
+      cs: 4,
+      v: input.logoUrl ? `<img class="logoimg" src="${esc(input.logoUrl)}" alt="">` : "",
+      cls: "cream logocell",
+    },
+    { r: 7, c: 1, rs: 4, v: "باص", cls: "lblue", style: "font-size:18px" },
+    { r: 7, c: 2, rs: 4, v: esc(h.busNumber), cls: "lblue", style: "font-size:30px" },
+    { r: 7, c: 3, v: "السائق", cls: "lblue", style: "font-size:14px" },
+    { r: 7, c: 4, v: esc(h.driverName), cls: "lblue", style: "font-size:13px" },
+    { r: 8, c: 3, v: "لوحه", cls: "lblue", style: "font-size:14px" },
+    { r: 8, c: 4, v: esc(h.plate), cls: "lblue", style: "font-size:13px" },
+    { r: 9, c: 3, v: "هويته", cls: "lblue", style: "font-size:14px" },
+    { r: 9, c: 4, v: esc(h.driverId), cls: "lblue", style: "font-size:13px" },
+    { r: 10, c: 3, v: "ت", cls: "lblue", style: "font-size:14px" },
+    { r: 10, c: 4, v: esc(h.driverPhone), cls: "lblue", style: "font-size:13px" },
+    { r: 9, c: 5, rs: 2, v: "عدد الركاب", cls: "cyan", style: "font-size:13px" },
+    { r: 9, c: 6, rs: 2, v: esc(h.passengersTotal ?? 0), cls: "cyan", style: "font-size:26px" },
+    { r: 9, c: 7, rs: 2, v: "متبقي", cls: "pink", style: "font-size:13px" },
+    { r: 9, c: 8, rs: 2, v: esc(h.seatsRemaining ?? ""), cls: "pink", style: "font-size:26px" },
+  ];
 
-  const returnBoxes = rc
-    .map(
-      (e) => `<div class="retbox"><div class="lbl">اعداد عودة يوم:</div>
-      <div class="day">${esc(e.day)}</div><div class="big">${e.count}</div></div>`,
-    )
-    .join("");
+  // Rooms summary (I1:N10) — number of ROOMS per hotel.
+  const roomsCols = [...hotels, "الإجمالي"];
+  cells.push({ r: 1, c: 9, cs: 2, v: "الغرف / الفندق", cls: "rooms red", style: "font-size:11px" });
+  roomsCols.forEach((name, i) => {
+    if (11 + i > COLS - 1) return;
+    cells.push({ r: 1, c: 11 + i, v: esc(name), cls: "rooms red", style: "font-size:10px" });
+  });
+  ROOM_TYPES.forEach((rt, ri) => {
+    const r = 2 + ri;
+    cells.push({ r, c: 9, cs: 2, v: esc(rt), cls: "rooms red", style: "font-size:10px" });
+    let s = 0;
+    hotels.forEach((hotel, ci) => {
+      const v = matrix.get(rt)?.get(hotel) ?? 0;
+      s += v;
+      if (11 + ci > COLS - 1) return;
+      cells.push({ r, c: 11 + ci, v: String(v || ""), cls: "rooms", style: "font-size:10px" });
+    });
+    if (11 + hotels.length <= COLS - 1)
+      cells.push({ r, c: 11 + hotels.length, v: String(s || ""), cls: "rooms red", style: "font-size:10px" });
+  });
+  {
+    const r = 10;
+    cells.push({ r, c: 9, cs: 2, v: "اجمالي", cls: "rooms red", style: "font-size:10px" });
+    let grand = 0;
+    hotels.forEach((hotel, ci) => {
+      let s = 0;
+      for (const rt of ROOM_TYPES) s += matrix.get(rt)?.get(hotel) ?? 0;
+      grand += s;
+      if (11 + ci > COLS - 1) return;
+      cells.push({ r, c: 11 + ci, v: String(s || ""), cls: "rooms red", style: "font-size:10px" });
+    });
+    if (11 + hotels.length <= COLS - 1)
+      cells.push({ r, c: 11 + hotels.length, v: String(grand || ""), cls: "rooms red", style: "font-size:10px" });
+  }
 
-  const logoBox = `<div class="logo">${
-    input.logoUrl ? `<img src="${esc(input.logoUrl)}" alt="">` : ""
-  }</div>`;
+  // Return-day statistics (column O)
+  rc.forEach((entry, i) => {
+    const base = 1 + i * 5;
+    cells.push({ r: base, c: 15, v: "اعداد عودة يوم:", cls: "red", style: "font-size:10px" });
+    cells.push({ r: base + 1, c: 15, v: esc(entry.day), cls: "pink", style: "font-size:12px" });
+    cells.push({ r: base + 2, c: 15, v: String(entry.count), cls: "pink", style: "font-size:22px" });
+  });
+
+  const headerHtml = headerGrid(cells, 10, COLS);
+  const totalW = COL_WIDTHS.reduce((a, b) => a + b, 0);
+  const colgroup = COL_WIDTHS.map((w) => `<col style="width:${((w / totalW) * 100).toFixed(2)}%">`).join("");
 
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(input.title ?? "كشف رحله")}</title>
@@ -403,75 +515,29 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   * { box-sizing: border-box; }
   body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color:#000; margin:0;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .top { display:flex; gap:4px; align-items:stretch; margin-bottom:6px; }
-  .cell { border:1px solid #333; padding:3px 5px; text-align:center; font-weight:800;
-          display:flex; align-items:center; justify-content:center; line-height:1.1; }
-  .logo { width:100px; height:100px; flex:0 0 100px; border:1px solid #333; background:#${C.cream};
-          display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  .logo img { max-width:96px; max-height:96px; object-fit:contain; }
-  .titlewrap { display:flex; flex-direction:column; gap:2px; }
-  .title { background:#${C.cream}; color:#${C.darkRed}; font-size:26px; min-width:140px; flex:1; }
-  .stack { display:flex; flex-direction:column; gap:2px; }
-  .row { display:flex; gap:2px; }
+  table { border-collapse:collapse; width:100%; table-layout:fixed; }
+  th, td { border:1px solid #333; padding:1px 3px; text-align:center; line-height:1.15;
+           vertical-align:middle; font-weight:800; overflow:hidden; }
   .cream { background:#${C.cream}; }
   .lime { background:#${C.lime}; color:#${C.darkRed}; }
   .lblue { background:#${C.lightBlue}; color:#${C.darkRed}; }
   .cyan { background:#${C.cyan}; color:#${C.blue}; }
   .pink { background:#${C.pink}; color:#${C.red}; }
+  .rooms { background:#${C.roomsTable}; }
+  .red { color:#${C.darkRed}; }
   .val { color:#${C.blue}; }
-  .bus { font-size:30px; }
-  .big { font-size:28px; }
-  table { border-collapse:collapse; width:100%; }
-  th, td { border:1px solid #333; padding:1px 3px; text-align:center; line-height:1.15;
-           height:auto; vertical-align:middle; }
-  table.main { font-size:11px; }
+  .blank { border:none; background:transparent; }
+  table.head td { height:20px; }
+  .logocell { padding:2px; }
+  .logoimg { max-width:100%; max-height:150px; object-fit:contain; }
+  table.main { font-size:11px; margin-top:4px; }
   table.main thead th { background:#${C.cream}; color:#${C.darkRed}; font-size:12px; }
-  table.main tfoot td { background:#${C.cream}; color:#${C.darkRed}; font-weight:800; }
-  table.rooms { font-size:10px; }
-  table.rooms th { background:#${C.roomsTable}; color:#${C.darkRed}; }
-  table.rooms td { background:#${C.roomsTable}; }
-  .retbox { border:1px solid #333; background:#${C.pink}; color:#${C.red}; text-align:center;
-            padding:2px 5px; font-weight:800; margin-bottom:3px; }
-  .retbox .lbl { font-size:11px; }
-  .retbox .day { font-size:14px; }
-  .side { display:flex; gap:4px; }
+  table.main tfoot td { background:#${C.cream}; color:#${C.darkRed}; }
   thead { display:table-header-group; }
 </style></head><body>
-<div class="top">
-  ${logoBox}
-  <div class="titlewrap"><div class="cell title">كشف رحله</div></div>
-  <div class="stack">
-    <div class="cell cream" style="font-size:16px">ذهاب</div>
-    <div class="cell cream val" style="font-size:16px">${esc(h.departureDate)}</div>
-    <div class="cell cream" style="font-size:16px">عوده</div>
-    <div class="cell cream val" style="font-size:16px">${esc(h.returnDate)}</div>
-    <div class="row">
-      <div class="cell lime" style="font-size:12px">بيان مركبه حمولة</div>
-      <div class="cell lime" style="font-size:14px">${esc(h.capacity)}</div>
-    </div>
-    <div class="cell lime" style="font-size:12px">${esc(h.transportCompany)}</div>
-  </div>
-  <div class="row">
-    <div class="cell lblue" style="font-size:16px">باص</div>
-    <div class="cell lblue bus">${esc(h.busNumber)}</div>
-  </div>
-  <div class="stack">
-    <div class="row"><div class="cell lblue">لوحه</div><div class="cell lblue">${esc(h.plate)}</div></div>
-    <div class="row"><div class="cell lblue">السائق</div><div class="cell lblue">${esc(h.driverName)}</div></div>
-    <div class="row"><div class="cell lblue">هويته</div><div class="cell lblue">${esc(h.driverId)}</div></div>
-    <div class="row"><div class="cell lblue">ت</div><div class="cell lblue">${esc(h.driverPhone)}</div></div>
-  </div>
-  <div class="stack">
-    <div class="row"><div class="cell cyan">عدد الركاب</div><div class="cell cyan big">${esc(h.passengersTotal ?? 0)}</div></div>
-    <div class="row"><div class="cell pink">متبقي</div><div class="cell pink big">${esc(h.seatsRemaining ?? "")}</div></div>
-  </div>
-  <div class="side">
-    <div>${roomsTable}</div>
-    <div>${returnBoxes}</div>
-  </div>
-</div>
+<table class="head"><colgroup>${colgroup}</colgroup><tbody>${headerHtml}</tbody></table>
 
-<table class="main">
+<table class="main"><colgroup>${colgroup}</colgroup>
   <thead><tr>${TABLE_COLUMNS.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
   <tbody>
     ${input.rows

@@ -1,0 +1,1 @@
+ALTER TABLE public.buses ADD COLUMN IF NOT EXISTS driver_name text;
