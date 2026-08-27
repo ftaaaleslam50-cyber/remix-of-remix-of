@@ -94,19 +94,39 @@ export function hotelsOf(rows: OfficialSheetRow[]): string[] {
   return [...new Set(rows.map((r) => (r.hotel || "").trim()).filter(Boolean))];
 }
 
-/** rooms matrix: room type × hotel → number of people */
+/** People per room, used to convert passenger counts into room counts. */
+export const ROOM_CAPACITY: Record<string, number> = {
+  فردي: 1,
+  ثنائي: 2,
+  ثلاثي: 3,
+  رباعي: 4,
+  خماسي: 5,
+  "رباعي مشترك": 4,
+  "خماسي مشترك": 5,
+  "مشترك مشرف": 4,
+};
+
+/** rooms matrix: room type × hotel → number of ROOMS (not people) */
 export function roomsMatrix(rows: OfficialSheetRow[]) {
   const hotels = hotelsOf(rows);
-  const matrix = new Map<string, Map<string, number>>();
-  for (const rt of ROOM_TYPES) matrix.set(rt, new Map(hotels.map((h) => [h, 0])));
+  const people = new Map<string, Map<string, number>>();
+  for (const rt of ROOM_TYPES) people.set(rt, new Map(hotels.map((h) => [h, 0])));
   for (const r of rows) {
     const rt = (r.roomType || "").trim();
     const h = (r.hotel || "").trim();
-    if (!matrix.has(rt) || !h) continue;
-    const inner = matrix.get(rt)!;
+    if (!people.has(rt) || !h) continue;
+    const inner = people.get(rt)!;
     inner.set(h, (inner.get(h) ?? 0) + (r.count || 0));
   }
-  return { hotels, matrix };
+  // Convert people → rooms using each room type's capacity.
+  const matrix = new Map<string, Map<string, number>>();
+  for (const rt of ROOM_TYPES) {
+    const cap = ROOM_CAPACITY[rt] || 1;
+    const inner = new Map<string, number>();
+    for (const h of hotels) inner.set(h, Math.ceil((people.get(rt)?.get(h) ?? 0) / cap));
+    matrix.set(rt, inner);
+  }
+  return { hotels, matrix, people };
 }
 
 /** total passengers per return day */
