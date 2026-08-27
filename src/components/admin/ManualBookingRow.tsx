@@ -212,7 +212,27 @@ export function ManualBookingRow({
       ((await supabase.from("pricing_matrix").select("*")).data as unknown as PricingCell[]) ?? [],
   });
 
-  const bus = buses.find((b) => b.id === d.bus_id) ?? null;
+  const busFromList = buses.find((b) => b.id === d.bus_id) ?? null;
+
+  // When editing a booking whose bus is not linked to the selected trip (or the
+  // trip list hasn't loaded), fetch that bus directly so its custom layout and
+  // pricing are still used instead of the default seat map.
+  const { data: busDirect = null } = useQuery({
+    queryKey: ["mb-bus-direct", d.bus_id],
+    enabled: !!d.bus_id && !busFromList,
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("buses")
+          .select(
+            "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price",
+          )
+          .eq("id", d.bus_id)
+          .maybeSingle()
+      ).data as unknown as BusOpt) ?? null,
+  });
+
+  const bus = busFromList ?? busDirect;
 
   const { data: layoutRow } = useQuery({
     queryKey: ["mb-layout", bus?.layout_id ?? null],
@@ -229,6 +249,7 @@ export function ManualBookingRow({
   const { data: reserved = [] } = useQuery({
     queryKey: ["mb-reserved", d.bus_id, d.booking_code ?? ""],
     enabled: !!d.bus_id,
+    refetchInterval: 1_000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_bus_occupancy" as never, {
         _trip_id: d.trip_id ?? null,
@@ -239,6 +260,7 @@ export function ManualBookingRow({
       return ((data ?? []) as { seat_numbers: string[] }[]).flatMap((r) => r.seat_numbers ?? []);
     },
   });
+
 
 
   // Individual bookings always price off the shared 5-bed column.
