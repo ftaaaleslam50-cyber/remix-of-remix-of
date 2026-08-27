@@ -24,6 +24,16 @@ export function allLayoutSeats(layout: LayoutJson): string[] {
   return layout.cells.filter((c) => c.kind === "seat" && !c.disabled).map(seatLabel);
 }
 
+/** Mirror a layout horizontally (right↔left) without changing seat labels. */
+export function mirrorLayout(layout: LayoutJson): LayoutJson {
+  const cols = Math.max(1, layout.cols || 1);
+  return {
+    rows: layout.rows,
+    cols,
+    cells: layout.cells.map((c) => ({ ...c, col: cols + 1 - c.col })),
+  };
+}
+
 export function pickRandomLayoutSeats(count: number, layout: LayoutJson, reserved: string[]): string[] {
   const free = allLayoutSeats(layout).filter((s) => !reserved.includes(s));
   if (count <= 0 || free.length < count) return free.slice(0, count);

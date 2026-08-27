@@ -32,8 +32,9 @@ import {
   Image as ImageIcon,
   XCircle,
   CheckCircle2,
+  FileDown,
 } from "lucide-react";
-import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { LayoutSeatMap, mirrorLayout, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
@@ -723,6 +724,30 @@ function UnifiedBookingsTab(props: {
     return headers.findIndex((h) => aliases.some((a) => h.includes(a)));
   }
 
+  function downloadImportTemplate() {
+    const headers = [
+      "العميل",
+      "الجوال",
+      "واتساب",
+      "الهوية",
+      "الجنسية",
+      "العدد",
+      "المقاعد",
+      "المندوب",
+      "الفندق",
+      "نوع الغرفة",
+      "العودة",
+      "ليالي التمديد",
+      "إجمالي",
+      "ملاحظات",
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    ws["!cols"] = headers.map(() => ({ wch: 16 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "كشف ركاب");
+    XLSX.writeFile(wb, "نموذج_كشف_الركاب.xlsx");
+  }
+
   async function handleImportFile(file: File | null | undefined) {
     if (!file) return;
     try {
@@ -1113,9 +1138,9 @@ function UnifiedBookingsTab(props: {
                   </h3>
                   <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
                 </div>
-                <div className="pointer-events-none">
+                <div className="pointer-events-none" style={{ direction: "ltr" }}>
                   <LayoutSeatMap
-                    layout={liveLayout}
+                    layout={mirrorLayout(liveLayout)}
                     selected={liveSeatNumbers}
                     reserved={[]}
                     maxSelectable={liveSeatNumbers.length}
@@ -1307,6 +1332,9 @@ function UnifiedBookingsTab(props: {
         />
         <Button size="sm" variant="outline" className="rounded-full" onClick={() => importInputRef.current?.click()}>
           <Download className="h-3 w-3 ml-1" /> رفع كشف
+        </Button>
+        <Button size="sm" variant="outline" className="rounded-full" onClick={downloadImportTemplate}>
+          <FileDown className="h-3 w-3 ml-1" /> تنزيل النموذج
         </Button>
         <Button size="sm" className="rounded-full" onClick={() => setManualOpen((v) => !v)}>
           <Plus className="h-3 w-3 ml-1" />
