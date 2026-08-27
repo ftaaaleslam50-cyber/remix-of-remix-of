@@ -56,28 +56,13 @@ export interface ChartMeta {
   capacity?: number;
 }
 
-export function renderSeatChartCanvas(
-  layout: LayoutJson,
-  occupants: SeatOccupant[],
-  meta: ChartMeta,
-): HTMLCanvasElement {
-  const bySeat = new Map<string, SeatOccupant>();
-  for (const o of occupants) bySeat.set(o.seat, o);
+/** Keep only the first two words of a passenger name (اسم ثنائي). */
+export function twoPartName(name: string): string {
+  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).join(" ");
+}
 
-  const CELL = 74;
-  const GAP = 10;
-  const PAD = 32;
-  const HEADER = 96;
-  const LIST_W = 430;
-  const gridW = layout.cols * CELL + (layout.cols - 1) * GAP;
-  const gridH = layout.rows * CELL + (layout.rows - 1) * GAP;
-
-  const listRowH = 30;
-  const listH = 46 + occupants.length * listRowH;
-
-  const width = PAD * 2 + gridW + 40 + LIST_W;
-  const height = PAD * 2 + HEADER + Math.max(gridH, listH) + 70;
-
+function newCanvas(width: number, height: number) {
   const scale = 2;
   const canvas = document.createElement("canvas");
   canvas.width = width * scale;
@@ -85,35 +70,65 @@ export function renderSeatChartCanvas(
   const ctx = canvas.getContext("2d")!;
   ctx.scale(scale, scale);
   ctx.textBaseline = "middle";
-
-  const F = (size: number, bold = false) =>
-    `${bold ? "700 " : ""}${size}px "Tajawal","Segoe UI",Arial,sans-serif`;
-
-  // background
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
+  return { canvas, ctx };
+}
 
-  // header
+const F = (size: number, bold = false) =>
+  `${bold ? "800 " : ""}${size}px "Tajawal","Segoe UI",Arial,sans-serif`;
+
+function drawHeader(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  title: string,
+  sub: string,
+  pad: number,
+) {
   ctx.fillStyle = COLORS.navy;
-  ctx.fillRect(0, 0, width, HEADER);
+  ctx.fillRect(0, 0, width, height);
   ctx.direction = "rtl";
   ctx.textAlign = "right";
   ctx.fillStyle = "#ffffff";
-  ctx.font = F(30, true);
-  ctx.fillText(`مخطط مقاعد: ${meta.busLabel}`, width - PAD, 36);
-  ctx.font = F(17);
+  ctx.font = F(34, true);
+  ctx.fillText(title, width - pad, 40);
+  ctx.font = F(19);
   ctx.fillStyle = "#e2e8f0";
+  ctx.fillText(sub, width - pad, 76);
+  ctx.textAlign = "left";
+  ctx.font = F(15);
+  ctx.fillStyle = "#cbd5e1";
+  ctx.fillText(new Date().toLocaleString("ar"), pad, 76);
+}
+
+/** Page 1: enlarged seat map. Page 2: passenger list. */
+export function renderSeatChartPages(
+  layout: LayoutJson,
+  occupants: SeatOccupant[],
+  meta: ChartMeta,
+): HTMLCanvasElement[] {
+  const bySeat = new Map<string, SeatOccupant>();
+  for (const o of occupants) bySeat.set(o.seat, o);
+
+  const PAD = 40;
+  const HEADER = 104;
+  const CELL = 130;
+  const GAP = 16;
+  const gridW = layout.cols * CELL + (layout.cols - 1) * GAP;
+  const gridH = layout.rows * CELL + (layout.rows - 1) * GAP;
+
   const sub = [meta.tripLabel, meta.capacity ? `السعة: ${meta.capacity}` : "", `الركاب: ${occupants.length}`]
     .filter(Boolean)
     .join("  •  ");
-  ctx.fillText(sub, width - PAD, 68);
-  ctx.textAlign = "left";
-  ctx.font = F(14);
-  ctx.fillStyle = "#cbd5e1";
-  ctx.fillText(new Date().toLocaleString("ar"), PAD, 68);
 
-  // ---- seat grid (drawn on the right side, mirrored per RTL like the booking wizard) ----
-  const gridX = width - PAD - gridW;
+  // ---------- page 1: seat map ----------
+  const width = PAD * 2 + gridW;
+  const height = PAD * 2 + HEADER + gridH + 80;
+  const { canvas, ctx } = newCanvas(width, height);
+  drawHeader(ctx, width, HEADER, `مخطط مقاعد: ${meta.busLabel}`, sub, PAD);
+
+  const gridX = PAD;
   const gridY = PAD + HEADER;
   const cols = Math.max(1, layout.cols || 1);
 
@@ -157,66 +172,31 @@ export function renderSeatChartCanvas(
 
     ctx.fillStyle = bg;
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2;
-    roundRect(ctx, x, y, CELL, CELL, 10);
+    ctx.lineWidth = 3;
+    roundRect(ctx, x, y, CELL, CELL, 16);
     ctx.fill();
     ctx.stroke();
 
     ctx.fillStyle = fg;
+    ctx.direction = "rtl";
     ctx.textAlign = "center";
     if (cell.kind !== "seat") {
-      ctx.font = F(12, true);
+      ctx.font = F(18, true);
       ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL / 2, y + CELL / 2);
       continue;
     }
-    ctx.font = F(13, true);
-    ctx.fillText(id, x + CELL / 2, y + (occ ? 18 : CELL / 2));
+    ctx.font = F(22, true);
+    ctx.fillText(id, x + CELL / 2, y + (occ ? 28 : CELL / 2));
     if (occ) {
-      ctx.font = F(11);
-      const nm = shorten(occ.name || "", 14);
-      ctx.fillText(nm, x + CELL / 2, y + 40);
-      ctx.font = F(12, true);
-      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL / 2, y + 60);
+      const nm = twoPartName(occ.name || "");
+      const words = nm.split(" ");
+      ctx.font = F(19, true);
+      ctx.fillText(shorten(words[0] ?? "", 12), x + CELL / 2, y + 62);
+      if (words[1]) ctx.fillText(shorten(words[1], 12), x + CELL / 2, y + 86);
+      ctx.font = F(20, true);
+      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL / 2, y + CELL - 18);
     }
   }
-
-  // ---- passenger list ----
-  const listX = PAD;
-  let listY = PAD + HEADER;
-  ctx.direction = "rtl";
-  ctx.textAlign = "right";
-  ctx.fillStyle = COLORS.navy;
-  ctx.font = F(19, true);
-  ctx.fillText("قائمة الركاب", listX + LIST_W, listY + 10);
-  listY += 34;
-
-  ctx.strokeStyle = COLORS.border;
-  ctx.lineWidth = 1;
-  ctx.font = F(13, true);
-  ctx.fillStyle = COLORS.muted;
-  ctx.fillText("الاسم", listX + LIST_W, listY);
-  ctx.textAlign = "left";
-  ctx.fillText("المقعد", listX + 6, listY);
-  listY += 12;
-  ctx.beginPath();
-  ctx.moveTo(listX, listY);
-  ctx.lineTo(listX + LIST_W, listY);
-  ctx.stroke();
-
-  occupants.forEach((o, i) => {
-    const y = listY + 18 + i * listRowH;
-    if (i % 2 === 0) {
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(listX, y - 13, LIST_W, listRowH - 4);
-    }
-    ctx.fillStyle = o.gender === "female" ? COLORS.female : o.gender === "male" ? COLORS.male : COLORS.text;
-    ctx.font = F(14, true);
-    ctx.textAlign = "right";
-    ctx.fillText(`${i + 1}. ${shorten(o.name || "-", 28)}`, listX + LIST_W - 6, y);
-    ctx.textAlign = "left";
-    ctx.font = F(14, true);
-    ctx.fillText(`${o.seat} ${o.gender === "female" ? "♀" : o.gender === "male" ? "♂" : ""}`, listX + 6, y);
-  });
 
   // legend
   const legendY = height - PAD - 8;
@@ -232,16 +212,56 @@ export function renderSeatChartCanvas(
   legend.forEach(([color, label]) => {
     ctx.fillStyle = color;
     ctx.strokeStyle = COLORS.border;
-    roundRect(ctx, lx - 16, legendY - 8, 16, 16, 4);
+    roundRect(ctx, lx - 18, legendY - 9, 18, 18, 5);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = COLORS.text;
-    ctx.font = F(13);
-    ctx.fillText(label, lx - 22, legendY);
-    lx -= 22 + ctx.measureText(label).width + 24;
+    ctx.font = F(15);
+    ctx.fillText(label, lx - 24, legendY);
+    lx -= 24 + ctx.measureText(label).width + 26;
   });
 
-  return canvas;
+  // ---------- page 2: passenger list ----------
+  const rowH = 40;
+  const listW = Math.max(760, Math.min(width, 1100));
+  const listPageH = PAD * 2 + HEADER + 60 + Math.max(1, occupants.length) * rowH + 40;
+  const { canvas: c2, ctx: l } = newCanvas(listW, listPageH);
+  drawHeader(l, listW, HEADER, "قائمة الركاب", `${meta.busLabel}${meta.tripLabel ? ` • ${meta.tripLabel}` : ""}`, PAD);
+
+  const listX = PAD;
+  let listY = PAD + HEADER + 10;
+  l.direction = "rtl";
+  l.textAlign = "right";
+  l.font = F(16, true);
+  l.fillStyle = COLORS.muted;
+  l.fillText("الاسم", listW - PAD, listY);
+  l.textAlign = "left";
+  l.fillText("المقعد", listX, listY);
+  listY += 16;
+  l.strokeStyle = COLORS.border;
+  l.lineWidth = 1.5;
+  l.beginPath();
+  l.moveTo(listX, listY);
+  l.lineTo(listW - PAD, listY);
+  l.stroke();
+
+  occupants.forEach((o, i) => {
+    const y = listY + 26 + i * rowH;
+    if (i % 2 === 0) {
+      l.fillStyle = "#f1f5f9";
+      l.fillRect(listX, y - 18, listW - PAD * 2, rowH - 4);
+    }
+    l.fillStyle = o.gender === "female" ? COLORS.female : o.gender === "male" ? COLORS.male : COLORS.text;
+    l.font = F(22, true);
+    l.direction = "rtl";
+    l.textAlign = "right";
+    l.fillText(`${i + 1}. ${twoPartName(o.name || "-")}`, listW - PAD - 8, y);
+    l.textAlign = "left";
+    l.font = F(21, true);
+    l.fillText(`${o.seat} ${o.gender === "female" ? "♀" : o.gender === "male" ? "♂" : ""}`, listX + 8, y);
+  });
+
+  return [canvas, c2];
 }
 
 function kindLabel(kind: string) {
@@ -262,17 +282,25 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-export function downloadSeatChartPng(canvas: HTMLCanvasElement, filename: string) {
-  const a = document.createElement("a");
-  a.href = canvas.toDataURL("image/png");
-  a.download = `${filename}.png`;
-  a.click();
+export function downloadSeatChartPng(canvases: HTMLCanvasElement[], filename: string) {
+  canvases.forEach((canvas, i) => {
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `${filename}${i === 0 ? "-map" : "-list"}.png`;
+    a.click();
+  });
 }
 
-export function downloadSeatChartPdf(canvas: HTMLCanvasElement, filename: string) {
-  const w = canvas.width;
-  const h = canvas.height;
-  const pdf = new jsPDF({ orientation: w >= h ? "landscape" : "portrait", unit: "pt", format: [w / 2, h / 2] });
-  pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w / 2, h / 2);
-  pdf.save(`${filename}.pdf`);
+export function downloadSeatChartPdf(canvases: HTMLCanvasElement[], filename: string) {
+  let pdf: jsPDF | null = null;
+  canvases.forEach((canvas) => {
+    const w = canvas.width / 2;
+    const h = canvas.height / 2;
+    const orientation = w >= h ? "landscape" : "portrait";
+    if (!pdf) pdf = new jsPDF({ orientation, unit: "pt", format: [w, h] });
+    else pdf.addPage([w, h], orientation);
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);
+  });
+  pdf?.save(`${filename}.pdf`);
 }
+
