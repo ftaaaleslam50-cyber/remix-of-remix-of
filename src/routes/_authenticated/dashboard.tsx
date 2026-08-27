@@ -453,6 +453,8 @@ interface UBBusOpt {
   trip_id: string | null;
   layout?: string | null;
   layout_id?: string | null;
+  driver_name?: string | null;
+  plate?: string | null;
   driver_phone?: string | null;
   driver_id_number?: string | null;
 }
