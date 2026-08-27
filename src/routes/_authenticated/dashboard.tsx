@@ -453,6 +453,8 @@ interface UBBusOpt {
   trip_id: string | null;
   layout?: string | null;
   layout_id?: string | null;
+  driver_name?: string | null;
+  plate?: string | null;
   driver_phone?: string | null;
   driver_id_number?: string | null;
 }
@@ -527,7 +529,7 @@ function UnifiedBookingsTab(props: {
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
         let q = supabase
           .from("buses")
-          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,driver_phone,driver_id_number")
+          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number")
           .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
@@ -537,7 +539,7 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,driver_phone,driver_id_number").order("bus_number"))
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number").order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
@@ -897,6 +899,8 @@ function UnifiedBookingsTab(props: {
         returnDate: info?.return_day ?? "",
         capacity: bus?.capacity,
         busNumber: bus ? bus.bus_number : "",
+        driverName: bus?.driver_name ?? "",
+        plate: bus?.plate ?? "",
         driverId: bus?.driver_id_number ?? "",
         driverPhone: bus?.driver_phone ?? "",
         passengersTotal: totalPax,
