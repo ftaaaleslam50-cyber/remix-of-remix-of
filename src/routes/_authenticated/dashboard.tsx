@@ -1332,6 +1332,9 @@ function UnifiedBookingsTab(props: {
         <Button size="sm" variant="outline" className="rounded-full" onClick={() => importInputRef.current?.click()}>
           <Download className="h-3 w-3 ml-1" /> رفع كشف
         </Button>
+        <Button size="sm" variant="outline" className="rounded-full" onClick={downloadImportTemplate}>
+          <FileDown className="h-3 w-3 ml-1" /> تنزيل النموذج
+        </Button>
         <Button size="sm" className="rounded-full" onClick={() => setManualOpen((v) => !v)}>
           <Plus className="h-3 w-3 ml-1" />
           حجز يدوي
