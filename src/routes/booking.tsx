@@ -185,10 +185,16 @@ function BookingPage() {
   // Load reserved seats for all candidate buses via a SECURITY DEFINER RPC so
   // guests and normal users see the same occupancy as admins (RLS on `bookings`
   // hides other people's rows, which used to make full buses look empty).
-  const { data: busReserved = {} } = useQuery({
+  const { data: busReserved = {}, refetch: refetchReserved } = useQuery({
     queryKey: ["bus_reserved_all", tripId, editingCode],
     enabled: !!tripId && buses.length > 0,
     retry: 2,
+    // Seat occupancy changes constantly — never serve a stale snapshot, and keep
+    // polling while the user is on the wizard so two people can't grab one seat.
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as unknown as (
         fn: string,
