@@ -239,11 +239,12 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   const logo = await loadLogo(input.logoUrl);
   if (logo) {
     const imgId = wb.addImage({ buffer: logo.buffer as ArrayBuffer, extension: logo.ext });
+    // Stretch the logo across the whole merged E1:H8 block.
     ws.addImage(imgId, {
-      tl: { col: 4.1, row: 0.1 },
-      ext: { width: 260, height: 200 },
+      tl: { col: 4, row: 0 },
+      br: { col: 8, row: 8 },
       editAs: "oneCell",
-    });
+    } as never);
   }
 
   // Title block
