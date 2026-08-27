@@ -271,8 +271,8 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   put(ws, 7, 2, h.busNumber ?? "", { fill: C.lightBlue, color: C.darkRed, size: 34 });
 
   const driverPairs: Array<[string, ExcelJS.CellValue]> = [
-    ["لوحه", h.plate ?? ""],
     ["السائق", h.driverName ?? ""],
+    ["لوحه", h.plate ?? ""],
     ["هويته", h.driverId ?? ""],
     ["ت", h.driverPhone ?? ""],
   ];
