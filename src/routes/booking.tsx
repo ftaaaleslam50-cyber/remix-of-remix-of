@@ -1003,11 +1003,12 @@ function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
 
 function StepHeader({ title, desc }: { title: string; desc?: string }) {
   return (
-    <div className="mb-6">
-      <h2 className="text-2xl font-extrabold text-[color:var(--color-navy)]">{title}</h2>
-      {desc && <p className="mt-2 text-muted-foreground">{desc}</p>}
+    <div className="mb-4 sm:mb-6">
+      <h2 className="text-xl sm:text-2xl font-extrabold text-[color:var(--color-navy)]">{title}</h2>
+      {desc && <p className="mt-1.5 sm:mt-2 text-sm sm:text-base text-muted-foreground">{desc}</p>}
     </div>
   );
+
 }
 
 function StepBookingType({ value, onChange }: { value: BookingType | null; onChange: (v: BookingType) => void }) {
