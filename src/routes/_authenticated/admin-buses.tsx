@@ -626,6 +626,36 @@ function BusEditRow({
       </TableCell>
 
       <TableCell>
+        <Input
+          dir="ltr"
+          className="h-9 w-32"
+          value={local.driver_phone ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              driver_phone: e.target.value,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          dir="ltr"
+          className="h-9 w-32"
+          value={local.driver_id_number ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              driver_id_number: e.target.value,
+            })
+          }
+        />
+      </TableCell>
+
+
+
+      <TableCell>
         <Select
           value={local.status}
           onValueChange={(v) =>
