@@ -1003,11 +1003,12 @@ function Stepper({ steps, step }: { steps: readonly string[]; step: number }) {
 
 function StepHeader({ title, desc }: { title: string; desc?: string }) {
   return (
-    <div className="mb-6">
-      <h2 className="text-2xl font-extrabold text-[color:var(--color-navy)]">{title}</h2>
-      {desc && <p className="mt-2 text-muted-foreground">{desc}</p>}
+    <div className="mb-4 sm:mb-6">
+      <h2 className="text-xl sm:text-2xl font-extrabold text-[color:var(--color-navy)]">{title}</h2>
+      {desc && <p className="mt-1.5 sm:mt-2 text-sm sm:text-base text-muted-foreground">{desc}</p>}
     </div>
   );
+
 }
 
 function StepBookingType({ value, onChange }: { value: BookingType | null; onChange: (v: BookingType) => void }) {
@@ -1421,47 +1422,48 @@ function StepTripBus({
       <button
         type="button"
         onClick={onSelectNoBus}
-        className={`w-full text-right rounded-3xl border-2 p-5 mb-5 bg-white transition-all flex items-center gap-4 ${
+        className={`w-full text-right rounded-2xl sm:rounded-3xl border-2 p-4 sm:p-5 mb-4 sm:mb-5 bg-white transition-all flex items-center gap-3 sm:gap-4 ${
           noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"
         }`}
       >
         <div
-          className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${
+          className={`h-10 w-10 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center shrink-0 ${
             noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"
           }`}
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون مواصلات</h3>
-          <p className="text-sm text-muted-foreground">فندق فقط — الانتقال مباشرة إلى خطوة الفندق</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base sm:text-lg font-extrabold text-[color:var(--color-navy)]">بدون مواصلات</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">فندق فقط — الانتقال مباشرة إلى خطوة الفندق</p>
         </div>
-        {noBus && <CheckCircle2 className="h-5 w-5 text-primary" />}
+        {noBus && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
       </button>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+
         {trips.map((t) => {
           const active = !noBus && tripId === t.id;
           const tripBuses = active ? buses : [];
           return (
             <div
               key={t.id}
-              className={`rounded-3xl border-2 bg-white transition-all ${
+              className={`overflow-hidden rounded-2xl sm:rounded-3xl border-2 bg-white transition-all ${
                 active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
               }`}
             >
-              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
-                    <h3 className="mt-1 text-lg font-extrabold text-[color:var(--color-navy)]">{t.name}</h3>
-                    <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      الذهاب: {t.departure_day} • العودة: {t.return_day}
+              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-4 sm:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
+                    <h3 className="mt-1 text-base sm:text-lg font-extrabold text-[color:var(--color-navy)] break-words">{t.name}</h3>
+                    <div className="mt-2 text-xs sm:text-sm text-muted-foreground flex items-start gap-2">
+                      <Calendar className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span className="break-words">الذهاب: {t.departure_day} • العودة: {t.return_day}</span>
                     </div>
                   </div>
                   {active && (
-                    <div className="h-9 w-9 rounded-full btn-primary-glow text-white flex items-center justify-center">
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-full btn-primary-glow text-white flex items-center justify-center">
                       <Check className="h-5 w-5" />
                     </div>
                   )}
@@ -1469,7 +1471,8 @@ function StepTripBus({
               </button>
 
               {active && (
-                <div className="border-t border-border p-4 space-y-2 bg-muted/30 rounded-b-3xl">
+                <div className="border-t border-border p-3 sm:p-4 space-y-2 bg-muted/30">
+
                   <p className="text-sm font-bold text-[color:var(--color-navy)] mb-1">
                     اختر حافلتك من الحافلات المتاحة
                   </p>
@@ -1498,7 +1501,7 @@ function StepTripBus({
                             onClick={() => onSelectBus(b.id)}
                             className={`w-full text-right p-3 flex items-center gap-3 ${full ? "cursor-not-allowed" : "cursor-pointer"}`}
                           >
-                            <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                            <div className="h-12 w-16 sm:h-14 sm:w-20 rounded-xl overflow-hidden bg-muted shrink-0">
                               {b.image_url ? (
                                 <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
                               ) : (
@@ -2070,8 +2073,8 @@ function PriceBar(props: {
 }) {
   return (
     <div className="fixed bottom-0 inset-x-0 z-30 glass-bar border-t shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)]">
-      <div className="container-luxe py-2 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
+      <div className="container-luxe py-2 flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 flex items-center gap-x-4 gap-y-1 text-[11px] md:text-sm overflow-x-auto overscroll-x-contain md:flex-wrap md:overflow-visible" style={{ scrollbarWidth: "thin" }}>
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
           <PriceCell label="الغرفة" value={roomDisplayLabel(props.roomType, props.bookingType, props.hasHotel)} />
@@ -2079,13 +2082,14 @@ function PriceBar(props: {
           {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
           {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">الإجمالي</p>
             {props.discount > 0 && <p className="text-xs text-muted-foreground line-through">{sar(props.subtotal)}</p>}
-            <p className="text-lg md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
+            <p className="text-base md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
           </div>
         </div>
+
       </div>
       {props.children && (
         <div className="border-t bg-background/60">
@@ -2098,9 +2102,9 @@ function PriceBar(props: {
 
 function PriceCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="font-bold">{value}</span>
+    <div className="flex flex-col shrink-0 max-w-[9rem]">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</span>
+      <span className="font-bold truncate">{value}</span>
     </div>
   );
 }
