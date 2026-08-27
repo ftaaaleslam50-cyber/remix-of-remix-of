@@ -33,6 +33,7 @@ interface BusRow {
   image_url: string | null;
   bus_type: string | null;
   details: string | null;
+  driver_name: string | null;
   driver_phone: string | null;
   driver_id_number: string | null;
   price_addition: number;
@@ -185,6 +186,8 @@ function AdminBuses() {
       model: b.model,
       bus_type: b.bus_type,
       details: b.details,
+      driver_name: b.driver_name,
+      driver_name: b.driver_name,
       driver_phone: b.driver_phone,
       driver_id_number: b.driver_id_number,
       capacity: b.capacity,
@@ -226,6 +229,8 @@ function AdminBuses() {
       image_url: b.image_url,
       bus_type: b.bus_type,
       details: b.details,
+      driver_name: b.driver_name,
+      driver_name: b.driver_name,
       driver_phone: b.driver_phone,
       driver_id_number: b.driver_id_number,
       price_addition: Number(b.round_trip_price) || 0,
@@ -386,6 +391,7 @@ function AdminBuses() {
                   <TableHead>ذهاب فقط</TableHead>
                   <TableHead>عودة فقط</TableHead>
                   <TableHead>صورة</TableHead>
+                  <TableHead>اسم السائق</TableHead>
                   <TableHead>جوال السائق</TableHead>
                   <TableHead>هوية السائق</TableHead>
                   <TableHead>الحالة</TableHead>
@@ -620,6 +626,19 @@ function BusEditRow({
             setLocal({
               ...local,
               image_url: url,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          className="h-9 w-36"
+          value={local.driver_name ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              driver_name: e.target.value,
             })
           }
         />
