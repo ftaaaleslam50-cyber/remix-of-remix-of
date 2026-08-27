@@ -529,7 +529,7 @@ function UnifiedBookingsTab(props: {
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
         let q = supabase
           .from("buses")
-          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,driver_phone,driver_id_number")
+          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number")
           .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
@@ -539,7 +539,7 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,driver_phone,driver_id_number").order("bus_number"))
+        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number").order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
