@@ -1500,7 +1500,7 @@ function StepTripBus({
                             onClick={() => onSelectBus(b.id)}
                             className={`w-full text-right p-3 flex items-center gap-3 ${full ? "cursor-not-allowed" : "cursor-pointer"}`}
                           >
-                            <div className="h-14 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                            <div className="h-12 w-16 sm:h-14 sm:w-20 rounded-xl overflow-hidden bg-muted shrink-0">
                               {b.image_url ? (
                                 <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
                               ) : (
