@@ -628,6 +628,7 @@ export type Database = {
           created_at: string
           details: string | null
           driver_id_number: string | null
+          driver_name: string | null
           driver_phone: string | null
           expenses: number
           id: string
@@ -656,6 +657,7 @@ export type Database = {
           created_at?: string
           details?: string | null
           driver_id_number?: string | null
+          driver_name?: string | null
           driver_phone?: string | null
           expenses?: number
           id?: string
@@ -684,6 +686,7 @@ export type Database = {
           created_at?: string
           details?: string | null
           driver_id_number?: string | null
+          driver_name?: string | null
           driver_phone?: string | null
           expenses?: number
           id?: string
