@@ -292,12 +292,12 @@ export function downloadSeatChartPng(canvases: HTMLCanvasElement[], filename: st
 }
 
 export function downloadSeatChartPdf(canvases: HTMLCanvasElement[], filename: string) {
-  let pdf: jsPDF | null = null;
+  let pdf: jsPDF | undefined;
   canvases.forEach((canvas) => {
     const w = canvas.width / 2;
     const h = canvas.height / 2;
     const orientation = w >= h ? "landscape" : "portrait";
-    if (!pdf) pdf = new jsPDF({ orientation, unit: "pt", format: [w, h] });
+    if (pdf === undefined) pdf = new jsPDF({ orientation, unit: "pt", format: [w, h] });
     else pdf.addPage([w, h], orientation);
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);
   });
