@@ -723,6 +723,30 @@ function UnifiedBookingsTab(props: {
     return headers.findIndex((h) => aliases.some((a) => h.includes(a)));
   }
 
+  function downloadImportTemplate() {
+    const headers = [
+      "العميل",
+      "الجوال",
+      "واتساب",
+      "الهوية",
+      "الجنسية",
+      "العدد",
+      "المقاعد",
+      "المندوب",
+      "الفندق",
+      "نوع الغرفة",
+      "العودة",
+      "ليالي التمديد",
+      "إجمالي",
+      "ملاحظات",
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    ws["!cols"] = headers.map(() => ({ wch: 16 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "كشف ركاب");
+    XLSX.writeFile(wb, "نموذج_كشف_الركاب.xlsx");
+  }
+
   async function handleImportFile(file: File | null | undefined) {
     if (!file) return;
     try {
