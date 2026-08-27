@@ -1113,9 +1113,9 @@ function UnifiedBookingsTab(props: {
                   </h3>
                   <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
                 </div>
-                <div className="pointer-events-none">
+                <div className="pointer-events-none" style={{ direction: "ltr" }}>
                   <LayoutSeatMap
-                    layout={liveLayout}
+                    layout={mirrorLayout(liveLayout)}
                     selected={liveSeatNumbers}
                     reserved={[]}
                     maxSelectable={liveSeatNumbers.length}
