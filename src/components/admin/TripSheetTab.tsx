@@ -95,7 +95,7 @@ export function TripSheetTab() {
   const { data: buses = [] } = useQuery({
     queryKey: ["ts-buses"],
     queryFn: async () =>
-      ((await supabase.from("buses").select("id,name,bus_number,capacity,plate,bus_type,details").order("bus_number"))
+      ((await supabase.from("buses").select("id,name,bus_number,capacity,plate,bus_type,details,driver_name,driver_phone,driver_id_number").order("bus_number"))
         .data ?? []) as Array<{
         id: string;
         name: string | null;
@@ -104,6 +104,9 @@ export function TripSheetTab() {
         plate: string | null;
         bus_type: string | null;
         details: string | null;
+        driver_name: string | null;
+        driver_phone: string | null;
+        driver_id_number: string | null;
       }>,
   });
 
@@ -182,6 +185,14 @@ export function TripSheetTab() {
   );
 
   const bus = buses.find((b) => b.id === busId) ?? null;
+
+  // Driver details come from the fleet record of the selected bus.
+  useEffect(() => {
+    if (!bus) return;
+    setDriverName(bus.driver_name ?? "");
+    setDriverId(bus.driver_id_number ?? "");
+    setDriverPhone(bus.driver_phone ?? "");
+  }, [bus]);
   const trip = trips.find((t) => t.id === tripId) ?? null;
   const tripInfo = filtered.find((b) => b.trips)?.trips ?? null;
 
