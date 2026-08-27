@@ -671,8 +671,18 @@ function BookingPage() {
       const anyE = e as { message?: string; error?: string; details?: string; hint?: string } | null;
       const msg =
         anyE?.message || anyE?.error || anyE?.details || anyE?.hint || (typeof e === "string" ? e : "حدث خطأ");
+      // Seat conflict detected server-side: refresh occupancy and send the user
+      // back to the seat step with the taken seats cleared.
+      if (msg.includes("محجوزة بالفعل") || msg.includes("غير متاحة للحجز")) {
+        const fresh = await refetchReserved();
+        const takenNow = (fresh.data ?? {})[busId ?? ""] ?? [];
+        setSeats((prev) => prev.filter((s) => !takenNow.includes(s)));
+        const seatStep = STEPS.indexOf("المقاعد");
+        if (seatStep >= 0) setStep(seatStep);
+      }
       toast.error("تعذر إتمام الحجز: " + msg);
     } finally {
+
       setSubmitting(false);
     }
   }
