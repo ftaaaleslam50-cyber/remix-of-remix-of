@@ -86,7 +86,7 @@ export function ExportSheetDialog(props: {
 
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 mt-2">
 
-          <div className="rounded-2xl border p-5 flex flex-col items-center text-center gap-2">
+          <div className="rounded-2xl border p-4 sm:p-5 flex flex-col items-center text-center gap-2">
             <FileSpreadsheet className="h-10 w-10 text-emerald-600" />
             <p className="font-extrabold">تصدير Excel</p>
             <p className="text-xs text-muted-foreground">القالب الكامل: ألوان، خلايا مدمجة، شعار المؤسسة.</p>
@@ -95,7 +95,7 @@ export function ExportSheetDialog(props: {
             </Button>
           </div>
 
-          <div className="rounded-2xl border p-5 flex flex-col items-center text-center gap-2">
+          <div className="rounded-2xl border p-4 sm:p-5 flex flex-col items-center text-center gap-2">
             <FileText className="h-10 w-10 text-red-600" />
             <p className="font-extrabold">تصدير PDF</p>
             <p className="text-xs text-muted-foreground">نفس القالب، PDF أفقي جاهز للطباعة.</p>
@@ -109,7 +109,7 @@ export function ExportSheetDialog(props: {
             </Button>
           </div>
 
-          <div className="rounded-2xl border p-5 flex flex-col items-center text-center gap-2">
+          <div className="rounded-2xl border p-4 sm:p-5 flex flex-col items-center text-center gap-2">
             <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
             <p className="font-extrabold">تنزيل Excel خام</p>
             <p className="text-xs text-muted-foreground">جدول قياسي بدون تنسيق — سهل الاستيراد في برامج أخرى.</p>
@@ -123,7 +123,7 @@ export function ExportSheetDialog(props: {
             </Button>
           </div>
 
-          <div className="rounded-2xl border p-5 flex flex-col items-center text-center gap-2">
+          <div className="rounded-2xl border p-4 sm:p-5 flex flex-col items-center text-center gap-2">
             <FileText className="h-10 w-10 text-muted-foreground" />
             <p className="font-extrabold">تنزيل PDF خام</p>
             <p className="text-xs text-muted-foreground">جدول نظيف بدون تنسيق للطباعة السريعة أو الأرشفة.</p>
