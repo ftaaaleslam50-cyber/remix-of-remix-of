@@ -515,75 +515,29 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   * { box-sizing: border-box; }
   body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color:#000; margin:0;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .top { display:flex; gap:4px; align-items:stretch; margin-bottom:6px; }
-  .cell { border:1px solid #333; padding:3px 5px; text-align:center; font-weight:800;
-          display:flex; align-items:center; justify-content:center; line-height:1.1; }
-  .logo { width:100px; height:100px; flex:0 0 100px; border:1px solid #333; background:#${C.cream};
-          display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  .logo img { max-width:96px; max-height:96px; object-fit:contain; }
-  .titlewrap { display:flex; flex-direction:column; gap:2px; }
-  .title { background:#${C.cream}; color:#${C.darkRed}; font-size:26px; min-width:140px; flex:1; }
-  .stack { display:flex; flex-direction:column; gap:2px; }
-  .row { display:flex; gap:2px; }
+  table { border-collapse:collapse; width:100%; table-layout:fixed; }
+  th, td { border:1px solid #333; padding:1px 3px; text-align:center; line-height:1.15;
+           vertical-align:middle; font-weight:800; overflow:hidden; }
   .cream { background:#${C.cream}; }
   .lime { background:#${C.lime}; color:#${C.darkRed}; }
   .lblue { background:#${C.lightBlue}; color:#${C.darkRed}; }
   .cyan { background:#${C.cyan}; color:#${C.blue}; }
   .pink { background:#${C.pink}; color:#${C.red}; }
+  .rooms { background:#${C.roomsTable}; }
+  .red { color:#${C.darkRed}; }
   .val { color:#${C.blue}; }
-  .bus { font-size:30px; }
-  .big { font-size:28px; }
-  table { border-collapse:collapse; width:100%; }
-  th, td { border:1px solid #333; padding:1px 3px; text-align:center; line-height:1.15;
-           height:auto; vertical-align:middle; }
-  table.main { font-size:11px; }
+  .blank { border:none; background:transparent; }
+  table.head td { height:20px; }
+  .logocell { padding:2px; }
+  .logoimg { max-width:100%; max-height:150px; object-fit:contain; }
+  table.main { font-size:11px; margin-top:4px; }
   table.main thead th { background:#${C.cream}; color:#${C.darkRed}; font-size:12px; }
-  table.main tfoot td { background:#${C.cream}; color:#${C.darkRed}; font-weight:800; }
-  table.rooms { font-size:10px; }
-  table.rooms th { background:#${C.roomsTable}; color:#${C.darkRed}; }
-  table.rooms td { background:#${C.roomsTable}; }
-  .retbox { border:1px solid #333; background:#${C.pink}; color:#${C.red}; text-align:center;
-            padding:2px 5px; font-weight:800; margin-bottom:3px; }
-  .retbox .lbl { font-size:11px; }
-  .retbox .day { font-size:14px; }
-  .side { display:flex; gap:4px; }
+  table.main tfoot td { background:#${C.cream}; color:#${C.darkRed}; }
   thead { display:table-header-group; }
 </style></head><body>
-<div class="top">
-  ${logoBox}
-  <div class="titlewrap"><div class="cell title">كشف رحله</div></div>
-  <div class="stack">
-    <div class="cell cream" style="font-size:16px">ذهاب</div>
-    <div class="cell cream val" style="font-size:16px">${esc(h.departureDate)}</div>
-    <div class="cell cream" style="font-size:16px">عوده</div>
-    <div class="cell cream val" style="font-size:16px">${esc(h.returnDate)}</div>
-    <div class="row">
-      <div class="cell lime" style="font-size:12px">بيان مركبه حمولة</div>
-      <div class="cell lime" style="font-size:14px">${esc(h.capacity)}</div>
-    </div>
-    <div class="cell lime" style="font-size:12px">${esc(h.transportCompany)}</div>
-  </div>
-  <div class="row">
-    <div class="cell lblue" style="font-size:16px">باص</div>
-    <div class="cell lblue bus">${esc(h.busNumber)}</div>
-  </div>
-  <div class="stack">
-    <div class="row"><div class="cell lblue">لوحه</div><div class="cell lblue">${esc(h.plate)}</div></div>
-    <div class="row"><div class="cell lblue">السائق</div><div class="cell lblue">${esc(h.driverName)}</div></div>
-    <div class="row"><div class="cell lblue">هويته</div><div class="cell lblue">${esc(h.driverId)}</div></div>
-    <div class="row"><div class="cell lblue">ت</div><div class="cell lblue">${esc(h.driverPhone)}</div></div>
-  </div>
-  <div class="stack">
-    <div class="row"><div class="cell cyan">عدد الركاب</div><div class="cell cyan big">${esc(h.passengersTotal ?? 0)}</div></div>
-    <div class="row"><div class="cell pink">متبقي</div><div class="cell pink big">${esc(h.seatsRemaining ?? "")}</div></div>
-  </div>
-  <div class="side">
-    <div>${roomsTable}</div>
-    <div>${returnBoxes}</div>
-  </div>
-</div>
+<table class="head"><colgroup>${colgroup}</colgroup><tbody>${headerHtml}</tbody></table>
 
-<table class="main">
+<table class="main"><colgroup>${colgroup}</colgroup>
   <thead><tr>${TABLE_COLUMNS.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
   <tbody>
     ${input.rows
