@@ -657,7 +657,7 @@ function UnifiedBookingsTab(props: {
     }
     occupants.sort((a, z) => a.seat.localeCompare(z.seat, "en", { numeric: true }));
     const layout = busLayout?.layout_json ?? buildDefaultLayout((bus.layout as "A" | "B") ?? "A");
-    return renderSeatChartCanvas(layout, occupants, {
+    return renderSeatChartPages(layout, occupants, {
       busLabel: bus.name || `حافلة ${bus.bus_number}`,
       tripLabel: trips.find((t) => t.id === tripId)?.name,
       capacity: bus.capacity,
