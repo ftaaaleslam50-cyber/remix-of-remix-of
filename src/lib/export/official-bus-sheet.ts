@@ -530,7 +530,7 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   .blank { border:none; background:transparent; }
   table.head td { height:20px; }
   .logocell { padding:2px; }
-  .logoimg { max-width:100%; max-height:150px; object-fit:contain; }
+  .logoimg { width:100%; height:100%; min-height:150px; object-fit:contain; display:block; }
   table.main { font-size:11px; margin-top:4px; }
   table.main thead th { background:#${C.cream}; color:#${C.darkRed}; font-size:12px; }
   table.main tfoot td { background:#${C.cream}; color:#${C.darkRed}; }
