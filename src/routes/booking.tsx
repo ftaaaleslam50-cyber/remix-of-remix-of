@@ -1421,25 +1421,26 @@ function StepTripBus({
       <button
         type="button"
         onClick={onSelectNoBus}
-        className={`w-full text-right rounded-3xl border-2 p-5 mb-5 bg-white transition-all flex items-center gap-4 ${
+        className={`w-full text-right rounded-2xl sm:rounded-3xl border-2 p-4 sm:p-5 mb-4 sm:mb-5 bg-white transition-all flex items-center gap-3 sm:gap-4 ${
           noBus ? "border-primary shadow-[var(--shadow-red)]" : "border-dashed border-border hover:border-primary/40"
         }`}
       >
         <div
-          className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${
+          className={`h-10 w-10 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center shrink-0 ${
             noBus ? "btn-primary-glow text-white" : "bg-muted text-[color:var(--color-navy)]"
           }`}
         >
-          <X className="h-6 w-6" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-extrabold text-[color:var(--color-navy)]">بدون مواصلات</h3>
-          <p className="text-sm text-muted-foreground">فندق فقط — الانتقال مباشرة إلى خطوة الفندق</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base sm:text-lg font-extrabold text-[color:var(--color-navy)]">بدون مواصلات</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">فندق فقط — الانتقال مباشرة إلى خطوة الفندق</p>
         </div>
-        {noBus && <CheckCircle2 className="h-5 w-5 text-primary" />}
+        {noBus && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
       </button>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+
         {trips.map((t) => {
           const active = !noBus && tripId === t.id;
           const tripBuses = active ? buses : [];
