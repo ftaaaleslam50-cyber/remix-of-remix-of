@@ -192,7 +192,7 @@ function BookingPage() {
     // Seat occupancy changes constantly — never serve a stale snapshot, and keep
     // polling while the user is on the wizard so two people can't grab one seat.
     staleTime: 0,
-    refetchInterval: 15_000,
+    refetchInterval: 1_000,
     refetchOnWindowFocus: true,
 
     queryFn: async () => {
