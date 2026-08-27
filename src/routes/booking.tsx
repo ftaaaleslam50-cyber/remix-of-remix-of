@@ -2070,8 +2070,8 @@ function PriceBar(props: {
 }) {
   return (
     <div className="fixed bottom-0 inset-x-0 z-30 glass-bar border-t shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)]">
-      <div className="container-luxe py-2 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs md:text-sm">
+      <div className="container-luxe py-2 flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 flex items-center gap-x-4 gap-y-1 text-[11px] md:text-sm overflow-x-auto overscroll-x-contain md:flex-wrap md:overflow-visible" style={{ scrollbarWidth: "thin" }}>
           <PriceCell label="سعر الفرد" value={sar(props.pricePerPerson)} />
           <PriceCell label="عدد الأفراد" value={String(props.passengerCount)} />
           <PriceCell label="الغرفة" value={roomDisplayLabel(props.roomType, props.bookingType, props.hasHotel)} />
@@ -2079,13 +2079,14 @@ function PriceBar(props: {
           {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
           {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">الإجمالي</p>
             {props.discount > 0 && <p className="text-xs text-muted-foreground line-through">{sar(props.subtotal)}</p>}
-            <p className="text-lg md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
+            <p className="text-base md:text-2xl font-extrabold text-primary">{sar(props.total)}</p>
           </div>
         </div>
+
       </div>
       {props.children && (
         <div className="border-t bg-background/60">
@@ -2098,9 +2099,9 @@ function PriceBar(props: {
 
 function PriceCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="font-bold">{value}</span>
+    <div className="flex flex-col shrink-0 max-w-[9rem]">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</span>
+      <span className="font-bold truncate">{value}</span>
     </div>
   );
 }
