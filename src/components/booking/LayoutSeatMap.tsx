@@ -49,9 +49,13 @@ interface Props {
   onChange: (seats: string[]) => void;
   /** Optional gender per selected seat — drives colour + icon. */
   genders?: Record<string, SeatGender>;
+  /** Optional passenger name per seat — rendered in bold inside the seat. */
+  names?: Record<string, string>;
+  /** Enlarge cells (used by the admin live map). */
+  large?: boolean;
 }
 
-export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onChange, genders = {} }: Props) {
+export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onChange, genders = {}, names = {}, large = false }: Props) {
   const rows = Math.max(1, layout.rows || 1);
   const cols = Math.max(1, layout.cols || 1);
   const map = new Map<string, LayoutCell>();
@@ -78,7 +82,7 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
     <div className="bg-gradient-to-b from-muted to-white rounded-3xl border-2 border-border p-3 sm:p-5">
       <div
         className="grid gap-1.5 mx-auto"
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, maxWidth: cols * 60 }}
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, maxWidth: cols * (large ? 130 : 60) }}
       >
         {Array.from({ length: rows * cols }).map((_, i) => {
           const r = Math.floor(i / cols) + 1;
@@ -116,12 +120,20 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
               key={i}
               type="button"
               onClick={() => toggle(cell)}
-              className={`aspect-square rounded-lg border-2 text-[11px] font-bold flex flex-col items-center justify-center leading-none transition-all ${cls}`}
-              title={id}
+              className={`aspect-square rounded-lg border-2 ${large ? "text-sm" : "text-[11px]"} font-bold flex flex-col items-center justify-center gap-0.5 leading-tight transition-all ${cls}`}
+              title={names[id] ? `${id} — ${names[id]}` : id}
             >
-              {g === "male" && <Mars className="h-3 w-3 mb-0.5" />}
-              {g === "female" && <Venus className="h-3 w-3 mb-0.5" />}
-              {id}
+              {g === "male" && <Mars className={large ? "h-4 w-4" : "h-3 w-3 mb-0.5"} />}
+              {g === "female" && <Venus className={large ? "h-4 w-4" : "h-3 w-3 mb-0.5"} />}
+              <span className="font-extrabold">{id}</span>
+              {names[id] && (
+                <span
+                  className={`w-full px-0.5 text-center font-extrabold leading-tight ${large ? "text-[11px]" : "text-[8px]"}`}
+                  style={{ overflowWrap: "anywhere" }}
+                >
+                  {names[id]}
+                </span>
+              )}
             </button>
           );
         })}
