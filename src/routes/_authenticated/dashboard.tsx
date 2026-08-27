@@ -44,7 +44,9 @@ import {
   buildDefaultLayout,
   downloadSeatChartPdf,
   downloadSeatChartPng,
-  renderSeatChartCanvas,
+  renderSeatChartPages,
+  twoPartName,
+
   type SeatOccupant,
 } from "@/lib/bus-seat-chart";
 import { AssetField } from "@/components/admin/AssetField";
@@ -632,6 +634,10 @@ function UnifiedBookingsTab(props: {
     }
     return acc;
   }, {});
+  const liveSeatNames = activeSeatBookings.reduce<Record<string, string>>((acc, b) => {
+    for (const seat of b.seat_numbers ?? []) acc[seat] = twoPartName(b.customer_name ?? "");
+    return acc;
+  }, {});
   const liveLayout = bus ? busLayout?.layout_json ?? buildDefaultLayout(bus.layout === "B" ? "B" : "A") : null;
 
   function buildChart() {
@@ -655,7 +661,7 @@ function UnifiedBookingsTab(props: {
     }
     occupants.sort((a, z) => a.seat.localeCompare(z.seat, "en", { numeric: true }));
     const layout = busLayout?.layout_json ?? buildDefaultLayout((bus.layout as "A" | "B") ?? "A");
-    return renderSeatChartCanvas(layout, occupants, {
+    return renderSeatChartPages(layout, occupants, {
       busLabel: bus.name || `حافلة ${bus.bus_number}`,
       tripLabel: trips.find((t) => t.id === tripId)?.name,
       capacity: bus.capacity,
@@ -1149,6 +1155,8 @@ function UnifiedBookingsTab(props: {
                     reserved={[]}
                     maxSelectable={liveSeatNumbers.length}
                     genders={liveSeatGenders}
+                    names={liveSeatNames}
+                    large
                     onChange={() => undefined}
                   />
                 </div>
@@ -1173,7 +1181,7 @@ function UnifiedBookingsTab(props: {
                             <span className="shrink-0 rounded-full bg-[color:var(--color-navy)] px-2 py-0.5 font-extrabold text-white">
                               {seat}
                             </span>
-                            <span className="truncate font-bold">{b.customer_name}</span>
+                            <span className="truncate text-sm font-extrabold text-[color:var(--color-navy)]">{twoPartName(b.customer_name)}</span>
                             <span className="truncate text-muted-foreground">{b.booking_source || "الموقع"}</span>
                           </div>
                         ))}
