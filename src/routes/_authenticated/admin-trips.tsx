@@ -272,17 +272,25 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
         <Label className="text-xs">مواعيد العودة الإضافية (للرحلات ذات أكثر من عودة)</Label>
         <div className="space-y-2 mt-1">
           {(local.return_options ?? []).map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] text-muted-foreground w-14 shrink-0">عودة {i + 2}</span>
               <Input
-                placeholder="مثال: السبت 17/8"
-                value={opt}
+                type="date"
+                className="w-44"
+                value={/^\d{4}-\d{2}-\d{2}$/.test(opt) ? opt : ""}
                 onChange={(e) => {
+                  const iso = e.target.value;
+                  if (!iso) return;
                   const next = [...(local.return_options ?? [])];
-                  next[i] = e.target.value.replace(/[,،]/g, " ");
+                  next[i] = iso;
                   setLocal({ ...local, return_options: next });
                 }}
               />
+              {opt && (
+                <span className="text-xs font-bold text-[color:var(--color-navy)]">
+                  {/^\d{4}-\d{2}-\d{2}$/.test(opt) ? formatTripDate(opt) : opt}
+                </span>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -305,7 +313,7 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground mt-1">
-          «العودة 1» هي يوم العودة الأساسي بالأعلى. كل موعد تضيفه هنا سيظهر للعميل كخيار عودة داخل بطاقة الحافلة في خطوات الحجز.
+          «العودة 1» هي تاريخ العودة الفعلي بالأعلى. كل موعد تضيفه هنا من التقويم سيظهر للعميل كخيار عودة داخل بطاقة الحافلة في خطوات الحجز.
         </p>
       </div>
 
