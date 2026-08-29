@@ -18,10 +18,17 @@ export function departureDisplay(
   departureDay?: string | null,
   fallback = "-",
   tripMode?: string | null,
+  compact = false,
 ): string {
   if (tripMode === "return") return "بدون ذهاب";
-  if (departureDate) return formatTripDate(departureDate);
+  if (departureDate) return compact ? formatTripDateCompact(departureDate) : formatTripDate(departureDate);
   return departureDay || fallback;
+}
+
+/** Compact extension marker: "+2ل" (nights). */
+export function extensionLabelCompact(nights: number): string {
+  if (nights <= 0) return "";
+  return `+${nights}ل`;
 }
 
 /**
@@ -34,23 +41,31 @@ export function returnActualDisplay(
   extensionNights?: number | null,
   tripMode?: string | null,
   fallback = "-",
+  compact = false,
 ): string {
   if (tripMode === "outbound") return NO_RETURN_LABEL;
   const n = Math.max(0, Number(extensionNights ?? 0));
   const real = actualReturnDate(returnDate, n);
-  if (real) return formatTripDate(real) + (n > 0 ? ` (${extensionLabel(n)})` : "");
-  if (n > 0) return extensionLabel(n);
+  if (real) {
+    const dateStr = compact ? formatTripDateCompact(real) : formatTripDate(real);
+    if (n > 0) return compact ? `${dateStr} ${extensionLabelCompact(n)}` : `${dateStr} (${extensionLabel(n)})`;
+    return dateStr;
+  }
+  if (n > 0) return compact ? extensionLabelCompact(n) : extensionLabel(n);
   return returnDay || fallback;
 }
 
-/** "رحلة الخميس — السبت 29 أغسطس 2026" */
+/** "رحلة الخميس — السبت 29 أغسطس 2026" (compact: "رحلة الخميس — السبت 29 أغسطس") */
 export function tripWithDate(
   name?: string | null,
   departureDate?: string | null,
   departureDay?: string | null,
+  compact = false,
 ): string {
   const base = name || "-";
-  const d = departureDate ? formatTripDate(departureDate) : departureDay || "";
+  const d = departureDate
+    ? compact ? formatTripDateCompact(departureDate) : formatTripDate(departureDate)
+    : departureDay || "";
   return d ? `${base} — ${d}` : base;
 }
 
