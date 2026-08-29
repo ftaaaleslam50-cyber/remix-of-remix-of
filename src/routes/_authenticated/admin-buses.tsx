@@ -315,6 +315,10 @@ function AdminBuses() {
     qc.invalidateQueries({
       queryKey: ["admin-buses-fleet"],
     });
+
+    qc.invalidateQueries({
+      queryKey: ["admin-buses-booking-counts"],
+    });
   }
 
   if (isAdmin === false) {
