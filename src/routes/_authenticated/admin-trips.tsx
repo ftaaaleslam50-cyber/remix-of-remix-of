@@ -187,7 +187,9 @@ function AdminTrips() {
               buses={buses}
               assigned={assigned}
               occupancy={occupancy}
+              past={occurrences.filter((o) => o.trip_id === t.id)}
               onSave={save}
+              onSaveOccurrence={saveOccurrence}
               onDelete={() => del(t.id)}
               onToggleBus={(busId, add) => toggleBus(t.id, busId, add)}
             />
