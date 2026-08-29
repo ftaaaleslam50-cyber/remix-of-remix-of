@@ -1,6 +1,6 @@
 // Renders seat map from a bus_layouts.layout_json template.
 import { toast } from "sonner";
-import { Mars, Venus } from "lucide-react";
+import { Mars, Venus, UserCog } from "lucide-react";
 
 export type SeatGender = "male" | "female";
 
@@ -97,8 +97,15 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
           if (cell.kind !== "seat") {
             const m = KIND_META[cell.kind];
             return (
-              <div key={i} className={`aspect-square rounded-lg border-2 text-[10px] font-bold flex items-center justify-center ${m.bg}`} title={m.label}>
-                <span>{cell.label || m.icon}</span>
+              <div key={i} className={`aspect-square rounded-lg border-2 text-[9px] font-bold flex flex-col items-center justify-center gap-0.5 leading-tight ${m.bg}`} title={m.label}>
+                {cell.kind === "supervisor" ? (
+                  <>
+                    <UserCog className={large ? "h-5 w-5" : "h-4 w-4"} />
+                    <span>{cell.label || "المشرف"}</span>
+                  </>
+                ) : (
+                  <span>{cell.label || m.icon}</span>
+                )}
               </div>
             );
           }
