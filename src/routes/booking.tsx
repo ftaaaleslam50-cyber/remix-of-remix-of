@@ -160,7 +160,12 @@ function BookingPage() {
       const { data: joins } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId!);
       const joinIds = (joins ?? []).map((r) => r.bus_id).filter(Boolean) as string[];
 
-      let query = supabase.from("buses").select("*").in("status", ["active"]);
+      let query = supabase
+        .from("buses")
+        .select(
+          "id,trip_id,bus_number,name,capacity,active,status,priority,is_active_booking,blocked_seats,layout,layout_id,image_url,bus_type,details,price_addition,round_trip_price,outbound_price,return_price,plate,model,created_at,updated_at",
+        )
+        .in("status", ["active"]);
       if (joinIds.length > 0) {
         query = query.or(`id.in.(${joinIds.join(",")}),trip_id.eq.${tripId}`);
       } else {
