@@ -1456,6 +1456,7 @@ export type Database = {
           from_city: string
           id: string
           name: string
+          return_date: string | null
           return_time: string | null
           to_city: string
           updated_at: string
@@ -1468,6 +1469,7 @@ export type Database = {
           from_city?: string
           id?: string
           name: string
+          return_date?: string | null
           return_time?: string | null
           to_city?: string
           updated_at?: string
@@ -1480,6 +1482,7 @@ export type Database = {
           from_city?: string
           id?: string
           name?: string
+          return_date?: string | null
           return_time?: string | null
           to_city?: string
           updated_at?: string

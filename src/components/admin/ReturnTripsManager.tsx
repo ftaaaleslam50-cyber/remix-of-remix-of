@@ -2,12 +2,12 @@
 // القوالب أسبوعية، لكن التشغيل والإدارة يتمّان بالتاريخ الفعلي.
 // الحجوزات ترتبط بالرحلة عبر «تاريخ العودة الفعلي» المحسوب مسبقًا في قاعدة البيانات
 // (تاريخ العودة + ليالي التمديد)، ولا علاقة للسعة بظهور الحجوزات.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2, Save, Bus as BusIcon,
-  AlertTriangle, Users, Settings2,
+  AlertTriangle, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
@@ -26,6 +27,7 @@ export interface ReturnTripRow {
   from_city: string;
   to_city: string;
   weekday: number;
+  return_date: string | null;
   return_time: string | null;
   active: boolean;
   display_order: number;
@@ -49,10 +51,6 @@ export interface ReturnBookingRow {
   status: string;
 }
 
-const WEEKDAYS = [
-  { v: 0, l: "الأحد" }, { v: 1, l: "الاثنين" }, { v: 2, l: "الثلاثاء" }, { v: 3, l: "الأربعاء" },
-  { v: 4, l: "الخميس" }, { v: 5, l: "الجمعة" }, { v: 6, l: "السبت" },
-];
 
 export function todayIso(): string {
   const now = new Date(Date.now() + 3 * 3600_000); // Riyadh
@@ -132,23 +130,60 @@ export function useReturnData(date: string) {
   return { templates, buses, assignedBuses, bookings };
 }
 
-/** الواجهة الكاملة لإدارة رحلات العودة (تُستخدم في تبويب إدارة الرحلات). */
-export function ReturnTripsManager({ ownerId }: { ownerId?: string }) {
-  const [date, setDate] = useState(todayIso());
-  const [showTemplates, setShowTemplates] = useState(false);
+/** إدارة رحلات العودة — قائمة رحلات مثل الذهاب: لكل رحلة تاريخ فعلي وحافلات عودة تُختار منها. */
+export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) {
   const qc = useQueryClient();
-  const { templates, buses, assignedBuses, bookings } = useReturnData(date);
 
-  const dayTemplates = useMemo(
-    () => (templates.data ?? []).filter((t) => t.active && t.weekday === weekdayOf(date)),
-    [templates.data, date],
-  );
+  const templates = useQuery({
+    queryKey: ["return-trips"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("return_trips" as never).select("*").order("display_order");
+      if (error) throw error;
+      return (data as unknown as ReturnTripRow[]) ?? [];
+    },
+  });
 
-  async function addTemplate() {
-    const name = prompt("اسم قالب رحلة العودة (مثال: عودة الاثنين):");
+  const buses = useQuery({
+    queryKey: ["return-fleet-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status").order("bus_number");
+      if (error) throw error;
+      return ((data as unknown as BusRow[]) ?? []).filter((b) => (b.direction ?? "outbound") === "return");
+    },
+  });
+
+  const links = useQuery({
+    queryKey: ["return-trip-buses-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("return_trip_buses" as never).select("*");
+      if (error) throw error;
+      return (data as unknown as ReturnBusRow[]) ?? [];
+    },
+  });
+
+  const occupancy = useQuery({
+    queryKey: ["return-occupancy"],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("bookings")
+        .select("return_bus_id,return_seat_numbers")
+        .not("return_bus_id", "is", null)
+        .is("deleted_at", null)
+        .neq("status", "cancelled");
+      const map: Record<string, number> = {};
+      for (const b of (data ?? []) as { return_bus_id: string; return_seat_numbers: string[] | null }[]) {
+        map[b.return_bus_id] = (map[b.return_bus_id] ?? 0) + (b.return_seat_numbers?.length ?? 0);
+      }
+      return map;
+    },
+  });
+
+  async function addTrip() {
+    const name = prompt("اسم رحلة العودة (مثال: عودة السبت):");
     if (!name) return;
+    const d = todayIso();
     const { error } = await supabase.from("return_trips" as never).insert({
-      name, weekday: weekdayOf(date), display_order: (templates.data ?? []).length,
+      name, weekday: weekdayOf(d), return_date: d, display_order: (templates.data ?? []).length,
     } as never);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["return-trips"] });
@@ -156,91 +191,152 @@ export function ReturnTripsManager({ ownerId }: { ownerId?: string }) {
 
   return (
     <div className="space-y-4">
-      <ReturnDateBar date={date} onChange={setDate} />
-
       <div className="flex flex-wrap gap-2 justify-end">
-        <Button size="sm" variant="outline" className="rounded-full" onClick={() => setShowTemplates((v) => !v)}>
-          <Settings2 className="h-4 w-4 ml-1" /> القوالب الأسبوعية
-        </Button>
-        <Button size="sm" className="rounded-full" onClick={addTemplate}>
-          <Plus className="h-4 w-4 ml-1" /> إضافة قالب عودة
+        <Button size="sm" className="rounded-full" onClick={addTrip}>
+          <Plus className="h-4 w-4 ml-1" /> إضافة رحلة عودة
         </Button>
       </div>
 
-      {showTemplates && (
-        <div className="surface-card p-5 space-y-3">
-          <div className="text-sm font-extrabold">قوالب رحلات العودة الأسبوعية</div>
-          {(templates.data ?? []).length === 0 && <div className="text-xs text-muted-foreground">لا توجد قوالب بعد.</div>}
-          {(templates.data ?? []).map((t) => <TemplateEditor key={t.id} template={t} />)}
+      {(templates.data ?? []).length === 0 && (
+        <div className="surface-card p-10 text-center text-muted-foreground space-y-2">
+          <CalendarDays className="h-10 w-10 mx-auto opacity-40" />
+          <div>لا توجد رحلات عودة بعد.</div>
         </div>
       )}
 
-      {dayTemplates.length === 0 ? (
-        <div className="surface-card p-10 text-center text-muted-foreground space-y-2">
-          <CalendarDays className="h-10 w-10 mx-auto opacity-40" />
-          <div>لا يوجد قالب رحلة عودة ليوم {WEEKDAYS[weekdayOf(date)].l}.</div>
-          <div className="text-xs">أضف قالبًا أسبوعيًا لهذا اليوم لتظهر رحلة العودة بتاريخه الفعلي.</div>
-        </div>
-      ) : (
-        dayTemplates.map((t) => (
-          <ReturnTripCard
-            key={t.id}
-            template={t}
-            date={date}
-            buses={buses.data ?? []}
-            assigned={(assignedBuses.data ?? []).filter((x) => x.return_trip_id === t.id)}
-            bookings={bookings.data ?? []}
-            ownerId={ownerId}
-          />
-        ))
-      )}
+      {(templates.data ?? []).map((t) => (
+        <ReturnTripEditor
+          key={t.id}
+          trip={t}
+          buses={buses.data ?? []}
+          assigned={new Set((links.data ?? []).filter((l) => l.return_trip_id === t.id && l.trip_date === (t.return_date ?? "")).map((l) => l.bus_id))}
+          occupancy={occupancy.data ?? {}}
+        />
+      ))}
     </div>
   );
 }
 
-function TemplateEditor({ template }: { template: ReturnTripRow }) {
+/** بطاقة تحرير رحلة عودة واحدة — مطابقة في الأسلوب لبطاقة رحلة الذهاب. */
+function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
+  trip: ReturnTripRow;
+  buses: BusRow[];
+  assigned: Set<string>;
+  occupancy: Record<string, number>;
+}) {
   const qc = useQueryClient();
-  const [local, setLocal] = useState(template);
+  const [local, setLocal] = useState(trip);
+  useEffect(() => setLocal(trip), [trip]);
+
+  function refresh() {
+    qc.invalidateQueries({ queryKey: ["return-trips"] });
+    qc.invalidateQueries({ queryKey: ["return-trip-buses-all"] });
+  }
 
   async function save() {
+    const date = local.return_date || null;
     const { error } = await supabase.from("return_trips" as never).update({
       name: local.name, from_city: local.from_city, to_city: local.to_city,
-      weekday: local.weekday, return_time: local.return_time || null,
-      active: local.active, display_order: local.display_order,
-    } as never).eq("id", template.id);
+      return_date: date, weekday: date ? weekdayOf(date) : local.weekday,
+      return_time: local.return_time || null, active: local.active, display_order: local.display_order,
+    } as never).eq("id", trip.id);
     if (error) return toast.error(error.message);
+    // نقل ارتباطات الحافلات إلى التاريخ الجديد عند تغييره
+    if (date && trip.return_date && date !== trip.return_date) {
+      await supabase.from("return_trip_buses" as never)
+        .update({ trip_date: date } as never)
+        .eq("return_trip_id", trip.id).eq("trip_date", trip.return_date);
+    }
     toast.success("تم الحفظ");
-    qc.invalidateQueries({ queryKey: ["return-trips"] });
+    refresh();
   }
+
   async function del() {
-    if (!confirm("حذف قالب رحلة العودة؟ (لن يتم حذف أي حجز)")) return;
-    const { error } = await supabase.from("return_trips" as never).delete().eq("id", template.id);
+    if (!confirm("حذف رحلة العودة؟ (لن يتم حذف أي حجز)")) return;
+    const { error } = await supabase.from("return_trips" as never).delete().eq("id", trip.id);
     if (error) return toast.error(error.message);
-    qc.invalidateQueries({ queryKey: ["return-trips"] });
+    refresh();
+  }
+
+  async function toggleBus(busId: string, add: boolean) {
+    const date = trip.return_date;
+    if (!date) return toast.error("حدّد تاريخ رحلة العودة أولًا ثم احفظ.");
+    if (add) {
+      const { error } = await supabase.from("return_trip_buses" as never)
+        .insert({ return_trip_id: trip.id, trip_date: date, bus_id: busId } as never);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("return_trip_buses" as never).delete()
+        .eq("return_trip_id", trip.id).eq("trip_date", date).eq("bus_id", busId);
+      if (error) return toast.error(error.message);
+    }
+    refresh();
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-7 items-end border rounded-xl p-3">
-      <div className="md:col-span-2"><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
-      <div><Label className="text-xs">من</Label><Input value={local.from_city} onChange={(e) => setLocal({ ...local, from_city: e.target.value })} /></div>
-      <div><Label className="text-xs">إلى</Label><Input value={local.to_city} onChange={(e) => setLocal({ ...local, to_city: e.target.value })} /></div>
-      <div>
-        <Label className="text-xs">يوم الأسبوع</Label>
-        <Select value={String(local.weekday)} onValueChange={(v) => setLocal({ ...local, weekday: Number(v) })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{WEEKDAYS.map((d) => <SelectItem key={d.v} value={String(d.v)}>{d.l}</SelectItem>)}</SelectContent>
-        </Select>
+    <div className="surface-card p-5 space-y-4">
+      <div className="rounded-xl border bg-muted/40 p-4">
+        <div className="text-base font-extrabold">{trip.name}</div>
+        {trip.return_date ? (
+          <>
+            <div className="text-sm font-bold text-[color:var(--color-navy)]">
+              {formatTripDate(trip.return_date)}
+              {trip.return_time ? ` — ${formatTripTime(trip.return_time)}` : ""}
+            </div>
+            <div className="text-xs text-muted-foreground">{trip.from_city} ← {trip.to_city}</div>
+          </>
+        ) : (
+          <div className="text-xs text-destructive">لم يتم تحديد تاريخ فعلي لرحلة العودة بعد.</div>
+        )}
       </div>
-      <div><Label className="text-xs">وقت العودة</Label><Input type="time" value={local.return_time ?? ""} onChange={(e) => setLocal({ ...local, return_time: e.target.value })} /></div>
-      <div className="flex items-center gap-2">
-        <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
-        <span className="text-xs">مفعّل</span>
-        <Button size="sm" className="rounded-full" onClick={save}><Save className="h-4 w-4" /></Button>
-        <Button size="sm" variant="outline" className="rounded-full" onClick={del}><Trash2 className="h-4 w-4" /></Button>
+
+      <div className="grid gap-3 md:grid-cols-6">
+        <div className="md:col-span-2"><Label className="text-xs">اسم رحلة العودة</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
+        <div><Label className="text-xs">تاريخ العودة الفعلي</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
+        <div><Label className="text-xs">وقت العودة</Label><Input type="time" value={local.return_time ?? ""} onChange={(e) => setLocal({ ...local, return_time: e.target.value })} /></div>
+        <div><Label className="text-xs">من</Label><Input value={local.from_city} onChange={(e) => setLocal({ ...local, from_city: e.target.value })} /></div>
+        <div><Label className="text-xs">إلى</Label><Input value={local.to_city} onChange={(e) => setLocal({ ...local, to_city: e.target.value })} /></div>
+        <div><Label className="text-xs">الترتيب</Label><Input type="number" value={local.display_order} onChange={(e) => setLocal({ ...local, display_order: Number(e.target.value) })} /></div>
+        <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّلة</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> حافلات العودة المتاحة والإشغال</div>
+        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          {buses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات عودة في الأسطول — أضف حافلة باتجاه «عودة».</div>}
+          {buses.map((b) => {
+            const used = occupancy[b.id] ?? 0;
+            const pct = b.capacity > 0 ? Math.round((used / b.capacity) * 100) : 0;
+            const on = assigned.has(b.id);
+            return (
+              <div key={b.id} className={`flex items-center justify-between border rounded-xl p-3 ${on ? "border-primary bg-primary/5" : ""}`}>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={on} onCheckedChange={(v) => toggleBus(b.id, !!v)} />
+                  <div>
+                    <div className="text-sm font-bold">{b.name || `حافلة ${b.bus_number}`}</div>
+                    <div className="text-[11px] text-muted-foreground">{b.status}</div>
+                  </div>
+                </label>
+                <div className="text-left">
+                  <div className={`text-sm font-bold ${used >= b.capacity ? "text-destructive" : ""}`}>{used}/{b.capacity}</div>
+                  <div className="text-[11px] text-muted-foreground">{pct}%</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={del} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
+        <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
       </div>
     </div>
   );
 }
+
 
 export function ReturnTripCard({ template, date, buses, assigned, bookings, ownerId }: {
   template: ReturnTripRow;
@@ -502,18 +598,57 @@ function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
 export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   const [date, setDate] = useState(todayIso());
   const { templates, buses, assignedBuses, bookings } = useReturnData(date);
-  const dayTemplates = (templates.data ?? []).filter((t) => t.active && t.weekday === weekdayOf(date));
+
+  const allTrips = useMemo(
+    () => (templates.data ?? [])
+      .filter((t) => t.active)
+      .slice()
+      .sort((a, b) => (a.return_date ?? "").localeCompare(b.return_date ?? "")),
+    [templates.data],
+  );
+
+  const dayTrips = useMemo(
+    () => allTrips.filter((t) => (t.return_date ? t.return_date === date : t.weekday === weekdayOf(date))),
+    [allTrips, date],
+  );
 
   return (
     <div className="space-y-4">
+      {/* استعراض رحلات العودة المتاحة والانتقال إليها بضغطة */}
+      <div className="surface-card p-4">
+        <div className="text-sm font-bold mb-2 flex items-center gap-2"><CalendarDays className="h-4 w-4" /> رحلات العودة</div>
+        {allTrips.length === 0 ? (
+          <div className="text-xs text-muted-foreground">لا توجد رحلات عودة — أنشئها من «إدارة الرحلات ← إدارة رحلات العودة».</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {allTrips.map((t) => {
+              const on = !!t.return_date && t.return_date === date;
+              return (
+                <Button
+                  key={t.id}
+                  size="sm"
+                  variant={on ? "default" : "outline"}
+                  className="rounded-full"
+                  onClick={() => t.return_date && setDate(t.return_date)}
+                >
+                  {t.name}
+                  {t.return_date ? ` — ${formatTripDate(t.return_date)}` : ""}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <ReturnDateBar date={date} onChange={setDate} />
-      {dayTemplates.length === 0 ? (
+
+      {dayTrips.length === 0 ? (
         <div className="surface-card p-6 space-y-3">
           <div className="text-sm font-bold">
             الحجوزات المرتبطة بعودة {formatTripDate(date)}: {(bookings.data ?? []).length}
           </div>
           <p className="text-xs text-muted-foreground">
-            لا يوجد قالب رحلة عودة لهذا اليوم — أضف قالبًا من «إدارة الرحلات ← إدارة رحلات العودة» لتتمكن من التوزيع.
+            لا توجد رحلة عودة بهذا التاريخ — أنشئها من «إدارة الرحلات ← إدارة رحلات العودة» لتتمكن من التوزيع.
           </p>
           <div className="flex flex-wrap gap-2">
             {(bookings.data ?? []).map((b) => (
@@ -522,7 +657,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
           </div>
         </div>
       ) : (
-        dayTemplates.map((t) => (
+        dayTrips.map((t) => (
           <ReturnTripCard
             key={t.id}
             template={t}
@@ -537,3 +672,4 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     </div>
   );
 }
+
