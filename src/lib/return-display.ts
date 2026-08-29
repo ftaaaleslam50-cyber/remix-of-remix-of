@@ -1,4 +1,4 @@
-import { formatTripDate, formatTripDateCompact, formatTripDateShort, actualReturnDate } from "./trip-dates";
+import { formatTripDate, formatTripDateCompact, actualReturnDate } from "./trip-dates";
 
 // Display-only helpers for the booking "return" value.
 // When a booking has hotel extension nights, we show the extension label
@@ -25,11 +25,6 @@ export function departureDisplay(
   return departureDay || fallback;
 }
 
-/** Compact extension marker: "+2ل" (nights). */
-export function extensionLabelCompact(nights: number): string {
-  if (nights <= 0) return "";
-  return `+${nights}ل`;
-}
 
 /**
  * Actual return: original return date + extension nights (real date when available).
