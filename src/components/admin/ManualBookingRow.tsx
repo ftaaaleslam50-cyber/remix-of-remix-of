@@ -262,6 +262,28 @@ export function ManualBookingRow({
     },
   });
 
+  // Gender of already-reserved seats (pale blue / pale pink shading).
+  const { data: reservedGenders = {} } = useQuery({
+    queryKey: ["mb-reserved-genders", d.bus_id, d.booking_code ?? ""],
+    enabled: !!d.bus_id,
+    refetchInterval: 1_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_bus_seat_genders" as never, {
+        _trip_id: d.trip_id ?? null,
+        _bus_id: d.bus_id,
+        _exclude_code: d.booking_code ?? null,
+      } as never);
+      if (error) throw error;
+      const map: Record<string, "male" | "female"> = {};
+      for (const row of (data ?? []) as { seat_genders: Record<string, string> | null }[]) {
+        for (const [seat, g] of Object.entries(row.seat_genders ?? {})) {
+          if (g === "male" || g === "female") map[seat] = g;
+        }
+      }
+      return map;
+    },
+  });
+
 
 
   // Individual bookings always price off the shared 5-bed column.
@@ -682,6 +704,7 @@ export function ManualBookingRow({
                 layout={layoutRow.layout_json}
                 selected={d.seat_numbers}
                 reserved={reserved}
+                reservedGenders={reservedGenders}
                 maxSelectable={d.passenger_count}
                 genders={seatGenders}
                 onChange={(s) => set("seat_numbers", s)}
@@ -690,6 +713,7 @@ export function ManualBookingRow({
               <BusSeatMap
                 selected={d.seat_numbers}
                 reserved={reserved}
+                reservedGenders={reservedGenders}
                 maxSelectable={d.passenger_count}
                 blocked={bus?.blocked_seats ?? []}
                 layout={(bus?.layout as "A" | "B") ?? "A"}
