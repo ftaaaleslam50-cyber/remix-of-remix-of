@@ -8,7 +8,7 @@
 //                  in both). The rendered grid has 53 buttons in Layout B; capacity
 //                  math uses allSeats(layout).length.
 
-import { Bus as BusIcon, DoorOpen, Droplets, User, Mars, Venus } from "lucide-react";
+import { Bus as BusIcon, DoorOpen, Droplets, User, UserCog, Mars, Venus } from "lucide-react";
 
 export type SeatStatus = "available" | "selected" | "reserved" | "supervisor" | "blocked";
 export type BusLayout = "A" | "B";
@@ -101,6 +101,7 @@ export function BusSeatMap({
         title={status === "supervisor" ? "مقعد المشرف" : id}
         className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-xl border-2 text-[11px] font-bold transition-all flex flex-col items-center justify-center leading-none ${cls}`}
       >
+        {status === "supervisor" && <UserCog className="h-3.5 w-3.5 mb-0.5" />}
         {(g ?? rg) === "male" && <Mars className="h-3 w-3 mb-0.5" />}
         {(g ?? rg) === "female" && <Venus className="h-3 w-3 mb-0.5" />}
         {id}
