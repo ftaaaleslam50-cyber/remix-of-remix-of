@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_return_seat_uniqueness() FROM PUBLIC, anon, authenticated;

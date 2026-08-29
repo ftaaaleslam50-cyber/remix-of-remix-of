@@ -40,7 +40,9 @@ interface BusRow {
   round_trip_price: number;
   outbound_price: number;
   return_price: number;
+  direction: "outbound" | "return";
 }
+
 
 interface LayoutRow {
   id: string;
@@ -197,6 +199,7 @@ function AdminBuses() {
       round_trip_price: b.round_trip_price,
       outbound_price: b.outbound_price,
       return_price: b.return_price,
+      direction: b.direction ?? "outbound",
       status: "active",
       active: true,
       trip_id: b.trip_id,
@@ -235,6 +238,7 @@ function AdminBuses() {
       round_trip_price: Number(b.round_trip_price) || 0,
       outbound_price: Number(b.outbound_price) || 0,
       return_price: Number(b.return_price) || 0,
+      direction: b.direction === "return" ? "return" : "outbound",
     };
 
     // مزامنة سعة الحافلة مع القالب المختار
@@ -360,15 +364,25 @@ function AdminBuses() {
         </div>
       </header>
 
-      <main className="container-luxe py-8">
-        <div className="surface-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-extrabold">الحافلات ({buses.length})</h2>
+      <main className="container-luxe py-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-extrabold">الأسطول ({buses.length})</h2>
 
-            <Button onClick={addBus} className="rounded-full">
-              <Plus className="h-4 w-4 ml-1" />
-              إضافة حافلة
-            </Button>
+          <Button onClick={addBus} className="rounded-full">
+            <Plus className="h-4 w-4 ml-1" />
+            إضافة حافلة
+          </Button>
+        </div>
+
+        {([
+          { key: "outbound", title: "حافلات الذهاب" },
+          { key: "return", title: "حافلات العودة" },
+        ] as const).map((group) => {
+          const list = buses.filter((b) => (b.direction ?? "outbound") === group.key);
+          return (
+        <div className="surface-card p-6" key={group.key}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-extrabold">{group.title} ({list.length})</h3>
           </div>
 
           <div className="overflow-x-auto">
@@ -380,6 +394,7 @@ function AdminBuses() {
                   <TableHead>اللوحة</TableHead>
                   <TableHead>الطراز</TableHead>
                   <TableHead>النوع</TableHead>
+                  <TableHead>الاتجاه</TableHead>
                   <TableHead>القالب</TableHead>
                   <TableHead>السعة</TableHead>
                   <TableHead>المحجوز</TableHead>
@@ -396,15 +411,15 @@ function AdminBuses() {
               </TableHeader>
 
               <TableBody>
-                {buses.length === 0 && (
+                {list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={18} className="text-center py-10 text-muted-foreground">
                       لا توجد حافلات
                     </TableCell>
                   </TableRow>
                 )}
 
-                {buses.map((b) => (
+                {list.map((b) => (
                   <BusEditRow
                     key={b.id}
                     bus={b}
@@ -420,7 +435,11 @@ function AdminBuses() {
             </Table>
           </div>
         </div>
+          );
+        })}
+
       </main>
+
 
       <TransferDialog
         from={transferFrom}
@@ -532,6 +551,24 @@ function BusEditRow({
           }
         />
       </TableCell>
+
+      <TableCell>
+        <Select
+          value={local.direction ?? "outbound"}
+          onValueChange={(v) => setLocal({ ...local, direction: v as BusRow["direction"] })}
+        >
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="outbound">ذهاب</SelectItem>
+            <SelectItem value="return">عودة</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+
+
+
 
       <TableCell>
 
