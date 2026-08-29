@@ -1,3 +1,5 @@
+import { formatTripDate, actualReturnDate } from "./trip-dates";
+
 // Display-only helpers for the booking "return" value.
 // When a booking has hotel extension nights, we show the extension label
 // instead of the stored return date. The stored value is never modified.
