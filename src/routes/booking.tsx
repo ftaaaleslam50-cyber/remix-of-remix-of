@@ -1769,6 +1769,7 @@ function StepSeats({
               onChange(next);
             }}
             genders={genders}
+            reservedGenders={reservedGenders}
             blocked={bus?.blocked_seats ?? ["A2"]}
             layout={((bus as { layout?: string } | null | undefined)?.layout as "A" | "B") ?? "A"}
           />
