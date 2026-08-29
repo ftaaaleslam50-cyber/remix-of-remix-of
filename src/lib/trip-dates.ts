@@ -9,12 +9,39 @@ const AR_DATE = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
   year: "numeric",
 });
 
+const AR_DATE_COMPACT = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+
+const AR_DATE_SHORT = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+  day: "numeric",
+  month: "short",
+});
+
 /** "2026-08-29" -> "السبت 29 أغسطس 2026" */
 export function formatTripDate(date?: string | null): string {
   if (!date) return "";
   const d = new Date(`${date}T00:00:00`);
   if (Number.isNaN(d.getTime())) return String(date);
   return AR_DATE.format(d);
+}
+
+/** Compact: "29 أغسطس" (day + month only, no weekday, no year). */
+export function formatTripDateShort(date?: string | null): string {
+  if (!date) return "";
+  const d = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return String(date);
+  return AR_DATE_SHORT.format(d);
+}
+
+/** Compact: "السبت 29 أغسطس" (short weekday + day + month, no year). */
+export function formatTripDateCompact(date?: string | null): string {
+  if (!date) return "";
+  const d = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return String(date);
+  return AR_DATE_COMPACT.format(d);
 }
 
 /** "22:00:00" -> "10:00 مساءً" */
