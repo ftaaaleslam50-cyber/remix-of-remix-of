@@ -305,12 +305,16 @@ function TicketPage() {
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
             <TicketRow label="الذهاب" value={departureDisplay(booking.departure_date ?? booking.trips?.departure_date, booking.trips?.departure_day, "-", booking.trip_mode)} />
-            {booking.trips?.return_day && (
-              <TicketRow label="العودة" value={returnDisplay(booking.trips.return_day, booking.extension_nights, "-", booking.trip_mode)} />
-            )}
-            {Number(booking.extension_nights ?? 0) === 0 && booking.trip_mode !== "outbound" && booking.actual_return_day && (
-              <TicketRow label="العودة الفعلية" value={booking.actual_return_day} />
-            )}
+            <TicketRow
+              label="العودة الفعلية"
+              value={returnActualDisplay(
+                booking.return_date ?? booking.trips?.return_date,
+                booking.actual_return_day ?? booking.trips?.return_day,
+                booking.extension_nights,
+                booking.trip_mode,
+                "-",
+              )}
+            />
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
 
