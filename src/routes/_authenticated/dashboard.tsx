@@ -535,11 +535,7 @@ function UnifiedBookingsTab(props: {
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
-        let q = supabase
-          .from("buses")
-          .select(COLS)
-          .eq("is_active_booking", true)
-          .order("bus_number");
+        let q = supabase.from("buses").select(COLS).eq("active", true).order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
         } else {
@@ -548,7 +544,7 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select(COLS).eq("is_active_booking", true).order("bus_number"))
+        ((await supabase.from("buses").select(COLS).eq("active", true).order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },

@@ -275,35 +275,29 @@ function AdminBuses() {
     if (used > 0) {
       if (
         !confirm(
-          `لا يمكن حذف الحافلة نهائياً لأنها مرتبطة بـ ${used} حجز. هل تريد أرشفتها (إيقافها عن الاستخدام مع الاحتفاظ بالسجلات)؟`,
+          `تنبيه: هذه الحافلة تحتوي على ${used} مقعد محجوز ضمن حجوزات نشطة.\n\nهل تريد حذف الحافلة نهائياً مع إلغاء وحذف جميع حجوزاتها؟ لن يمكن التراجع.`,
         )
       ) {
         return;
       }
 
-      const { error } = await supabase
-        .from("buses")
-        .update({
-          status: "stopped",
-          active: false,
-        } as never)
-        .eq("id", id);
+      const { error: cancelErr } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled", deleted_at: new Date().toISOString() } as never)
+        .eq("bus_id", id);
 
-      if (error) {
-        toast.error(error.message);
+      if (cancelErr) {
+        toast.error(cancelErr.message);
         return;
       }
 
-      toast.success("تمت أرشفة الحافلة");
+      const { error: delErr } = await supabase.from("bookings").delete().eq("bus_id", id);
 
-      qc.invalidateQueries({
-        queryKey: ["admin-buses-fleet"],
-      });
-
-      return;
-    }
-
-    if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) {
+      if (delErr) {
+        toast.error(delErr.message);
+        return;
+      }
+    } else if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) {
       return;
     }
 
@@ -320,6 +314,10 @@ function AdminBuses() {
 
     qc.invalidateQueries({
       queryKey: ["admin-buses-fleet"],
+    });
+
+    qc.invalidateQueries({
+      queryKey: ["admin-buses-booking-counts"],
     });
   }
 
