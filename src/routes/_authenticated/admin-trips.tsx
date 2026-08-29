@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatTripDate, formatTripTime, isTripFinished, nextOccurrence } from "@/lib/trip-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-trips")({
   component: AdminTrips,
@@ -324,6 +325,25 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
         <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" onClick={() => onSave(local)} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
       </div>
+    </div>
+  );
+}
+
+function PastOccurrence({ occurrence, onSave }: { occurrence: OccurrenceRow; onSave: (o: OccurrenceRow) => void }) {
+  const [local, setLocal] = useState(occurrence);
+  useEffect(() => setLocal(occurrence), [occurrence]);
+  return (
+    <div className="grid gap-2 md:grid-cols-5 items-end border rounded-xl p-3 bg-muted/30">
+      <div className="md:col-span-2 text-xs font-bold">
+        {formatTripDate(occurrence.departure_date)}
+        {occurrence.departure_time ? ` — ${formatTripTime(occurrence.departure_time)}` : ""}
+        <div className="text-[11px] font-normal text-muted-foreground">
+          الحافلات وقتها: {occurrence.bus_ids?.length ?? 0}
+        </div>
+      </div>
+      <div><Label className="text-[11px]">تاريخ المغادرة</Label><Input type="date" value={local.departure_date} onChange={(e) => setLocal({ ...local, departure_date: e.target.value })} /></div>
+      <div><Label className="text-[11px]">تاريخ العودة</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
+      <Button size="sm" variant="outline" className="rounded-full" onClick={() => onSave(local)}><Save className="h-4 w-4 ml-1" /> حفظ</Button>
     </div>
   );
 }
