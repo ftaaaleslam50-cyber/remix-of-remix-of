@@ -32,8 +32,9 @@ export function extensionLabelCompact(nights: number): string {
 }
 
 /**
- * Actual return: original return date + extension nights (real date when available),
- * otherwise the legacy day text with an extension label.
+ * Actual return: original return date + extension nights (real date when available).
+ * The extension-nights count itself is shown in its own dedicated field, never
+ * appended here.
  */
 export function returnActualDisplay(
   returnDate?: string | null,
@@ -41,17 +42,12 @@ export function returnActualDisplay(
   extensionNights?: number | null,
   tripMode?: string | null,
   fallback = "-",
-  compact = false,
+  _compact = false,
 ): string {
   if (tripMode === "outbound") return NO_RETURN_LABEL;
   const n = Math.max(0, Number(extensionNights ?? 0));
   const real = actualReturnDate(returnDate, n);
-  if (real) {
-    const dateStr = compact ? formatTripDateCompact(real) : formatTripDate(real);
-    if (n > 0) return compact ? `${dateStr} ${extensionLabelCompact(n)}` : `${dateStr} (${extensionLabel(n)})`;
-    return dateStr;
-  }
-  if (n > 0) return compact ? extensionLabelCompact(n) : extensionLabel(n);
+  if (real) return formatTripDate(real);
   return returnDay || fallback;
 }
 
