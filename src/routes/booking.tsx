@@ -652,7 +652,7 @@ function BookingPage() {
         departure_date: (selectedTrip as unknown as { departure_date?: string | null } | undefined)?.departure_date ?? null,
         return_date: (tripMode === "outbound"
           ? null
-          : (selectedTrip as unknown as { return_date?: string | null } | undefined)?.return_date ?? null) as string | null,
+          : selectedReturnDate) as string | null,
       };
 
       if (editingCode) {
@@ -809,7 +809,7 @@ function BookingPage() {
                     setSeats([]);
                     setActualReturnDay("");
                   }}
-                  returnOptions={selectedTrip?.return_options ?? []}
+                  returnOptions={returnChoices}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
                   tripMode={tripMode}
@@ -911,7 +911,7 @@ function BookingPage() {
                   existingIdImageUrl={profileIdImageSignedUrl}
                   notes={notes}
                   setNotes={setNotes}
-                  returnOptions={tripMode === "return" ? [] : (selectedTrip?.return_options ?? [])}
+                  returnOptions={tripMode === "return" ? [] : returnChoices}
                   defaultReturnDay={selectedTrip?.return_day ?? ""}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
@@ -976,7 +976,7 @@ function BookingPage() {
           true,
         )}
         returnLabel={returnActualDisplay(
-          (selectedTrip as unknown as { return_date?: string | null } | null)?.return_date,
+          selectedReturnDate,
           actualReturnDay || selectedTrip?.return_day,
           effectiveExtensionNights,
           tripMode,
