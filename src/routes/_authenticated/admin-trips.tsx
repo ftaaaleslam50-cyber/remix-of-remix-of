@@ -200,16 +200,48 @@ function AdminTrips() {
   );
 }
 
-function TripEditor({ trip, buses, assigned, occupancy, onSave, onDelete, onToggleBus }: {
-  trip: TripRow; buses: BusRow[]; assigned: Set<string>; occupancy: Record<string, number>;
-  onSave: (t: TripRow) => void; onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
+function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccurrence, onDelete, onToggleBus }: {
+  trip: TripRow; buses: BusRow[]; assigned: Set<string>; occupancy: Record<string, number>; past: OccurrenceRow[];
+  onSave: (t: TripRow) => void; onSaveOccurrence: (o: OccurrenceRow) => void;
+  onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
 }) {
   const [local, setLocal] = useState(trip);
   useEffect(() => setLocal(trip), [trip]);
+  const finished = isTripFinished(trip.departure_date, trip.departure_time);
+  const upcoming = trip.departure_date ? nextOccurrence(trip.departure_date, trip.recurrence_weeks || 1) : null;
   return (
     <div className="surface-card p-5 space-y-4">
+      <div className="rounded-xl border bg-muted/40 p-4">
+        <div className="text-base font-extrabold">{trip.name}</div>
+        {trip.departure_date ? (
+          <>
+            <div className="text-sm font-bold text-[color:var(--color-navy)]">
+              {formatTripDate(trip.departure_date)}
+              {trip.departure_time ? ` — ${formatTripTime(trip.departure_time)}` : ""}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              العودة: {trip.return_date ? formatTripDate(trip.return_date) : "—"}
+              {upcoming ? ` • الموعد الأسبوعي التالي: ${formatTripDate(upcoming)}` : ""}
+            </div>
+            {finished && (
+              <div className="text-xs font-bold text-destructive mt-1">
+                انتهى موعد هذه الرحلة — سينتقل النظام تلقائيًا للأسبوع التالي (بدون نسخ الحافلات).
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-xs text-destructive">لم يتم تحديد تاريخ فعلي لهذه الرحلة بعد.</div>
+        )}
+      </div>
+
       <div className="grid gap-3 md:grid-cols-6">
         <div className="md:col-span-2"><Label className="text-xs">اسم الرحلة</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
+        <div><Label className="text-xs">تاريخ المغادرة الفعلي</Label><Input type="date" value={local.departure_date ?? ""} onChange={(e) => setLocal({ ...local, departure_date: e.target.value })} /></div>
+        <div><Label className="text-xs">تاريخ العودة الفعلي</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
+        <div><Label className="text-xs">تكرار كل (أسابيع)</Label><Input type="number" min={1} value={local.recurrence_weeks ?? 1} onChange={(e) => setLocal({ ...local, recurrence_weeks: Number(e.target.value) })} /></div>
+        <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2"><Switch checked={local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} /><span className="text-xs">تقدّم تلقائي أسبوعي</span></div>
+        </div>
         <div><Label className="text-xs">يوم المغادرة</Label><Input placeholder="الخميس 15/8" value={local.departure_day} onChange={(e) => setLocal({ ...local, departure_day: e.target.value })} /></div>
         <div><Label className="text-xs">وقت المغادرة</Label><Input type="time" value={local.departure_time ?? ""} onChange={(e) => setLocal({ ...local, departure_time: e.target.value })} /></div>
         <div>
