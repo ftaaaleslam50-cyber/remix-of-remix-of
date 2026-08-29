@@ -113,10 +113,12 @@ export function renderSeatChartPages(
 
   const PAD = 40;
   const HEADER = 104;
-  const CELL = 130;
-  const GAP = 16;
-  const gridW = layout.cols * CELL + (layout.cols - 1) * GAP;
-  const gridH = layout.rows * CELL + (layout.rows - 1) * GAP;
+  // Seats are drawn as wide rectangles (wider than tall) for readability.
+  const CELL_W = 168;
+  const CELL_H = 108;
+  const GAP = 14;
+  const gridW = layout.cols * CELL_W + (layout.cols - 1) * GAP;
+  const gridH = layout.rows * CELL_H + (layout.rows - 1) * GAP;
 
   const sub = [meta.tripLabel, meta.capacity ? `السعة: ${meta.capacity}` : "", `الركاب: ${occupants.length}`]
     .filter(Boolean)
