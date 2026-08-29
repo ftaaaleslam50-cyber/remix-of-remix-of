@@ -572,6 +572,7 @@ function UnifiedBookingsTab(props: {
   // selected, match on the booking's own trip_id (stable) rather than trip name.
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
+    if (source && ((b.booking_source ?? "").trim() || "الموقع") !== source) return false;
     if (busId) {
       if (b.bus_id !== busId) return false;
     } else if (tripId) {
