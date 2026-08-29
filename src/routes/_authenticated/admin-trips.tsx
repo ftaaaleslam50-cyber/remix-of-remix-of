@@ -269,18 +269,46 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
       </div>
 
       <div>
-        <Label className="text-xs">مواعيد العودة الإضافية (اختياري — للرحلات ذات أكثر من عودة)</Label>
-        <Input
-          placeholder="افصل بين المواعيد بفاصلة، مثال: السبت 17/8، الأحد 18/8"
-          value={(local.return_options ?? []).join("، ")}
-          onChange={(e) =>
-            setLocal({ ...local, return_options: e.target.value.split(/[,،]/).map((s) => s.trim()).filter(Boolean) })
-          }
-        />
+        <Label className="text-xs">مواعيد العودة الإضافية (للرحلات ذات أكثر من عودة)</Label>
+        <div className="space-y-2 mt-1">
+          {(local.return_options ?? []).map((opt, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground w-14 shrink-0">عودة {i + 2}</span>
+              <Input
+                placeholder="مثال: السبت 17/8"
+                value={opt}
+                onChange={(e) => {
+                  const next = [...(local.return_options ?? [])];
+                  next[i] = e.target.value.replace(/[,،]/g, " ");
+                  setLocal({ ...local, return_options: next });
+                }}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full shrink-0"
+                onClick={() =>
+                  setLocal({ ...local, return_options: (local.return_options ?? []).filter((_, j) => j !== i) })
+                }
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => setLocal({ ...local, return_options: [...(local.return_options ?? []), ""] })}
+          >
+            <Plus className="h-4 w-4 ml-1" /> إضافة عودة أخرى
+          </Button>
+        </div>
         <p className="text-[11px] text-muted-foreground mt-1">
-          إذا كانت الرحلة لها أكثر من موعد للعودة، أضفها هنا. سيظهر للعميل خيار الاختيار بينها قبل إتمام الحجز.
+          «العودة 1» هي يوم العودة الأساسي بالأعلى. كل موعد تضيفه هنا سيظهر للعميل كخيار عودة داخل بطاقة الحافلة في خطوات الحجز.
         </p>
       </div>
+
 
       <div>
         <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> الحافلات المتاحة والإشغال</div>
