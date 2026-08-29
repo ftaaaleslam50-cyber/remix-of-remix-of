@@ -364,15 +364,25 @@ function AdminBuses() {
         </div>
       </header>
 
-      <main className="container-luxe py-8">
-        <div className="surface-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-extrabold">الحافلات ({buses.length})</h2>
+      <main className="container-luxe py-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-extrabold">الأسطول ({buses.length})</h2>
 
-            <Button onClick={addBus} className="rounded-full">
-              <Plus className="h-4 w-4 ml-1" />
-              إضافة حافلة
-            </Button>
+          <Button onClick={addBus} className="rounded-full">
+            <Plus className="h-4 w-4 ml-1" />
+            إضافة حافلة
+          </Button>
+        </div>
+
+        {([
+          { key: "outbound", title: "حافلات الذهاب" },
+          { key: "return", title: "حافلات العودة" },
+        ] as const).map((group) => {
+          const list = buses.filter((b) => (b.direction ?? "outbound") === group.key);
+          return (
+        <div className="surface-card p-6" key={group.key}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-extrabold">{group.title} ({list.length})</h3>
           </div>
 
           <div className="overflow-x-auto">
@@ -384,6 +394,7 @@ function AdminBuses() {
                   <TableHead>اللوحة</TableHead>
                   <TableHead>الطراز</TableHead>
                   <TableHead>النوع</TableHead>
+                  <TableHead>الاتجاه</TableHead>
                   <TableHead>القالب</TableHead>
                   <TableHead>السعة</TableHead>
                   <TableHead>المحجوز</TableHead>
@@ -400,15 +411,15 @@ function AdminBuses() {
               </TableHeader>
 
               <TableBody>
-                {buses.length === 0 && (
+                {list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={16} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={18} className="text-center py-10 text-muted-foreground">
                       لا توجد حافلات
                     </TableCell>
                   </TableRow>
                 )}
 
-                {buses.map((b) => (
+                {list.map((b) => (
                   <BusEditRow
                     key={b.id}
                     bus={b}
@@ -423,6 +434,10 @@ function AdminBuses() {
               </TableBody>
             </Table>
           </div>
+        </div>
+          );
+        })}
+
         </div>
       </main>
 
