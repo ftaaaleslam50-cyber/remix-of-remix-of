@@ -309,6 +309,17 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
         </div>
       </div>
 
+      {past.length > 0 && (
+        <div>
+          <div className="text-sm font-bold mb-2">المواعيد السابقة (قابلة للتعديل)</div>
+          <div className="space-y-2">
+            {past.map((o) => (
+              <PastOccurrence key={o.id} occurrence={o} onSave={onSaveOccurrence} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" onClick={() => onSave(local)} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
