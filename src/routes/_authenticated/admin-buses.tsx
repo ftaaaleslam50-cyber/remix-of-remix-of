@@ -438,8 +438,8 @@ function AdminBuses() {
           );
         })}
 
-        </div>
       </main>
+
 
       <TransferDialog
         from={transferFrom}
