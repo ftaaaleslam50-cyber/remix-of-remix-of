@@ -414,6 +414,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          actual_return_date: string | null
           actual_return_day: string | null
           booking_code: string
           booking_source: string | null
@@ -446,7 +447,10 @@ export type Database = {
           rep_name: string | null
           rep_phone: string | null
           rep_whatsapp: string | null
+          return_bus_id: string | null
           return_date: string | null
+          return_seat_numbers: string[]
+          return_trip_id: string | null
           room_type: string
           seat_genders: Json
           seat_numbers: string[]
@@ -459,6 +463,7 @@ export type Database = {
           whatsapp_phone: string
         }
         Insert: {
+          actual_return_date?: string | null
           actual_return_day?: string | null
           booking_code: string
           booking_source?: string | null
@@ -491,7 +496,10 @@ export type Database = {
           rep_name?: string | null
           rep_phone?: string | null
           rep_whatsapp?: string | null
+          return_bus_id?: string | null
           return_date?: string | null
+          return_seat_numbers?: string[]
+          return_trip_id?: string | null
           room_type: string
           seat_genders?: Json
           seat_numbers?: string[]
@@ -504,6 +512,7 @@ export type Database = {
           whatsapp_phone: string
         }
         Update: {
+          actual_return_date?: string | null
           actual_return_day?: string | null
           booking_code?: string
           booking_source?: string | null
@@ -536,7 +545,10 @@ export type Database = {
           rep_name?: string | null
           rep_phone?: string | null
           rep_whatsapp?: string | null
+          return_bus_id?: string | null
           return_date?: string | null
+          return_seat_numbers?: string[]
+          return_trip_id?: string | null
           room_type?: string
           seat_genders?: Json
           seat_numbers?: string[]
@@ -568,6 +580,20 @@ export type Database = {
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_return_bus_id_fkey"
+            columns: ["return_bus_id"]
+            isOneToOne: false
+            referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_return_trip_id_fkey"
+            columns: ["return_trip_id"]
+            isOneToOne: false
+            referencedRelation: "return_trips"
             referencedColumns: ["id"]
           },
           {
@@ -633,6 +659,7 @@ export type Database = {
           capacity: number
           created_at: string
           details: string | null
+          direction: string
           driver_id_number: string | null
           driver_name: string | null
           driver_phone: string | null
@@ -662,6 +689,7 @@ export type Database = {
           capacity?: number
           created_at?: string
           details?: string | null
+          direction?: string
           driver_id_number?: string | null
           driver_name?: string | null
           driver_phone?: string | null
@@ -691,6 +719,7 @@ export type Database = {
           capacity?: number
           created_at?: string
           details?: string | null
+          direction?: string
           driver_id_number?: string | null
           driver_name?: string | null
           driver_phone?: string | null
@@ -1377,6 +1406,84 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           whatsapp?: string
+        }
+        Relationships: []
+      }
+      return_trip_buses: {
+        Row: {
+          bus_id: string
+          created_at: string
+          id: string
+          return_trip_id: string
+          trip_date: string
+        }
+        Insert: {
+          bus_id: string
+          created_at?: string
+          id?: string
+          return_trip_id: string
+          trip_date: string
+        }
+        Update: {
+          bus_id?: string
+          created_at?: string
+          id?: string
+          return_trip_id?: string
+          trip_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_trip_buses_bus_id_fkey"
+            columns: ["bus_id"]
+            isOneToOne: false
+            referencedRelation: "buses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_trip_buses_return_trip_id_fkey"
+            columns: ["return_trip_id"]
+            isOneToOne: false
+            referencedRelation: "return_trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      return_trips: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_order: number
+          from_city: string
+          id: string
+          name: string
+          return_time: string | null
+          to_city: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          from_city?: string
+          id?: string
+          name: string
+          return_time?: string | null
+          to_city?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_order?: number
+          from_city?: string
+          id?: string
+          name?: string
+          return_time?: string | null
+          to_city?: string
+          updated_at?: string
+          weekday?: number
         }
         Relationships: []
       }
