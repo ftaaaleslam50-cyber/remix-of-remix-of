@@ -565,6 +565,9 @@ function BusEditRow({
             <SelectItem value="return">عودة</SelectItem>
           </SelectContent>
         </Select>
+      </TableCell>
+
+
 
 
       <TableCell>
