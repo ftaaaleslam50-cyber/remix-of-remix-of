@@ -931,6 +931,8 @@ function BookingPage() {
                   bookingSource={accountType === "representative" && repName ? repName : "Website"}
                   pkg={selectedPackage}
                   trip={selectedTrip}
+                  returnDate={selectedReturnDate}
+                  actualReturnDay={actualReturnDay}
                   seats={seats}
                   customer={customer}
                   pricePerPerson={pricePerPerson}
@@ -2053,7 +2055,7 @@ function StepConfirm(props: {
       : []),
     ["الرحلة", tripWithDate(props.trip?.name, (props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day)],
     ["الذهاب", departureDisplay((props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day, "—")],
-    ["العودة الفعلية", returnActualDisplay((props.trip as unknown as { return_date?: string | null } | null)?.return_date, props.trip?.return_day, props.extensionNights, undefined, "—")],
+    ["العودة الفعلية", returnActualDisplay(props.returnDate ?? (props.trip as unknown as { return_date?: string | null } | null)?.return_date, props.actualReturnDay || props.trip?.return_day, props.extensionNights, undefined, "—")],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
     ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],
