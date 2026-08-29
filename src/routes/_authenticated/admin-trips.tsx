@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReturnTripsManager } from "@/components/admin/ReturnTripsManager";
 import { formatTripDate, formatTripTime, isTripFinished, nextOccurrence } from "@/lib/trip-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-trips")({
@@ -91,7 +93,11 @@ function AdminTrips() {
   const { data: buses = [] } = useQuery({
     queryKey: ["admin-trips-buses"],
     enabled: isAdmin === true,
-    queryFn: async () => (await supabase.from("buses").select("id,name,bus_number,capacity,status").order("bus_number")).data as BusRow[] ?? [],
+    queryFn: async () => {
+      const { data } = await supabase.from("buses").select("id,name,bus_number,capacity,status,direction").order("bus_number");
+      // حافلات الذهاب فقط تُخصَّص لرحلات الذهاب
+      return ((data as unknown as (BusRow & { direction?: string })[]) ?? []).filter((b) => (b.direction ?? "outbound") === "outbound");
+    },
   });
 
   const { data: tripBuses = [] } = useQuery({
@@ -177,7 +183,13 @@ function AdminTrips() {
           </div>
         </div>
       </header>
-      <main className="container-luxe py-8 space-y-4">
+      <main className="container-luxe py-8">
+        <Tabs defaultValue="outbound">
+          <TabsList className="mb-4">
+            <TabsTrigger value="outbound">إدارة رحلات الذهاب</TabsTrigger>
+            <TabsTrigger value="return">إدارة رحلات العودة</TabsTrigger>
+          </TabsList>
+          <TabsContent value="outbound" className="space-y-4">
         {trips.length === 0 && <div className="surface-card p-10 text-center text-muted-foreground">لا توجد رحلات</div>}
         {trips.map((t) => {
           const assigned = new Set(tripBuses.filter((x) => x.trip_id === t.id).map((x) => x.bus_id));
@@ -196,6 +208,11 @@ function AdminTrips() {
             />
           );
         })}
+          </TabsContent>
+          <TabsContent value="return">
+            <ReturnTripsManager />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
