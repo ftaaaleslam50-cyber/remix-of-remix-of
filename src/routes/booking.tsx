@@ -424,6 +424,23 @@ function BookingPage() {
           .filter(Boolean),
       }
     : null;
+  // All selectable return dates = the trip's own return + any extra returns.
+  const returnChoices: string[] = selectedTrip
+    ? Array.from(
+        new Set(
+          [
+            (selectedTrip as unknown as { return_date?: string | null }).return_date ||
+              selectedTrip.return_day ||
+              "",
+            ...(selectedTrip.return_options ?? []),
+          ].filter(Boolean),
+        ),
+      )
+    : [];
+  const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  const selectedReturnDate = isoRe.test(actualReturnDay)
+    ? actualReturnDay
+    : ((selectedTrip as unknown as { return_date?: string | null } | null)?.return_date ?? null);
   const transportOnly = noHotel;
   // "عودة فقط" لا يحتاج اختيار مقاعد، وكذلك «بدون حافلة».
   const skipSeats = noBus || tripMode === "return";
