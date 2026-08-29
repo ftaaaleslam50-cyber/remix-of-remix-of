@@ -33,6 +33,8 @@ interface Props {
   layout?: BusLayout;
   /** Optional gender per selected seat — drives colour + icon. */
   genders?: Record<string, SeatGender>;
+  /** Gender of already-reserved seats — pale blue / pale pink shading. */
+  reservedGenders?: Record<string, SeatGender>;
 }
 
 export function BusSeatMap({
@@ -43,6 +45,7 @@ export function BusSeatMap({
   blocked = ["A2"],
   layout = "A",
   genders = {},
+  reservedGenders = {},
 }: Props) {
   const isReserved = (id: string) => reserved.includes(id);
   const isBlocked = (id: string) => blocked.includes(id) && id !== "A2";
@@ -77,12 +80,19 @@ export function BusSeatMap({
       supervisor: "bg-[color:var(--color-navy)] text-white border-[color:var(--color-navy)] cursor-not-allowed",
       blocked: "bg-neutral-200 text-neutral-400 border-neutral-300 cursor-not-allowed",
     }[status];
+    const rg = status === "reserved" ? reservedGenders[id] : undefined;
+    const reservedCls =
+      rg === "male"
+        ? "bg-sky-100 text-sky-800 border-sky-300 cursor-not-allowed"
+        : rg === "female"
+          ? "bg-pink-100 text-pink-800 border-pink-300 cursor-not-allowed"
+          : base;
     const cls =
       g === "male"
         ? "bg-sky-600 text-white border-sky-700 shadow scale-105"
         : g === "female"
           ? "bg-pink-500 text-white border-pink-600 shadow scale-105"
-          : base;
+          : reservedCls;
 
     return (
       <button
@@ -91,8 +101,8 @@ export function BusSeatMap({
         title={status === "supervisor" ? "مقعد المشرف" : id}
         className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-xl border-2 text-[11px] font-bold transition-all flex flex-col items-center justify-center leading-none ${cls}`}
       >
-        {g === "male" && <Mars className="h-3 w-3 mb-0.5" />}
-        {g === "female" && <Venus className="h-3 w-3 mb-0.5" />}
+        {(g ?? rg) === "male" && <Mars className="h-3 w-3 mb-0.5" />}
+        {(g ?? rg) === "female" && <Venus className="h-3 w-3 mb-0.5" />}
         {id}
       </button>
     );
