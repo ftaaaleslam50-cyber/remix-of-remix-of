@@ -877,26 +877,6 @@ function BookingPage() {
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
-                  mode={seatMode}
-                  onModeChange={(m) => {
-                    setSeatMode(m);
-                    if (m === "random") {
-                      const auto = activeLayout?.layout_json
-                        ? pickRandomLayoutSeats(passengerCount, activeLayout.layout_json, bookedSeats)
-                        : pickRandomSeats(
-                            passengerCount,
-                            bookedSeats,
-                            activeBus?.blocked_seats ?? ["A2"],
-                            ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A",
-                          );
-                      const g: Record<string, "male" | "female"> = {};
-                      auto.forEach((sid, i) => {
-                        g[sid] = i < maleCount ? "male" : "female";
-                      });
-                      setSeatGenders(g);
-                      setSeats(auto);
-                    }
-                  }}
                 />
               )}
               {stepName === "البيانات" && (
@@ -1696,8 +1676,6 @@ function StepSeats({
   bus,
   layout,
   remainingSeats,
-  mode,
-  onModeChange,
   genders,
   activeGender,
   onActiveGenderChange,
@@ -1717,8 +1695,6 @@ function StepSeats({
   bus: (Bus & { name?: string | null }) | null;
   layout: LayoutJson | null;
   remainingSeats: number;
-  mode: "manual" | "random";
-  onModeChange: (m: "manual" | "random") => void;
 }) {
   const busLabel = bus?.name || `الحافلة رقم ${bus?.bus_number ?? 1}`;
   return (
@@ -1797,6 +1773,10 @@ function StepSeats({
           />
         )}
       </div>
+
+      <p className="max-w-md mx-auto mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-xs sm:text-sm font-bold text-amber-800">
+        الرجاء اختيار مقاعد الذكور الذين ليس معهم عوائل في مؤخرة الحافلة
+      </p>
     </div>
   );
 }
