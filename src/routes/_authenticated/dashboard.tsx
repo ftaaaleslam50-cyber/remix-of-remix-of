@@ -1035,6 +1035,21 @@ function UnifiedBookingsTab(props: {
           </select>
         </div>
         <div>
+          <Label className="text-xs mb-1 block">مصدر الحجز</Label>
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل المصادر —</option>
+            {sourceOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
           <Label className="text-xs mb-1 block">بحث</Label>
           <div className="relative">
             <Search className="h-4 w-4 absolute top-3 right-3 text-muted-foreground" />
