@@ -2028,6 +2028,8 @@ function StepConfirm(props: {
   noHotel: boolean;
   pkg: Package | null;
   trip: Trip | null;
+  returnDate?: string | null;
+  actualReturnDay?: string;
   seats: string[];
   customer: { customer_name: string; id_number: string; contact_phone: string; nationality: string };
   bookingSource: string;
