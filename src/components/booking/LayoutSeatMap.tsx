@@ -4,7 +4,7 @@ import { Mars, Venus } from "lucide-react";
 
 export type SeatGender = "male" | "female";
 
-export type LayoutCellKind = "seat" | "empty" | "driver" | "door" | "restroom";
+export type LayoutCellKind = "seat" | "supervisor" | "empty" | "driver" | "door" | "restroom";
 export interface LayoutCell { row: number; col: number; kind: LayoutCellKind; label?: string; disabled?: boolean }
 export interface LayoutJson { rows: number; cols: number; cells: LayoutCell[] }
 
@@ -13,6 +13,7 @@ const KIND_META: Record<LayoutCellKind, { bg: string; icon: string; label: strin
   driver:   { bg: "bg-amber-100 text-amber-800 border-amber-400",  icon: "🚍", label: "السائق" },
   door:     { bg: "bg-blue-100 text-blue-700 border-blue-400",     icon: "🚪", label: "باب" },
   restroom: { bg: "bg-emerald-100 text-emerald-700 border-emerald-400", icon: "🚻", label: "دورة مياه" },
+  supervisor: { bg: "bg-[color:var(--color-navy)] text-white border-[color:var(--color-navy)]", icon: "👤", label: "مقعد المشرف" },
   seat:     { bg: "", icon: "", label: "" },
 };
 
@@ -53,9 +54,11 @@ interface Props {
   names?: Record<string, string>;
   /** Enlarge cells (used by the admin live map). */
   large?: boolean;
+  /** Gender of already-reserved seats — drives pale blue / pale pink shading. */
+  reservedGenders?: Record<string, SeatGender>;
 }
 
-export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onChange, genders = {}, names = {}, large = false }: Props) {
+export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onChange, genders = {}, names = {}, large = false, reservedGenders = {} }: Props) {
   const rows = Math.max(1, layout.rows || 1);
   const cols = Math.max(1, layout.cols || 1);
   const map = new Map<string, LayoutCell>();
@@ -104,12 +107,17 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
           const isSelected = selected.includes(id);
           const isDisabled = cell.disabled;
           const g = isSelected ? genders[id] : undefined;
+          const rg = isReserved ? reservedGenders[id] : undefined;
           const cls = g === "male"
             ? "bg-sky-600 text-white border-sky-700 shadow scale-105"
             : g === "female"
             ? "bg-pink-500 text-white border-pink-600 shadow scale-105"
             : isDisabled
             ? "bg-neutral-200 text-neutral-400 border-neutral-300 cursor-not-allowed"
+            : rg === "male"
+            ? "bg-sky-100 text-sky-800 border-sky-300 cursor-not-allowed"
+            : rg === "female"
+            ? "bg-pink-100 text-pink-800 border-pink-300 cursor-not-allowed"
             : isReserved
             ? "bg-muted text-muted-foreground border-border cursor-not-allowed opacity-70"
             : isSelected
@@ -123,8 +131,8 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
               className={`aspect-square rounded-lg border-2 ${large ? "text-sm" : "text-[11px]"} font-bold flex flex-col items-center justify-center gap-0.5 leading-tight transition-all ${cls}`}
               title={names[id] ? `${id} — ${names[id]}` : id}
             >
-              {g === "male" && <Mars className={large ? "h-4 w-4" : "h-3 w-3 mb-0.5"} />}
-              {g === "female" && <Venus className={large ? "h-4 w-4" : "h-3 w-3 mb-0.5"} />}
+              {(g ?? rg) === "male" && <Mars className={large ? "h-4 w-4" : "h-3 w-3 mb-0.5"} />}
+              {(g ?? rg) === "female" && <Venus className={large ? "h-4 w-4" : "h-3 w-3 mb-0.5"} />}
               <span className="font-extrabold">{id}</span>
               {names[id] && (
                 <span
@@ -143,6 +151,8 @@ export function LayoutSeatMap({ layout, selected, reserved, maxSelectable, onCha
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-white border-2 border-border" /><span className="text-muted-foreground">متاح</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-primary" /><span className="text-muted-foreground">مختار</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-muted border-2 border-border" /><span className="text-muted-foreground">محجوز</span></div>
+        <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-sky-100 border-2 border-sky-300" /><span className="text-muted-foreground">محجوز (ذكر)</span></div>
+        <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-pink-100 border-2 border-pink-300" /><span className="text-muted-foreground">محجوزة (أنثى)</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-neutral-200 border-2 border-neutral-300" /><span className="text-muted-foreground">معطّل</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-sky-600" /><span className="text-muted-foreground">ذكر</span></div>
         <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-md bg-pink-500" /><span className="text-muted-foreground">أنثى</span></div>
