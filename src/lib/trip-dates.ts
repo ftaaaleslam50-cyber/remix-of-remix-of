@@ -44,6 +44,12 @@ export function formatTripDateCompact(date?: string | null): string {
   return AR_DATE_COMPACT.format(d);
 }
 
+/** Stored return-option: ISO dates become Arabic labels, legacy text passes through. */
+export function formatReturnOption(s?: string | null): string {
+  if (!s) return "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? formatTripDate(s) : s;
+}
+
 /** "22:00:00" -> "10:00 مساءً" */
 export function formatTripTime(time?: string | null): string {
   if (!time) return "";

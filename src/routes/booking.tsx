@@ -44,6 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
+import { formatReturnOption } from "@/lib/trip-dates";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
@@ -1642,7 +1643,7 @@ function StepTripBus({
                                           }`}
                                         >
                                           <div className="flex items-center justify-between gap-2">
-                                            <span className="font-bold text-xs">{d}</span>
+                                            <span className="font-bold text-xs">{formatReturnOption(d)}</span>
                                             {sel && <Check className="h-4 w-4 text-primary" />}
                                           </div>
                                         </button>

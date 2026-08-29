@@ -1,4 +1,4 @@
-import { formatTripDate, formatTripDateCompact, actualReturnDate } from "./trip-dates";
+import { formatTripDate, formatTripDateCompact, formatReturnOption, actualReturnDate } from "./trip-dates";
 
 // Display-only helpers for the booking "return" value.
 // When a booking has hotel extension nights, we show the extension label
@@ -43,7 +43,7 @@ export function returnActualDisplay(
   const n = Math.max(0, Number(extensionNights ?? 0));
   const real = actualReturnDate(returnDate, n);
   if (real) return formatTripDate(real);
-  return returnDay || fallback;
+  return returnDay ? formatReturnOption(returnDay) : fallback;
 }
 
 /** "رحلة الخميس — السبت 29 أغسطس 2026" (compact: "رحلة الخميس — السبت 29 أغسطس") */
@@ -69,5 +69,5 @@ export function returnDisplay(
   if (tripMode === "outbound") return NO_RETURN_LABEL;
   const n = Number(extensionNights ?? 0);
   if (n > 0) return extensionLabel(n);
-  return originalReturn || fallback;
+  return originalReturn ? formatReturnOption(originalReturn) : fallback;
 }
