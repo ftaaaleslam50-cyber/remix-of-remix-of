@@ -43,7 +43,7 @@ import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/compone
 import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
-import { extensionLabel } from "@/lib/return-display";
+import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
@@ -944,15 +944,24 @@ function BookingPage() {
         passengerCount={passengerCount}
         roomType={roomType}
         bookingType={bookingType}
-        tripName={selectedTrip?.name}
-        departureLabel={tripMode === "return" ? "بدون ذهاب" : (selectedTrip?.departure_day || "")}
-        returnLabel={
-          tripMode === "outbound"
-            ? "بدون عودة"
-            : effectiveExtensionNights > 0
-              ? extensionLabel(effectiveExtensionNights)
-              : actualReturnDay || selectedTrip?.return_day || ""
-        }
+        tripName={tripWithDate(
+          selectedTrip?.name,
+          (selectedTrip as unknown as { departure_date?: string | null } | null)?.departure_date,
+          selectedTrip?.departure_day,
+        )}
+        departureLabel={departureDisplay(
+          (selectedTrip as unknown as { departure_date?: string | null } | null)?.departure_date,
+          selectedTrip?.departure_day,
+          "",
+          tripMode,
+        )}
+        returnLabel={returnActualDisplay(
+          (selectedTrip as unknown as { return_date?: string | null } | null)?.return_date,
+          actualReturnDay || selectedTrip?.return_day,
+          effectiveExtensionNights,
+          tripMode,
+          "",
+        )}
         pricePerPerson={pricePerPerson}
         subtotal={subtotal}
         discount={discount}
@@ -1509,7 +1518,7 @@ function StepTripBus({
                     <h3 className="mt-1 text-base sm:text-lg font-extrabold text-[color:var(--color-navy)] break-words">{t.name}</h3>
                     <div className="mt-2 text-xs sm:text-sm text-muted-foreground flex items-start gap-2">
                       <Calendar className="h-4 w-4 shrink-0 mt-0.5" />
-                      <span className="break-words">الذهاب: {t.departure_day} • العودة: {t.return_day}</span>
+                      <span className="break-words">الذهاب: {departureDisplay((t as unknown as { departure_date?: string | null }).departure_date, t.departure_day, "-")} • العودة: {returnActualDisplay((t as unknown as { return_date?: string | null }).return_date, t.return_day, 0, undefined, "-")}</span>
                     </div>
                   </div>
                   {active && (
@@ -2020,8 +2029,9 @@ function StepConfirm(props: {
     ...(props.extensionNights > 0
       ? [["عدد ليال التمديد", `${props.extensionNights}`] as [string, string]]
       : []),
-    ["الرحلة", props.trip?.name ?? "—"],
-    ["العودة", props.extensionNights > 0 ? extensionLabel(props.extensionNights) : (props.trip?.return_day ?? "—")],
+    ["الرحلة", tripWithDate(props.trip?.name, (props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day)],
+    ["الذهاب", departureDisplay((props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day, "—")],
+    ["العودة الفعلية", returnActualDisplay((props.trip as unknown as { return_date?: string | null } | null)?.return_date, props.trip?.return_day, props.extensionNights, undefined, "—")],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
     ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],

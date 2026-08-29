@@ -12,6 +12,7 @@ import { BRAND } from "@/lib/brand";
 import { sar } from "@/lib/format";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { bookingBlockedMessage } from "@/lib/booking-availability";
+import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 
 export const Route = createFileRoute("/_authenticated/my-bookings")({
   head: () => ({ meta: [{ title: `حجوزاتي | ${BRAND.name}` }, { name: "robots", content: "noindex" }] }),
@@ -25,7 +26,11 @@ interface MyBooking {
   seat_numbers: string[] | null;
   contact_phone: string | null; whatsapp_phone: string | null;
   nationality: string | null; booking_source: string | null;
-  trips: { name: string; departure_day: string; return_day: string } | null;
+  extension_nights?: number | null;
+  trip_mode?: string | null;
+  departure_date?: string | null;
+  return_date?: string | null;
+  trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses: { name: string | null; bus_number: number } | null;
   packages: { name: string } | null;
 }
@@ -71,7 +76,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,trips(name,departure_day,return_day),buses(name,bus_number),packages(name)")
+        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses(name,bus_number),packages(name)")
         .eq("created_by", uid)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
@@ -179,7 +184,7 @@ function MyBookingsPage() {
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{new Date(b.created_at).toLocaleDateString("ar")}</b></span>
-                        {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{new Date(b.trips.departure_day).toLocaleDateString("ar")}</b></span>}
+                        {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)}</b></span>}
                         {b.packages && <span className="flex items-center gap-2 text-muted-foreground"><Hotel className="h-4 w-4" /> الفندق: <b className="text-foreground">{b.packages.name}</b></span>}
                         {b.buses && <span className="flex items-center gap-2 text-muted-foreground"><Bus className="h-4 w-4" /> الحافلة: <b className="text-foreground">{b.buses.name || `حافلة ${b.buses.bus_number}`}</b></span>}
                         {b.seat_numbers && b.seat_numbers.length > 0 && <span className="flex items-center gap-2 text-muted-foreground col-span-full">🎫 المقاعد: <b className="text-foreground font-mono">{b.seat_numbers.join(", ")}</b></span>}
@@ -221,7 +226,9 @@ function MyBookingsPage() {
             const rows: [string, React.ReactNode][] = [
               ["رقم الحجز", <span className="font-mono">{details.booking_code}</span>],
               ["تاريخ الحجز", new Date(details.created_at).toLocaleDateString("ar")],
-              ["تاريخ الرحلة", details.trips ? new Date(details.trips.departure_day).toLocaleDateString("ar") : "—"],
+              ["الرحلة", tripWithDate(details.trips?.name, details.departure_date ?? details.trips?.departure_date, details.trips?.departure_day)],
+              ["تاريخ الذهاب", departureDisplay(details.departure_date ?? details.trips?.departure_date, details.trips?.departure_day, "—", details.trip_mode)],
+              ["العودة الفعلية", returnActualDisplay(details.return_date ?? details.trips?.return_date, details.trips?.return_day, details.extension_nights, details.trip_mode, "—")],
               ["الفندق", details.packages?.name || (details.no_hotel ? "بدون فندق" : "—")],
               ["الحافلة", details.buses ? (details.buses.name || `حافلة ${details.buses.bus_number}`) : (details.no_bus ? "بدون حافلة" : "—")],
               ["المقاعد", details.seat_numbers?.join(", ") || "—"],
