@@ -43,7 +43,7 @@ import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/compone
 import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
-import { extensionLabel, departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
+import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
