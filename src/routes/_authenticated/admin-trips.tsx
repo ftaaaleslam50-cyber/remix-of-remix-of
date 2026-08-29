@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatTripDate, formatTripTime, isTripFinished, nextOccurrence } from "@/lib/trip-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-trips")({
   component: AdminTrips,
@@ -20,6 +21,10 @@ interface TripRow {
   name: string;
   departure_day: string;
   return_day: string;
+  departure_date: string | null;
+  return_date: string | null;
+  auto_advance: boolean;
+  recurrence_weeks: number;
   departure_time: string | null;
   return_time: string | null;
   departure_period: string | null;
@@ -30,6 +35,14 @@ interface TripRow {
   display_order: number;
 }
 interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; status: string }
+interface OccurrenceRow {
+  id: string;
+  trip_id: string;
+  departure_date: string;
+  departure_time: string | null;
+  return_date: string | null;
+  bus_ids: string[] | null;
+}
 
 const PERIODS = [
   { v: "morning", l: "صباحاً" },
@@ -55,11 +68,24 @@ function AdminTrips() {
   const { data: trips = [] } = useQuery({
     queryKey: ["admin-trips-full"],
     enabled: isAdmin === true,
+    refetchInterval: 60_000,
     queryFn: async () => {
+      // Roll finished weekly trips onto their next real date (buses are NOT copied).
+      await supabase.rpc("advance_due_trips" as never);
       const { data, error } = await supabase.from("trips").select("*").order("display_order");
       if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["admin-trip-buses"] });
+      qc.invalidateQueries({ queryKey: ["admin-trip-occurrences"] });
       return (data as unknown as TripRow[]) ?? [];
     },
+  });
+
+  const { data: occurrences = [] } = useQuery({
+    queryKey: ["admin-trip-occurrences"],
+    enabled: isAdmin === true,
+    queryFn: async () =>
+      ((await supabase.from("trip_occurrences" as never).select("*").order("departure_date", { ascending: false }))
+        .data as unknown as OccurrenceRow[]) ?? [],
   });
 
   const { data: buses = [] } = useQuery({
@@ -73,6 +99,7 @@ function AdminTrips() {
     enabled: isAdmin === true,
     queryFn: async () => (await supabase.from("trip_buses").select("trip_id,bus_id")).data as { trip_id: string; bus_id: string }[] ?? [],
   });
+
 
   const { data: occupancy = {} } = useQuery({
     queryKey: ["admin-trip-occupancy"],
@@ -100,6 +127,8 @@ function AdminTrips() {
   async function save(t: TripRow) {
     const { error } = await supabase.from("trips").update({
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
+      departure_date: t.departure_date || null, return_date: t.return_date || null,
+      auto_advance: t.auto_advance, recurrence_weeks: Math.max(1, Number(t.recurrence_weeks) || 1),
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
       return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
@@ -109,6 +138,15 @@ function AdminTrips() {
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-trips-full"] });
   }
+  async function saveOccurrence(o: OccurrenceRow) {
+    const { error } = await supabase.from("trip_occurrences" as never).update({
+      departure_date: o.departure_date, return_date: o.return_date || null, departure_time: o.departure_time || null,
+    } as never).eq("id", o.id);
+    if (error) return toast.error(error.message);
+    toast.success("تم تحديث الموعد السابق");
+    qc.invalidateQueries({ queryKey: ["admin-trip-occurrences"] });
+  }
+
   async function del(id: string) {
     if (!confirm("حذف الرحلة؟")) return;
     const { error } = await supabase.from("trips").delete().eq("id", id);
@@ -150,7 +188,9 @@ function AdminTrips() {
               buses={buses}
               assigned={assigned}
               occupancy={occupancy}
+              past={occurrences.filter((o) => o.trip_id === t.id)}
               onSave={save}
+              onSaveOccurrence={saveOccurrence}
               onDelete={() => del(t.id)}
               onToggleBus={(busId, add) => toggleBus(t.id, busId, add)}
             />
@@ -161,16 +201,48 @@ function AdminTrips() {
   );
 }
 
-function TripEditor({ trip, buses, assigned, occupancy, onSave, onDelete, onToggleBus }: {
-  trip: TripRow; buses: BusRow[]; assigned: Set<string>; occupancy: Record<string, number>;
-  onSave: (t: TripRow) => void; onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
+function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccurrence, onDelete, onToggleBus }: {
+  trip: TripRow; buses: BusRow[]; assigned: Set<string>; occupancy: Record<string, number>; past: OccurrenceRow[];
+  onSave: (t: TripRow) => void; onSaveOccurrence: (o: OccurrenceRow) => void;
+  onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
 }) {
   const [local, setLocal] = useState(trip);
   useEffect(() => setLocal(trip), [trip]);
+  const finished = isTripFinished(trip.departure_date, trip.departure_time);
+  const upcoming = trip.departure_date ? nextOccurrence(trip.departure_date, trip.recurrence_weeks || 1) : null;
   return (
     <div className="surface-card p-5 space-y-4">
+      <div className="rounded-xl border bg-muted/40 p-4">
+        <div className="text-base font-extrabold">{trip.name}</div>
+        {trip.departure_date ? (
+          <>
+            <div className="text-sm font-bold text-[color:var(--color-navy)]">
+              {formatTripDate(trip.departure_date)}
+              {trip.departure_time ? ` — ${formatTripTime(trip.departure_time)}` : ""}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              العودة: {trip.return_date ? formatTripDate(trip.return_date) : "—"}
+              {upcoming ? ` • الموعد الأسبوعي التالي: ${formatTripDate(upcoming)}` : ""}
+            </div>
+            {finished && (
+              <div className="text-xs font-bold text-destructive mt-1">
+                انتهى موعد هذه الرحلة — سينتقل النظام تلقائيًا للأسبوع التالي (بدون نسخ الحافلات).
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-xs text-destructive">لم يتم تحديد تاريخ فعلي لهذه الرحلة بعد.</div>
+        )}
+      </div>
+
       <div className="grid gap-3 md:grid-cols-6">
         <div className="md:col-span-2"><Label className="text-xs">اسم الرحلة</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
+        <div><Label className="text-xs">تاريخ المغادرة الفعلي</Label><Input type="date" value={local.departure_date ?? ""} onChange={(e) => setLocal({ ...local, departure_date: e.target.value })} /></div>
+        <div><Label className="text-xs">تاريخ العودة الفعلي</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
+        <div><Label className="text-xs">تكرار كل (أسابيع)</Label><Input type="number" min={1} value={local.recurrence_weeks ?? 1} onChange={(e) => setLocal({ ...local, recurrence_weeks: Number(e.target.value) })} /></div>
+        <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2"><Switch checked={local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} /><span className="text-xs">تقدّم تلقائي أسبوعي</span></div>
+        </div>
         <div><Label className="text-xs">يوم المغادرة</Label><Input placeholder="الخميس 15/8" value={local.departure_day} onChange={(e) => setLocal({ ...local, departure_day: e.target.value })} /></div>
         <div><Label className="text-xs">وقت المغادرة</Label><Input type="time" value={local.departure_time ?? ""} onChange={(e) => setLocal({ ...local, departure_time: e.target.value })} /></div>
         <div>
@@ -238,10 +310,40 @@ function TripEditor({ trip, buses, assigned, occupancy, onSave, onDelete, onTogg
         </div>
       </div>
 
+      {past.length > 0 && (
+        <div>
+          <div className="text-sm font-bold mb-2">المواعيد السابقة (قابلة للتعديل)</div>
+          <div className="space-y-2">
+            {past.map((o) => (
+              <PastOccurrence key={o.id} occurrence={o} onSave={onSaveOccurrence} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="outline" onClick={onDelete} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" onClick={() => onSave(local)} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
       </div>
+    </div>
+  );
+}
+
+function PastOccurrence({ occurrence, onSave }: { occurrence: OccurrenceRow; onSave: (o: OccurrenceRow) => void }) {
+  const [local, setLocal] = useState(occurrence);
+  useEffect(() => setLocal(occurrence), [occurrence]);
+  return (
+    <div className="grid gap-2 md:grid-cols-5 items-end border rounded-xl p-3 bg-muted/30">
+      <div className="md:col-span-2 text-xs font-bold">
+        {formatTripDate(occurrence.departure_date)}
+        {occurrence.departure_time ? ` — ${formatTripTime(occurrence.departure_time)}` : ""}
+        <div className="text-[11px] font-normal text-muted-foreground">
+          الحافلات وقتها: {occurrence.bus_ids?.length ?? 0}
+        </div>
+      </div>
+      <div><Label className="text-[11px]">تاريخ المغادرة</Label><Input type="date" value={local.departure_date} onChange={(e) => setLocal({ ...local, departure_date: e.target.value })} /></div>
+      <div><Label className="text-[11px]">تاريخ العودة</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
+      <Button size="sm" variant="outline" className="rounded-full" onClick={() => onSave(local)}><Save className="h-4 w-4 ml-1" /> حفظ</Button>
     </div>
   );
 }

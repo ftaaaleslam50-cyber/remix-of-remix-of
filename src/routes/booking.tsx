@@ -630,6 +630,11 @@ function BookingPage() {
           ? null
           : actualReturnDay || selectedTrip?.return_day || null) as string | null,
         extension_nights: effectiveExtensionNights,
+        // Snapshot the trip's real dates so history survives the weekly roll-forward.
+        departure_date: (selectedTrip as unknown as { departure_date?: string | null } | undefined)?.departure_date ?? null,
+        return_date: (tripMode === "outbound"
+          ? null
+          : (selectedTrip as unknown as { return_date?: string | null } | undefined)?.return_date ?? null) as string | null,
       };
 
       if (editingCode) {
