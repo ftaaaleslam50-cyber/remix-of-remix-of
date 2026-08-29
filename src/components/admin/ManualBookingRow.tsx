@@ -17,6 +17,7 @@ import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatM
 import { getPackagePrice, roomDisplayLabel, ROOM_LABEL } from "@/lib/booking/pricing";
 import type { Package, PricingCell, RoomType } from "@/lib/booking/types";
 import { sar } from "@/lib/format";
+import { formatReturnOption } from "@/lib/trip-dates";
 import { writeAudit } from "@/lib/audit";
 
 export type TripMode = "round" | "outbound" | "return";
