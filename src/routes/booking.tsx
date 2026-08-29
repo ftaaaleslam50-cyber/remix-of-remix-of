@@ -948,12 +948,14 @@ function BookingPage() {
           selectedTrip?.name,
           (selectedTrip as unknown as { departure_date?: string | null } | null)?.departure_date,
           selectedTrip?.departure_day,
+          true,
         )}
         departureLabel={departureDisplay(
           (selectedTrip as unknown as { departure_date?: string | null } | null)?.departure_date,
           selectedTrip?.departure_day,
           "",
           tripMode,
+          true,
         )}
         returnLabel={returnActualDisplay(
           (selectedTrip as unknown as { return_date?: string | null } | null)?.return_date,
@@ -961,6 +963,7 @@ function BookingPage() {
           effectiveExtensionNights,
           tripMode,
           "",
+          true,
         )}
         pricePerPerson={pricePerPerson}
         subtotal={subtotal}
