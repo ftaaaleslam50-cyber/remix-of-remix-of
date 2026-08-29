@@ -67,11 +67,24 @@ function AdminTrips() {
   const { data: trips = [] } = useQuery({
     queryKey: ["admin-trips-full"],
     enabled: isAdmin === true,
+    refetchInterval: 60_000,
     queryFn: async () => {
+      // Roll finished weekly trips onto their next real date (buses are NOT copied).
+      await supabase.rpc("advance_due_trips" as never);
       const { data, error } = await supabase.from("trips").select("*").order("display_order");
       if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["admin-trip-buses"] });
+      qc.invalidateQueries({ queryKey: ["admin-trip-occurrences"] });
       return (data as unknown as TripRow[]) ?? [];
     },
+  });
+
+  const { data: occurrences = [] } = useQuery({
+    queryKey: ["admin-trip-occurrences"],
+    enabled: isAdmin === true,
+    queryFn: async () =>
+      ((await supabase.from("trip_occurrences" as never).select("*").order("departure_date", { ascending: false }))
+        .data as unknown as OccurrenceRow[]) ?? [],
   });
 
   const { data: buses = [] } = useQuery({
@@ -85,6 +98,7 @@ function AdminTrips() {
     enabled: isAdmin === true,
     queryFn: async () => (await supabase.from("trip_buses").select("trip_id,bus_id")).data as { trip_id: string; bus_id: string }[] ?? [],
   });
+
 
   const { data: occupancy = {} } = useQuery({
     queryKey: ["admin-trip-occupancy"],
