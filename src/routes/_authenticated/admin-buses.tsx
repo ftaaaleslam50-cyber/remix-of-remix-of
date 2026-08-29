@@ -199,6 +199,7 @@ function AdminBuses() {
       round_trip_price: b.round_trip_price,
       outbound_price: b.outbound_price,
       return_price: b.return_price,
+      direction: b.direction ?? "outbound",
       status: "active",
       active: true,
       trip_id: b.trip_id,
@@ -237,6 +238,7 @@ function AdminBuses() {
       round_trip_price: Number(b.round_trip_price) || 0,
       outbound_price: Number(b.outbound_price) || 0,
       return_price: Number(b.return_price) || 0,
+      direction: b.direction === "return" ? "return" : "outbound",
     };
 
     // مزامنة سعة الحافلة مع القالب المختار
