@@ -51,10 +51,6 @@ export interface ReturnBookingRow {
   status: string;
 }
 
-const WEEKDAYS = [
-  { v: 0, l: "الأحد" }, { v: 1, l: "الاثنين" }, { v: 2, l: "الثلاثاء" }, { v: 3, l: "الأربعاء" },
-  { v: 4, l: "الخميس" }, { v: 5, l: "الجمعة" }, { v: 6, l: "السبت" },
-];
 
 export function todayIso(): string {
   const now = new Date(Date.now() + 3 * 3600_000); // Riyadh
