@@ -426,6 +426,7 @@ export type Database = {
           created_by_name: string | null
           customer_name: string
           deleted_at: string | null
+          departure_date: string | null
           discount_amount: number
           extension_nights: number
           female_count: number
@@ -445,6 +446,7 @@ export type Database = {
           rep_name: string | null
           rep_phone: string | null
           rep_whatsapp: string | null
+          return_date: string | null
           room_type: string
           seat_genders: Json
           seat_numbers: string[]
@@ -469,6 +471,7 @@ export type Database = {
           created_by_name?: string | null
           customer_name: string
           deleted_at?: string | null
+          departure_date?: string | null
           discount_amount?: number
           extension_nights?: number
           female_count?: number
@@ -488,6 +491,7 @@ export type Database = {
           rep_name?: string | null
           rep_phone?: string | null
           rep_whatsapp?: string | null
+          return_date?: string | null
           room_type: string
           seat_genders?: Json
           seat_numbers?: string[]
@@ -512,6 +516,7 @@ export type Database = {
           created_by_name?: string | null
           customer_name?: string
           deleted_at?: string | null
+          departure_date?: string | null
           discount_amount?: number
           extension_nights?: number
           female_count?: number
@@ -531,6 +536,7 @@ export type Database = {
           rep_name?: string | null
           rep_phone?: string | null
           rep_whatsapp?: string | null
+          return_date?: string | null
           room_type?: string
           seat_genders?: Json
           seat_numbers?: string[]
@@ -1407,17 +1413,62 @@ export type Database = {
           },
         ]
       }
+      trip_occurrences: {
+        Row: {
+          bus_ids: string[]
+          created_at: string
+          departure_date: string
+          departure_time: string | null
+          id: string
+          return_date: string | null
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          bus_ids?: string[]
+          created_at?: string
+          departure_date: string
+          departure_time?: string | null
+          id?: string
+          return_date?: string | null
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          bus_ids?: string[]
+          created_at?: string
+          departure_date?: string
+          departure_time?: string | null
+          id?: string
+          return_date?: string | null
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_occurrences_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           active: boolean
+          auto_advance: boolean
           capacity: number
           created_at: string
+          departure_date: string | null
           departure_day: string
           departure_period: string | null
           departure_time: string | null
           display_order: number
           id: string
           name: string
+          recurrence_weeks: number
+          return_date: string | null
           return_day: string
           return_options: string[]
           return_period: string | null
@@ -1425,14 +1476,18 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          auto_advance?: boolean
           capacity?: number
           created_at?: string
+          departure_date?: string | null
           departure_day: string
           departure_period?: string | null
           departure_time?: string | null
           display_order?: number
           id?: string
           name: string
+          recurrence_weeks?: number
+          return_date?: string | null
           return_day: string
           return_options?: string[]
           return_period?: string | null
@@ -1440,14 +1495,18 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          auto_advance?: boolean
           capacity?: number
           created_at?: string
+          departure_date?: string | null
           departure_day?: string
           departure_period?: string | null
           departure_time?: string | null
           display_order?: number
           id?: string
           name?: string
+          recurrence_weeks?: number
+          return_date?: string | null
           return_day?: string
           return_options?: string[]
           return_period?: string | null
@@ -1588,6 +1647,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_due_trips: { Args: never; Returns: number }
       bind_coupon_to_ip: {
         Args: {
           _code: string
