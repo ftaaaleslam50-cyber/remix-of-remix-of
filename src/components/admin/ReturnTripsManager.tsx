@@ -602,18 +602,57 @@ function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
 export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   const [date, setDate] = useState(todayIso());
   const { templates, buses, assignedBuses, bookings } = useReturnData(date);
-  const dayTemplates = (templates.data ?? []).filter((t) => t.active && t.weekday === weekdayOf(date));
+
+  const allTrips = useMemo(
+    () => (templates.data ?? [])
+      .filter((t) => t.active)
+      .slice()
+      .sort((a, b) => (a.return_date ?? "").localeCompare(b.return_date ?? "")),
+    [templates.data],
+  );
+
+  const dayTrips = useMemo(
+    () => allTrips.filter((t) => (t.return_date ? t.return_date === date : t.weekday === weekdayOf(date))),
+    [allTrips, date],
+  );
 
   return (
     <div className="space-y-4">
+      {/* استعراض رحلات العودة المتاحة والانتقال إليها بضغطة */}
+      <div className="surface-card p-4">
+        <div className="text-sm font-bold mb-2 flex items-center gap-2"><CalendarDays className="h-4 w-4" /> رحلات العودة</div>
+        {allTrips.length === 0 ? (
+          <div className="text-xs text-muted-foreground">لا توجد رحلات عودة — أنشئها من «إدارة الرحلات ← إدارة رحلات العودة».</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {allTrips.map((t) => {
+              const on = !!t.return_date && t.return_date === date;
+              return (
+                <Button
+                  key={t.id}
+                  size="sm"
+                  variant={on ? "default" : "outline"}
+                  className="rounded-full"
+                  onClick={() => t.return_date && setDate(t.return_date)}
+                >
+                  {t.name}
+                  {t.return_date ? ` — ${formatTripDate(t.return_date)}` : ""}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <ReturnDateBar date={date} onChange={setDate} />
-      {dayTemplates.length === 0 ? (
+
+      {dayTrips.length === 0 ? (
         <div className="surface-card p-6 space-y-3">
           <div className="text-sm font-bold">
             الحجوزات المرتبطة بعودة {formatTripDate(date)}: {(bookings.data ?? []).length}
           </div>
           <p className="text-xs text-muted-foreground">
-            لا يوجد قالب رحلة عودة لهذا اليوم — أضف قالبًا من «إدارة الرحلات ← إدارة رحلات العودة» لتتمكن من التوزيع.
+            لا توجد رحلة عودة بهذا التاريخ — أنشئها من «إدارة الرحلات ← إدارة رحلات العودة» لتتمكن من التوزيع.
           </p>
           <div className="flex flex-wrap gap-2">
             {(bookings.data ?? []).map((b) => (
@@ -622,7 +661,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
           </div>
         </div>
       ) : (
-        dayTemplates.map((t) => (
+        dayTrips.map((t) => (
           <ReturnTripCard
             key={t.id}
             template={t}
@@ -637,3 +676,4 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     </div>
   );
 }
+
