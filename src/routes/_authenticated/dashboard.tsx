@@ -513,6 +513,7 @@ function UnifiedBookingsTab(props: {
   const [importRows, setImportRows] = useState<ImportBookingDraft[]>([]);
   const [importing, setImporting] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
+  const [source, setSource] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
