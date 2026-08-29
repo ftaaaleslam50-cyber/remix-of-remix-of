@@ -497,3 +497,43 @@ function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
     </tr>
   );
 }
+
+/** تبويب «العودة» داخل إدارة الحجوزات — اختيار تاريخ العودة وعرض ركابها وتوزيعهم. */
+export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
+  const [date, setDate] = useState(todayIso());
+  const { templates, buses, assignedBuses, bookings } = useReturnData(date);
+  const dayTemplates = (templates.data ?? []).filter((t) => t.active && t.weekday === weekdayOf(date));
+
+  return (
+    <div className="space-y-4">
+      <ReturnDateBar date={date} onChange={setDate} />
+      {dayTemplates.length === 0 ? (
+        <div className="surface-card p-6 space-y-3">
+          <div className="text-sm font-bold">
+            الحجوزات المرتبطة بعودة {formatTripDate(date)}: {(bookings.data ?? []).length}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            لا يوجد قالب رحلة عودة لهذا اليوم — أضف قالبًا من «إدارة الرحلات ← إدارة رحلات العودة» لتتمكن من التوزيع.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(bookings.data ?? []).map((b) => (
+              <Badge key={b.id} variant="outline">{b.customer_name || b.booking_code} — غير موزع</Badge>
+            ))}
+          </div>
+        </div>
+      ) : (
+        dayTemplates.map((t) => (
+          <ReturnTripCard
+            key={t.id}
+            template={t}
+            date={date}
+            buses={buses.data ?? []}
+            assigned={(assignedBuses.data ?? []).filter((x) => x.return_trip_id === t.id)}
+            bookings={bookings.data ?? []}
+            ownerId={ownerId}
+          />
+        ))
+      )}
+    </div>
+  );
+}

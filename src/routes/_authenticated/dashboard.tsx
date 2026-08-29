@@ -60,6 +60,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReturnBookingsTab } from "@/components/admin/ReturnTripsManager";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
@@ -399,6 +400,15 @@ function Dashboard() {
           </TabsList>
 
           <TabsContent value="bookings" className="mt-4">
+            <Tabs defaultValue="leg-outbound">
+              <TabsList className="mb-4">
+                <TabsTrigger value="leg-outbound" className="rounded-xl">الذهاب</TabsTrigger>
+                <TabsTrigger value="leg-return" className="rounded-xl">العودة</TabsTrigger>
+              </TabsList>
+              <TabsContent value="leg-return">
+                <ReturnBookingsTab />
+              </TabsContent>
+              <TabsContent value="leg-outbound">
             <UnifiedBookingsTab
               bookings={bookings}
               showArchived={showArchived}
@@ -411,6 +421,8 @@ function Dashboard() {
 
               downloadIdImage={downloadIdImage}
             />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="tripsheet" className="mt-4">
