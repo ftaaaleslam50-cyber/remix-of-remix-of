@@ -113,10 +113,12 @@ export function renderSeatChartPages(
 
   const PAD = 40;
   const HEADER = 104;
-  const CELL = 130;
-  const GAP = 16;
-  const gridW = layout.cols * CELL + (layout.cols - 1) * GAP;
-  const gridH = layout.rows * CELL + (layout.rows - 1) * GAP;
+  // Seats are drawn as wide rectangles (wider than tall) for readability.
+  const CELL_W = 168;
+  const CELL_H = 108;
+  const GAP = 14;
+  const gridW = layout.cols * CELL_W + (layout.cols - 1) * GAP;
+  const gridH = layout.rows * CELL_H + (layout.rows - 1) * GAP;
 
   const sub = [meta.tripLabel, meta.capacity ? `السعة: ${meta.capacity}` : "", `الركاب: ${occupants.length}`]
     .filter(Boolean)
@@ -135,8 +137,8 @@ export function renderSeatChartPages(
   for (const cell of layout.cells) {
     if (cell.kind === "empty") continue;
     // RTL: column 1 sits on the far right, matching the on-screen seat map.
-    const x = gridX + (cols - cell.col) * (CELL + GAP);
-    const y = gridY + (cell.row - 1) * (CELL + GAP);
+    const x = gridX + (cols - cell.col) * (CELL_W + GAP);
+    const y = gridY + (cell.row - 1) * (CELL_H + GAP);
 
     const id = seatId(cell);
     const occ = cell.kind === "seat" ? bySeat.get(id) : undefined;
@@ -173,7 +175,7 @@ export function renderSeatChartPages(
     ctx.fillStyle = bg;
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 3;
-    roundRect(ctx, x, y, CELL, CELL, 16);
+    roundRect(ctx, x, y, CELL_W, CELL_H, 14);
     ctx.fill();
     ctx.stroke();
 
@@ -182,19 +184,19 @@ export function renderSeatChartPages(
     ctx.textAlign = "center";
     if (cell.kind !== "seat") {
       ctx.font = F(18, true);
-      ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL / 2, y + CELL / 2);
+      ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + CELL_H / 2);
       continue;
     }
     ctx.font = F(22, true);
-    ctx.fillText(id, x + CELL / 2, y + (occ ? 28 : CELL / 2));
+    ctx.fillText(id, x + CELL_W / 2, y + (occ ? 24 : CELL_H / 2));
     if (occ) {
       const nm = twoPartName(occ.name || "");
       const words = nm.split(" ");
       ctx.font = F(19, true);
-      ctx.fillText(shorten(words[0] ?? "", 12), x + CELL / 2, y + 62);
-      if (words[1]) ctx.fillText(shorten(words[1], 12), x + CELL / 2, y + 86);
-      ctx.font = F(20, true);
-      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL / 2, y + CELL - 18);
+      ctx.fillText(shorten(words[0] ?? "", 12), x + CELL_W / 2, y + 54);
+      if (words[1]) ctx.fillText(shorten(words[1], 12), x + CELL_W / 2, y + 76);
+      ctx.font = F(19, true);
+      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL_W / 2, y + CELL_H - 13);
     }
   }
 

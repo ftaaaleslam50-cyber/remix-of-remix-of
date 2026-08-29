@@ -513,6 +513,7 @@ function UnifiedBookingsTab(props: {
   const [importRows, setImportRows] = useState<ImportBookingDraft[]>([]);
   const [importing, setImporting] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
+  const [source, setSource] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -528,12 +529,16 @@ function UnifiedBookingsTab(props: {
       // If a trip is selected, prefer buses linked via trip_buses; fall back to
       // legacy buses.trip_id column. When no trip: return all active buses so
       // the admin can filter/report on any bus independently.
+      // Only buses flagged active-for-booking are shown/counted.
+      const COLS =
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number";
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
         let q = supabase
           .from("buses")
-          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number")
+          .select(COLS)
+          .eq("is_active_booking", true)
           .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
@@ -543,11 +548,16 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number").order("bus_number"))
+        ((await supabase.from("buses").select(COLS).eq("is_active_booking", true).order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
   });
+
+  // Distinct booking sources actually present in the loaded bookings.
+  const sourceOptions: string[] = [
+    ...new Set(bookings.map((b) => (b.booking_source ?? "").trim() || "الموقع")),
+  ].sort((a, z) => a.localeCompare(z, "ar"));
 
   const { data: importHotels = [] } = useQuery({
     queryKey: ["ub-import-hotels"],
@@ -562,6 +572,7 @@ function UnifiedBookingsTab(props: {
   // selected, match on the booking's own trip_id (stable) rather than trip name.
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
+    if (source && ((b.booking_source ?? "").trim() || "الموقع") !== source) return false;
     if (busId) {
       if (b.bus_id !== busId) return false;
     } else if (tripId) {
@@ -976,7 +987,7 @@ function UnifiedBookingsTab(props: {
       </div>
 
       {/* Professional filter bar */}
-      <div className="grid gap-3 md:grid-cols-4 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
+      <div className="grid gap-3 md:grid-cols-5 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
         <div>
           <Label className="text-xs mb-1 block">الرحلة</Label>
           <select
@@ -1021,6 +1032,21 @@ function UnifiedBookingsTab(props: {
             <option value="confirmed">مؤكد</option>
             <option value="pending">قيد المراجعة</option>
             <option value="cancelled">ملغي</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">مصدر الحجز</Label>
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل المصادر —</option>
+            {sourceOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
         </div>
         <div>
