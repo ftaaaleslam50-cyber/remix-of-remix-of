@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/admin-bus-layouts")({
   component: AdminBusLayouts,
 });
 
-type CellKind = "seat" | "empty" | "driver" | "door" | "restroom";
+type CellKind = "seat" | "supervisor" | "empty" | "driver" | "door" | "restroom";
 
 interface Cell {
   row: number;
@@ -36,7 +36,7 @@ interface LayoutRow {
   layout_json: LayoutJson;
 }
 
-const KIND_CYCLE: CellKind[] = ["empty", "seat", "driver", "door", "restroom"];
+const KIND_CYCLE: CellKind[] = ["empty", "seat", "supervisor", "driver", "door", "restroom"];
 
 const KIND_STYLE: Record<CellKind, { bg: string; label: string; icon: string }> = {
   empty: {
@@ -48,6 +48,11 @@ const KIND_STYLE: Record<CellKind, { bg: string; label: string; icon: string }> 
     bg: "bg-primary/15 border-primary/60",
     label: "مقعد",
     icon: "🪑",
+  },
+  supervisor: {
+    bg: "bg-[color:var(--color-navy)]/15 border-[color:var(--color-navy)]",
+    label: "مقعد المشرف",
+    icon: "👤",
   },
   driver: {
     bg: "bg-amber-100 border-amber-500",
@@ -362,7 +367,7 @@ function LayoutEditor({
 
   function autoNumberSeats() {
     const seats = Array.from(cells.values())
-      .filter((cell) => cell.kind === "seat")
+      .filter((cell) => cell.kind === "seat" || cell.kind === "supervisor")
       .sort((a, b) => a.row - b.row || a.col - b.col);
 
     const next = new Map(cells);
@@ -391,7 +396,7 @@ function LayoutEditor({
      */
     if (autoNumber) {
       const seats = Array.from(nextCells.values())
-        .filter((cell) => cell.kind === "seat")
+        .filter((cell) => cell.kind === "seat" || cell.kind === "supervisor")
         .sort((a, b) => a.row - b.row || a.col - b.col);
 
       seats.forEach((seat, index) => {
