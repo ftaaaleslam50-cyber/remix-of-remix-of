@@ -215,6 +215,33 @@ function BookingPage() {
     },
   });
 
+  // Gender of already-booked seats (pale blue / pale pink shading on the map).
+  const { data: busReservedGenders = {} } = useQuery({
+    queryKey: ["bus_reserved_genders", tripId, editingCode],
+    enabled: !!tripId && buses.length > 0,
+    staleTime: 0,
+    refetchInterval: 1_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: { bus_id: string; seat_genders: Record<string, string> | null }[] | null; error: unknown }>)(
+        "get_bus_seat_genders",
+        { _trip_id: tripId, _bus_id: null, _exclude_code: editingCode ?? null },
+      );
+      if (error) throw error;
+      const map: Record<string, Record<string, "male" | "female">> = {};
+      for (const b of data ?? []) {
+        if (!b.bus_id) continue;
+        const target = (map[b.bus_id] ??= {});
+        for (const [seat, g] of Object.entries(b.seat_genders ?? {})) {
+          if (g === "male" || g === "female") target[seat] = g;
+        }
+      }
+      return map;
+    },
+  });
+
   // User-selected bus (from Bus step). No auto-fallback: until the user picks a
   // bus explicitly, there is no active bus and therefore no bus price/details.
   const activeBus = useMemo(() => {
@@ -239,6 +266,7 @@ function BookingPage() {
   });
 
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
+  const bookedSeatGenders = activeBus ? (busReservedGenders[activeBus.id] ?? {}) : {};
   const remainingSeats = activeBus
     ? (activeBus.capacity ?? 49) - (activeBus.blocked_seats ?? ["A2"]).length - bookedSeats.length
     : 0;
@@ -795,6 +823,7 @@ function BookingPage() {
                   count={passengerCount}
                   seats={seats}
                   reserved={bookedSeats}
+                  reservedGenders={bookedSeatGenders}
                   genders={seatGenders}
                   activeGender={activeGender}
                   onActiveGenderChange={setActiveGender}
@@ -1624,6 +1653,7 @@ function StepSeats({
   count,
   seats,
   reserved,
+  reservedGenders,
   onChange,
   bus,
   layout,
@@ -1639,6 +1669,7 @@ function StepSeats({
   count: number;
   seats: string[];
   reserved: string[];
+  reservedGenders: Record<string, "male" | "female">;
   onChange: (s: string[]) => void;
   genders: Record<string, "male" | "female">;
   activeGender: "male" | "female";
@@ -1718,6 +1749,7 @@ function StepSeats({
             layout={layout}
             selected={seats}
             reserved={reserved}
+            reservedGenders={reservedGenders}
             maxSelectable={count}
             genders={genders}
             onChange={onChange}
