@@ -965,6 +965,7 @@ function BookingPage() {
           "",
           true,
         )}
+        extensionNights={effectiveExtensionNights}
         pricePerPerson={pricePerPerson}
         subtotal={subtotal}
         discount={discount}
@@ -2132,6 +2133,7 @@ function PriceBar(props: {
   tripName?: string;
   departureLabel?: string;
   returnLabel?: string;
+  extensionNights?: number;
   pricePerPerson: number;
   subtotal: number;
   discount: number;
@@ -2148,6 +2150,9 @@ function PriceBar(props: {
           {props.packageName && <PriceCell label="الفندق" value={props.packageName} />}
           {props.departureLabel && <PriceCell label="الذهاب" value={props.departureLabel} />}
           {props.returnLabel && <PriceCell label="العودة" value={props.returnLabel} />}
+          {!!props.extensionNights && props.extensionNights > 0 && (
+            <PriceCell label="ليال التمديد" value={`${props.extensionNights} ليلة`} />
+          )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
