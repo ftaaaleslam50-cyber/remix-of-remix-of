@@ -2,12 +2,12 @@
 // القوالب أسبوعية، لكن التشغيل والإدارة يتمّان بالتاريخ الفعلي.
 // الحجوزات ترتبط بالرحلة عبر «تاريخ العودة الفعلي» المحسوب مسبقًا في قاعدة البيانات
 // (تاريخ العودة + ليالي التمديد)، ولا علاقة للسعة بظهور الحجوزات.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2, Save, Bus as BusIcon,
-  AlertTriangle, Users, Settings2,
+  AlertTriangle, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
@@ -26,6 +27,7 @@ export interface ReturnTripRow {
   from_city: string;
   to_city: string;
   weekday: number;
+  return_date: string | null;
   return_time: string | null;
   active: boolean;
   display_order: number;
@@ -339,50 +341,6 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
   );
 }
 
-
-function TemplateEditor({ template }: { template: ReturnTripRow }) {
-  const qc = useQueryClient();
-  const [local, setLocal] = useState(template);
-
-  async function save() {
-    const { error } = await supabase.from("return_trips" as never).update({
-      name: local.name, from_city: local.from_city, to_city: local.to_city,
-      weekday: local.weekday, return_time: local.return_time || null,
-      active: local.active, display_order: local.display_order,
-    } as never).eq("id", template.id);
-    if (error) return toast.error(error.message);
-    toast.success("تم الحفظ");
-    qc.invalidateQueries({ queryKey: ["return-trips"] });
-  }
-  async function del() {
-    if (!confirm("حذف قالب رحلة العودة؟ (لن يتم حذف أي حجز)")) return;
-    const { error } = await supabase.from("return_trips" as never).delete().eq("id", template.id);
-    if (error) return toast.error(error.message);
-    qc.invalidateQueries({ queryKey: ["return-trips"] });
-  }
-
-  return (
-    <div className="grid gap-3 md:grid-cols-7 items-end border rounded-xl p-3">
-      <div className="md:col-span-2"><Label className="text-xs">الاسم</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
-      <div><Label className="text-xs">من</Label><Input value={local.from_city} onChange={(e) => setLocal({ ...local, from_city: e.target.value })} /></div>
-      <div><Label className="text-xs">إلى</Label><Input value={local.to_city} onChange={(e) => setLocal({ ...local, to_city: e.target.value })} /></div>
-      <div>
-        <Label className="text-xs">يوم الأسبوع</Label>
-        <Select value={String(local.weekday)} onValueChange={(v) => setLocal({ ...local, weekday: Number(v) })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{WEEKDAYS.map((d) => <SelectItem key={d.v} value={String(d.v)}>{d.l}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div><Label className="text-xs">وقت العودة</Label><Input type="time" value={local.return_time ?? ""} onChange={(e) => setLocal({ ...local, return_time: e.target.value })} /></div>
-      <div className="flex items-center gap-2">
-        <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
-        <span className="text-xs">مفعّل</span>
-        <Button size="sm" className="rounded-full" onClick={save}><Save className="h-4 w-4" /></Button>
-        <Button size="sm" variant="outline" className="rounded-full" onClick={del}><Trash2 className="h-4 w-4" /></Button>
-      </div>
-    </div>
-  );
-}
 
 export function ReturnTripCard({ template, date, buses, assigned, bookings, ownerId }: {
   template: ReturnTripRow;
