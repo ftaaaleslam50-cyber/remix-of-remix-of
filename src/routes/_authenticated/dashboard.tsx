@@ -987,7 +987,7 @@ function UnifiedBookingsTab(props: {
       </div>
 
       {/* Professional filter bar */}
-      <div className="grid gap-3 md:grid-cols-4 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
+      <div className="grid gap-3 md:grid-cols-5 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
         <div>
           <Label className="text-xs mb-1 block">الرحلة</Label>
           <select
