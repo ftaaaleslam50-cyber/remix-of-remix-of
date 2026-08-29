@@ -511,7 +511,7 @@ export function ManualBookingRow({
                   <option value="">—</option>
                   {returnOptions.map((r) => (
                     <option key={r} value={r}>
-                      {r}
+                      {formatReturnOption(r)}
                     </option>
                   ))}
                 </select>
