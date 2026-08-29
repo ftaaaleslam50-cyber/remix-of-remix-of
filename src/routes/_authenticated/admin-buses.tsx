@@ -553,6 +553,21 @@ function BusEditRow({
       </TableCell>
 
       <TableCell>
+        <Select
+          value={local.direction ?? "outbound"}
+          onValueChange={(v) => setLocal({ ...local, direction: v as BusRow["direction"] })}
+        >
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="outbound">ذهاب</SelectItem>
+            <SelectItem value="return">عودة</SelectItem>
+          </SelectContent>
+        </Select>
+
+
+      <TableCell>
 
         <Select
           value={local.layout_id ?? "__none"}
