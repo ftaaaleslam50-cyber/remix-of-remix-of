@@ -61,7 +61,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { returnDisplay } from "@/lib/return-display";
+import { returnDisplay, departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
@@ -104,7 +104,9 @@ interface BookingRow {
   trip_id?: string | null;
   package_id?: string | null;
   packages?: { name: string } | null;
-  trips?: { name: string; departure_day: string | null; return_day: string | null } | null;
+  departure_date?: string | null;
+  return_date?: string | null;
+  trips?: { name: string; departure_day: string | null; return_day: string | null; departure_date?: string | null; return_date?: string | null } | null;
   buses?: {
     id: string;
     name: string | null;
@@ -160,7 +162,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day),buses(id,name,bus_number,expenses,driver_phone,driver_id_number)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -228,12 +230,12 @@ function Dashboard() {
       واتساب: b.whatsapp_phone,
       الفندق: b.packages?.name ?? "-",
       الغرفة: roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null, !!b.package_id),
-      الرحلة: b.trips?.name ?? "-",
+      الرحلة: tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day),
       الباص: b.buses?.bus_number ?? "-",
       المقاعد: b.seat_numbers.join(", "),
       الذكور: Number(b.male_count ?? 0),
       الإناث: Number(b.female_count ?? 0),
-      "العودة الفعلية": returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "-", b.trip_mode),
+      "العودة الفعلية": returnActualDisplay(b.return_date ?? b.trips?.return_date, b.actual_return_day || b.trips?.return_day, b.extension_nights, b.trip_mode, "-"),
       الخصم: Number(b.discount_amount ?? 0),
       الكود: b.coupon_code ?? "",
       السعر: Number(b.total_price),
@@ -696,9 +698,9 @@ function UnifiedBookingsTab(props: {
       الإناث: Number(b.female_count ?? 0),
       المقاعد: (b.seat_numbers ?? []).join(", "),
       "اسم الفندق": b.packages?.name ?? "-",
-      الذهاب: b.trips?.departure_day ?? "-",
-      العودة: b.trips?.return_day ?? "-",
-      "العودة الفعلية": returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "-", b.trip_mode),
+      الذهاب: departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode),
+      العودة: departureDisplay(b.return_date ?? b.trips?.return_date, b.trips?.return_day, "-"),
+      "العودة الفعلية": returnActualDisplay(b.return_date ?? b.trips?.return_date, b.actual_return_day || b.trips?.return_day, b.extension_nights, b.trip_mode, "-"),
       "إجمالي المبلغ": Number(b.total_price),
       ملاحظات: b.notes ?? "",
     }));
@@ -901,8 +903,8 @@ function UnifiedBookingsTab(props: {
       title: `كشف رحلة${tripName ? ` — ${tripName}` : ""}${busLabel ? ` — ${busLabel}` : ""}`,
       filename: `trip-sheet-${busLabel || tripName || "all"}-${new Date().toISOString().slice(0, 10)}`,
       header: {
-        departureDate: info?.departure_day ?? "",
-        returnDate: info?.return_day ?? "",
+        departureDate: departureDisplay(info?.departure_date, info?.departure_day, ""),
+        returnDate: departureDisplay(info?.return_date, info?.return_day, ""),
         capacity: bus?.capacity,
         busNumber: bus ? bus.bus_number : "",
         driverName: bus?.driver_name ?? "",
@@ -918,7 +920,7 @@ function UnifiedBookingsTab(props: {
         idNumber: b.id_number ?? "",
         nationality: b.nationality ?? "",
         count: b.passenger_count || 0,
-        returnDay: returnDisplay(b.actual_return_day || b.trips?.return_day, b.extension_nights, "", b.trip_mode),
+        returnDay: returnActualDisplay(b.return_date ?? b.trips?.return_date, b.actual_return_day || b.trips?.return_day, b.extension_nights, b.trip_mode, ""),
         hotel: b.packages?.name ?? "بدون فندق",
         roomType: roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null, !!b.package_id) ?? String(b.room_type ?? ""),
         packageTotal: Number(b.total_price || 0),
@@ -1521,8 +1523,8 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="text-xs">{b.packages?.name ?? "بدون"}</TableCell>
                 <TableCell className="text-xs">{roomDisplayLabel((b.room_type ?? "5") as RoomType, (b.booking_type as "individual" | "family" | null) ?? null, !!b.package_id) ?? "-"}</TableCell>
                 <TableCell className="text-xs">{(b.extension_nights ?? 0) > 0 ? `${b.extension_nights} ليلة` : "بدون"}</TableCell>
-                <TableCell className="text-xs">{b.trips?.name ?? "-"}</TableCell>
-                <TableCell className="text-xs">{returnDisplay(b.actual_return_day ?? b.trips?.return_day, b.extension_nights, "-", b.trip_mode)}</TableCell>
+                <TableCell className="text-xs">{tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)}</TableCell>
+                <TableCell className="text-xs">{returnActualDisplay(b.return_date ?? b.trips?.return_date, b.actual_return_day ?? b.trips?.return_day, b.extension_nights, b.trip_mode, "-")}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
                 <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
                 <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
