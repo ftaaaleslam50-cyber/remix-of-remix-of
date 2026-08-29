@@ -7,7 +7,7 @@ import fontkit from "@pdf-lib/fontkit";
 import ArabicReshaper from "arabic-reshaper";
 import QRCode from "qrcode";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { returnDisplay } from "@/lib/return-display";
+import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 
@@ -75,7 +75,9 @@ export interface TicketBooking {
   trip_mode?: string | null;
   packages?: { name: string } | null;
   hotels?: { name: string } | null;
-  trips?: { name: string; departure_day: string; return_day: string } | null;
+  departure_date?: string | null;
+  return_date?: string | null;
+  trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
   layout_json?: LayoutJson | null;
 }
@@ -101,7 +103,7 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
   const { data } = await supabaseAdmin
     .from("bookings")
     .select(
-      "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,created_at,notes,actual_return_day,extension_nights,trip_mode,packages(name),hotels(name),trips(name,departure_day,return_day),buses(bus_number,name,plate,layout_id)",
+      "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses(bus_number,name,plate,layout_id)",
     )
     .eq("booking_code", code)
     .is("deleted_at", null)
@@ -201,7 +203,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
     ["رقم الهوية", b.id_number || "-"],
     ["جوال التواصل", b.contact_phone || "-"],
     ["جوال الواتساب", b.whatsapp_phone || "-"],
-    ["الرحلة", b.trips?.name ?? "-"],
+    ["الرحلة", tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)],
     ["الفندق", b.packages?.name ?? b.hotels?.name ?? "بدون فندق"],
   ];
   if (Number(b.extension_nights ?? 0) > 0) rows.push(["عدد ليال التمديد", String(b.extension_nights)]);
@@ -214,14 +216,20 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   ]);
   if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
   rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
-  if (b.trips?.departure_day)
-    rows.push(["الذهاب", b.trip_mode === "return" ? "بدون ذهاب" : b.trips.departure_day]);
   rows.push([
-    "العودة",
-    returnDisplay(b.trips?.return_day, b.extension_nights, "-", b.trip_mode),
+    "الذهاب",
+    departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode),
   ]);
-  if (Number(b.extension_nights ?? 0) === 0 && b.trip_mode !== "outbound" && b.actual_return_day)
-    rows.push(["العودة الفعلية", b.actual_return_day]);
+  rows.push([
+    "العودة الفعلية",
+    returnActualDisplay(
+      b.return_date ?? b.trips?.return_date,
+      b.actual_return_day ?? b.trips?.return_day,
+      b.extension_nights,
+      b.trip_mode,
+      "-",
+    ),
+  ]);
   rows.push(["تاريخ الحجز", formatDate(b.created_at)]);
 
   y -= 30;

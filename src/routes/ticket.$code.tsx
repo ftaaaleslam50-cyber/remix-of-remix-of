@@ -292,7 +292,7 @@ function TicketPage() {
             <TicketRow label="رقم الهوية" value={booking.id_number} />
             <TicketRow label="جوال التواصل" value={booking.contact_phone} ltr />
             <TicketRow label="جوال الواتساب" value={booking.whatsapp_phone} ltr />
-            <TicketRow label="الرحلة" value={booking.trips?.name ?? "-"} />
+            <TicketRow label="الرحلة" value={tripWithDate(booking.trips?.name, booking.departure_date ?? booking.trips?.departure_date, booking.trips?.departure_day)} />
             <TicketRow label="الفندق" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />
             {Number(booking.extension_nights ?? 0) > 0 && (
               <TicketRow label="عدد ليال التمديد" value={String(booking.extension_nights)} />
