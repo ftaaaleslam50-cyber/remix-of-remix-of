@@ -175,7 +175,7 @@ export function renderSeatChartPages(
     ctx.fillStyle = bg;
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 3;
-    roundRect(ctx, x, y, CELL, CELL, 16);
+    roundRect(ctx, x, y, CELL_W, CELL_H, 14);
     ctx.fill();
     ctx.stroke();
 
@@ -184,19 +184,19 @@ export function renderSeatChartPages(
     ctx.textAlign = "center";
     if (cell.kind !== "seat") {
       ctx.font = F(18, true);
-      ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL / 2, y + CELL / 2);
+      ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + CELL_H / 2);
       continue;
     }
     ctx.font = F(22, true);
-    ctx.fillText(id, x + CELL / 2, y + (occ ? 28 : CELL / 2));
+    ctx.fillText(id, x + CELL_W / 2, y + (occ ? 24 : CELL_H / 2));
     if (occ) {
       const nm = twoPartName(occ.name || "");
       const words = nm.split(" ");
       ctx.font = F(19, true);
-      ctx.fillText(shorten(words[0] ?? "", 12), x + CELL / 2, y + 62);
-      if (words[1]) ctx.fillText(shorten(words[1], 12), x + CELL / 2, y + 86);
-      ctx.font = F(20, true);
-      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL / 2, y + CELL - 18);
+      ctx.fillText(shorten(words[0] ?? "", 12), x + CELL_W / 2, y + 54);
+      if (words[1]) ctx.fillText(shorten(words[1], 12), x + CELL_W / 2, y + 76);
+      ctx.font = F(19, true);
+      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL_W / 2, y + CELL_H - 13);
     }
   }
 
