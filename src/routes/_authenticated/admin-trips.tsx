@@ -126,6 +126,8 @@ function AdminTrips() {
   async function save(t: TripRow) {
     const { error } = await supabase.from("trips").update({
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
+      departure_date: t.departure_date || null, return_date: t.return_date || null,
+      auto_advance: t.auto_advance, recurrence_weeks: Math.max(1, Number(t.recurrence_weeks) || 1),
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
       return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
@@ -135,6 +137,15 @@ function AdminTrips() {
     toast.success("تم الحفظ");
     qc.invalidateQueries({ queryKey: ["admin-trips-full"] });
   }
+  async function saveOccurrence(o: OccurrenceRow) {
+    const { error } = await supabase.from("trip_occurrences" as never).update({
+      departure_date: o.departure_date, return_date: o.return_date || null, departure_time: o.departure_time || null,
+    } as never).eq("id", o.id);
+    if (error) return toast.error(error.message);
+    toast.success("تم تحديث الموعد السابق");
+    qc.invalidateQueries({ queryKey: ["admin-trip-occurrences"] });
+  }
+
   async function del(id: string) {
     if (!confirm("حذف الرحلة؟")) return;
     const { error } = await supabase.from("trips").delete().eq("id", id);
