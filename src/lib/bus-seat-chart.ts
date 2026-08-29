@@ -137,8 +137,8 @@ export function renderSeatChartPages(
   for (const cell of layout.cells) {
     if (cell.kind === "empty") continue;
     // RTL: column 1 sits on the far right, matching the on-screen seat map.
-    const x = gridX + (cols - cell.col) * (CELL + GAP);
-    const y = gridY + (cell.row - 1) * (CELL + GAP);
+    const x = gridX + (cols - cell.col) * (CELL_W + GAP);
+    const y = gridY + (cell.row - 1) * (CELL_H + GAP);
 
     const id = seatId(cell);
     const occ = cell.kind === "seat" ? bySeat.get(id) : undefined;
