@@ -40,7 +40,9 @@ interface BusRow {
   round_trip_price: number;
   outbound_price: number;
   return_price: number;
+  direction: "outbound" | "return";
 }
+
 
 interface LayoutRow {
   id: string;
