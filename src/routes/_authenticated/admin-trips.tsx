@@ -20,6 +20,10 @@ interface TripRow {
   name: string;
   departure_day: string;
   return_day: string;
+  departure_date: string | null;
+  return_date: string | null;
+  auto_advance: boolean;
+  recurrence_weeks: number;
   departure_time: string | null;
   return_time: string | null;
   departure_period: string | null;
@@ -30,6 +34,14 @@ interface TripRow {
   display_order: number;
 }
 interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; status: string }
+interface OccurrenceRow {
+  id: string;
+  trip_id: string;
+  departure_date: string;
+  departure_time: string | null;
+  return_date: string | null;
+  bus_ids: string[] | null;
+}
 
 const PERIODS = [
   { v: "morning", l: "صباحاً" },
