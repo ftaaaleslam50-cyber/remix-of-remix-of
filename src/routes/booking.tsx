@@ -21,8 +21,6 @@ import {
   X,
   Package as PackageIcon,
   Ticket,
-  Shuffle,
-  MousePointerClick,
   Mars,
   Venus,
 } from "lucide-react";
@@ -38,8 +36,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { BusSeatMap, pickRandomSeats } from "@/components/booking/BusSeatMap";
-import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { BusSeatMap } from "@/components/booking/BusSeatMap";
+import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
@@ -78,7 +76,6 @@ function BookingPage() {
   const [packageId, setPackageId] = useState<string | null>(null);
   const [roomType, setRoomType] = useState<RoomType>("5");
   const [tripId, setTripId] = useState<string | null>(null);
-  const [seatMode, setSeatMode] = useState<"manual" | "random">("manual");
   const [seats, setSeats] = useState<string[]>([]);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -424,6 +421,23 @@ function BookingPage() {
           .filter(Boolean),
       }
     : null;
+  // All selectable return dates = the trip's own return + any extra returns.
+  const returnChoices: string[] = selectedTrip
+    ? Array.from(
+        new Set(
+          [
+            (selectedTrip as unknown as { return_date?: string | null }).return_date ||
+              selectedTrip.return_day ||
+              "",
+            ...(selectedTrip.return_options ?? []),
+          ].filter(Boolean),
+        ),
+      )
+    : [];
+  const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  const selectedReturnDate = isoRe.test(actualReturnDay)
+    ? actualReturnDay
+    : ((selectedTrip as unknown as { return_date?: string | null } | null)?.return_date ?? null);
   const transportOnly = noHotel;
   // "عودة فقط" لا يحتاج اختيار مقاعد، وكذلك «بدون حافلة».
   const skipSeats = noBus || tripMode === "return";
@@ -635,7 +649,7 @@ function BookingPage() {
         departure_date: (selectedTrip as unknown as { departure_date?: string | null } | undefined)?.departure_date ?? null,
         return_date: (tripMode === "outbound"
           ? null
-          : (selectedTrip as unknown as { return_date?: string | null } | undefined)?.return_date ?? null) as string | null,
+          : selectedReturnDate) as string | null,
       };
 
       if (editingCode) {
@@ -792,7 +806,7 @@ function BookingPage() {
                     setSeats([]);
                     setActualReturnDay("");
                   }}
-                  returnOptions={selectedTrip?.return_options ?? []}
+                  returnOptions={returnChoices}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
                   tripMode={tripMode}
@@ -860,26 +874,6 @@ function BookingPage() {
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
-                  mode={seatMode}
-                  onModeChange={(m) => {
-                    setSeatMode(m);
-                    if (m === "random") {
-                      const auto = activeLayout?.layout_json
-                        ? pickRandomLayoutSeats(passengerCount, activeLayout.layout_json, bookedSeats)
-                        : pickRandomSeats(
-                            passengerCount,
-                            bookedSeats,
-                            activeBus?.blocked_seats ?? ["A2"],
-                            ((activeBus as { layout?: string } | null)?.layout as "A" | "B") ?? "A",
-                          );
-                      const g: Record<string, "male" | "female"> = {};
-                      auto.forEach((sid, i) => {
-                        g[sid] = i < maleCount ? "male" : "female";
-                      });
-                      setSeatGenders(g);
-                      setSeats(auto);
-                    }
-                  }}
                 />
               )}
               {stepName === "البيانات" && (
@@ -894,7 +888,7 @@ function BookingPage() {
                   existingIdImageUrl={profileIdImageSignedUrl}
                   notes={notes}
                   setNotes={setNotes}
-                  returnOptions={tripMode === "return" ? [] : (selectedTrip?.return_options ?? [])}
+                  returnOptions={tripMode === "return" ? [] : returnChoices}
                   defaultReturnDay={selectedTrip?.return_day ?? ""}
                   actualReturnDay={actualReturnDay}
                   setActualReturnDay={setActualReturnDay}
@@ -914,6 +908,8 @@ function BookingPage() {
                   bookingSource={accountType === "representative" && repName ? repName : "Website"}
                   pkg={selectedPackage}
                   trip={selectedTrip}
+                  returnDate={selectedReturnDate}
+                  actualReturnDay={actualReturnDay}
                   seats={seats}
                   customer={customer}
                   pricePerPerson={pricePerPerson}
@@ -959,7 +955,7 @@ function BookingPage() {
           true,
         )}
         returnLabel={returnActualDisplay(
-          (selectedTrip as unknown as { return_date?: string | null } | null)?.return_date,
+          selectedReturnDate,
           actualReturnDay || selectedTrip?.return_day,
           effectiveExtensionNights,
           tripMode,
@@ -1677,8 +1673,6 @@ function StepSeats({
   bus,
   layout,
   remainingSeats,
-  mode,
-  onModeChange,
   genders,
   activeGender,
   onActiveGenderChange,
@@ -1698,8 +1692,6 @@ function StepSeats({
   bus: (Bus & { name?: string | null }) | null;
   layout: LayoutJson | null;
   remainingSeats: number;
-  mode: "manual" | "random";
-  onModeChange: (m: "manual" | "random") => void;
 }) {
   const busLabel = bus?.name || `الحافلة رقم ${bus?.bus_number ?? 1}`;
   return (
@@ -1710,22 +1702,6 @@ function StepSeats({
         <span className="text-primary">{remainingSeats}</span> مقعد متبقٍ
       </div>
 
-      <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
-        <button
-          onClick={() => onModeChange("manual")}
-          className={`rounded-2xl border-2 p-4 transition-all ${mode === "manual" ? "border-primary bg-primary/5" : "border-border"}`}
-        >
-          <MousePointerClick className="h-6 w-6 mx-auto text-primary" />
-          <p className="mt-2 font-bold text-sm">اختيار يدوي</p>
-        </button>
-        <button
-          onClick={() => onModeChange("random")}
-          className={`rounded-2xl border-2 p-4 transition-all ${mode === "random" ? "border-primary bg-primary/5" : "border-border"}`}
-        >
-          <Shuffle className="h-6 w-6 mx-auto text-primary" />
-          <p className="mt-2 font-bold text-sm">اختيار عشوائي</p>
-        </button>
-      </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-4">
         <button
@@ -1794,6 +1770,10 @@ function StepSeats({
           />
         )}
       </div>
+
+      <p className="max-w-md mx-auto mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-xs sm:text-sm font-bold text-amber-800">
+        الرجاء اختيار مقاعد الذكور الذين ليس معهم عوائل في مؤخرة الحافلة
+      </p>
     </div>
   );
 }
@@ -2009,6 +1989,8 @@ function StepConfirm(props: {
   noHotel: boolean;
   pkg: Package | null;
   trip: Trip | null;
+  returnDate?: string | null;
+  actualReturnDay?: string;
   seats: string[];
   customer: { customer_name: string; id_number: string; contact_phone: string; nationality: string };
   bookingSource: string;
@@ -2036,7 +2018,7 @@ function StepConfirm(props: {
       : []),
     ["الرحلة", tripWithDate(props.trip?.name, (props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day)],
     ["الذهاب", departureDisplay((props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day, "—")],
-    ["العودة الفعلية", returnActualDisplay((props.trip as unknown as { return_date?: string | null } | null)?.return_date, props.trip?.return_day, props.extensionNights, undefined, "—")],
+    ["العودة الفعلية", returnActualDisplay(props.returnDate ?? (props.trip as unknown as { return_date?: string | null } | null)?.return_date, props.actualReturnDay || props.trip?.return_day, props.extensionNights, undefined, "—")],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
     ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],
