@@ -528,12 +528,16 @@ function UnifiedBookingsTab(props: {
       // If a trip is selected, prefer buses linked via trip_buses; fall back to
       // legacy buses.trip_id column. When no trip: return all active buses so
       // the admin can filter/report on any bus independently.
+      // Only buses flagged active-for-booking are shown/counted.
+      const COLS =
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number";
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
         let q = supabase
           .from("buses")
-          .select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number")
+          .select(COLS)
+          .eq("is_active_booking", true)
           .order("bus_number");
         if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
@@ -543,11 +547,16 @@ function UnifiedBookingsTab(props: {
         return ((await q).data as UBBusOpt[]) ?? [];
       }
       return (
-        ((await supabase.from("buses").select("id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number").order("bus_number"))
+        ((await supabase.from("buses").select(COLS).eq("is_active_booking", true).order("bus_number"))
           .data as UBBusOpt[]) ?? []
       );
     },
   });
+
+  // Distinct booking sources actually present in the loaded bookings.
+  const sourceOptions: string[] = [
+    ...new Set(bookings.map((b) => (b.booking_source ?? "").trim() || "الموقع")),
+  ].sort((a, z) => a.localeCompare(z, "ar"));
 
   const { data: importHotels = [] } = useQuery({
     queryKey: ["ub-import-hotels"],
