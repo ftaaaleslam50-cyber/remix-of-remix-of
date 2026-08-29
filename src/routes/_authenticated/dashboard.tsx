@@ -61,7 +61,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { returnDisplay, departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
+import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
