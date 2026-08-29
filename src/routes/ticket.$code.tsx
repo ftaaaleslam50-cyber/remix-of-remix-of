@@ -79,7 +79,7 @@ function TicketPage() {
         const { data } = await supabase
           .from("bookings")
           .select(
-            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses(bus_number,name,plate,layout_id)",
+            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id)",
           )
           .eq("booking_code", code)
           .maybeSingle();
