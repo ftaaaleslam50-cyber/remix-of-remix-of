@@ -21,8 +21,6 @@ import {
   X,
   Package as PackageIcon,
   Ticket,
-  Shuffle,
-  MousePointerClick,
   Mars,
   Venus,
 } from "lucide-react";
@@ -38,8 +36,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { BusSeatMap, pickRandomSeats } from "@/components/booking/BusSeatMap";
-import { LayoutSeatMap, pickRandomLayoutSeats, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { BusSeatMap } from "@/components/booking/BusSeatMap";
+import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
@@ -78,7 +76,6 @@ function BookingPage() {
   const [packageId, setPackageId] = useState<string | null>(null);
   const [roomType, setRoomType] = useState<RoomType>("5");
   const [tripId, setTripId] = useState<string | null>(null);
-  const [seatMode, setSeatMode] = useState<"manual" | "random">("manual");
   const [seats, setSeats] = useState<string[]>([]);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
