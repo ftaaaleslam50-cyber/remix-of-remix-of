@@ -1607,6 +1607,13 @@ export type Database = {
           seat_numbers: string[]
         }[]
       }
+      get_bus_seat_genders: {
+        Args: { _bus_id?: string; _exclude_code?: string; _trip_id?: string }
+        Returns: {
+          bus_id: string
+          seat_genders: Json
+        }[]
+      }
       get_coupon_for_ip: {
         Args: { _ip: string }
         Returns: {
