@@ -1729,22 +1729,6 @@ function StepSeats({
         <span className="text-primary">{remainingSeats}</span> مقعد متبقٍ
       </div>
 
-      <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
-        <button
-          onClick={() => onModeChange("manual")}
-          className={`rounded-2xl border-2 p-4 transition-all ${mode === "manual" ? "border-primary bg-primary/5" : "border-border"}`}
-        >
-          <MousePointerClick className="h-6 w-6 mx-auto text-primary" />
-          <p className="mt-2 font-bold text-sm">اختيار يدوي</p>
-        </button>
-        <button
-          onClick={() => onModeChange("random")}
-          className={`rounded-2xl border-2 p-4 transition-all ${mode === "random" ? "border-primary bg-primary/5" : "border-border"}`}
-        >
-          <Shuffle className="h-6 w-6 mx-auto text-primary" />
-          <p className="mt-2 font-bold text-sm">اختيار عشوائي</p>
-        </button>
-      </div>
 
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-4">
         <button
