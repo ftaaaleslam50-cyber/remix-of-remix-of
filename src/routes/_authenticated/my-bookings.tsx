@@ -76,7 +76,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses(name,bus_number),packages(name)")
+        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
         .eq("created_by", uid)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });

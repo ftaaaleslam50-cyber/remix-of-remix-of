@@ -130,7 +130,7 @@ function AdminBookings() {
           deleted_at,
           rep_name,
           trips(name,departure_day),
-          buses(name,bus_number),
+          buses!bookings_bus_id_fkey(name,bus_number),
           packages(name)
         `,
         )
