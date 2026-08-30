@@ -20,12 +20,13 @@ import { sar } from "@/lib/format";
 import { formatReturnOption } from "@/lib/trip-dates";
 import { writeAudit } from "@/lib/audit";
 
-export type TripMode = "round" | "outbound" | "return";
+export type TripMode = "round" | "outbound" | "return" | "round_open";
 
 const TRIP_MODE_LABEL: Record<TripMode, string> = {
   round: "ذهاب وعودة",
   outbound: "ذهاب فقط",
   return: "عودة فقط",
+  round_open: "ذهاب وعودة في رحلة أخرى",
 };
 
 export interface ManualBookingDraft {
@@ -109,6 +110,7 @@ interface BusOpt {
   round_trip_price: number | null;
   outbound_price: number | null;
   return_price: number | null;
+  open_return_price: number | null;
 }
 
 function newCode(): string {
@@ -121,9 +123,15 @@ function busPriceFor(bus: BusOpt | null, mode: TripMode): number {
   const legacy = Number(bus.price_addition ?? 0) || 0;
   const v =
     Number(
-      (mode === "outbound" ? bus.outbound_price : mode === "return" ? bus.return_price : bus.round_trip_price) ?? 0,
+      (mode === "outbound"
+        ? bus.outbound_price
+        : mode === "return"
+          ? bus.return_price
+          : mode === "round_open"
+            ? (Number(bus.open_return_price ?? 0) || bus.round_trip_price)
+            : bus.round_trip_price) ?? 0,
     ) || 0;
-  return v > 0 ? v : mode === "round" ? legacy : v;
+  return v > 0 ? v : mode === "round" || mode === "round_open" ? legacy : v;
 }
 
 export function ManualBookingRow({
@@ -175,7 +183,7 @@ export function ManualBookingRow({
       const base = supabase
         .from("buses")
         .select(
-          "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price",
+          "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price",
         )
         .order("bus_number");
       if (!d.trip_id) return ((await base).data as unknown as BusOpt[]) ?? [];
@@ -226,7 +234,7 @@ export function ManualBookingRow({
         await supabase
           .from("buses")
           .select(
-            "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price",
+            "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price",
           )
           .eq("id", d.bus_id!)
           .maybeSingle()
@@ -528,7 +536,17 @@ export function ManualBookingRow({
             <Field label="الذهاب">
               <Input className={cell} value={selectedTrip?.departure_day ?? "-"} readOnly />
             </Field>
-            {d.trip_mode !== "outbound" && (
+            {d.trip_mode === "round_open" && (
+              <Field label="تاريخ العودة (رحلة أخرى)">
+                <Input
+                  type="date"
+                  className={cell}
+                  value={d.actual_return_day}
+                  onChange={(e) => set("actual_return_day", e.target.value)}
+                />
+              </Field>
+            )}
+            {d.trip_mode !== "outbound" && d.trip_mode !== "round_open" && (
               <Field label="العودة الفعلية">
                 <select className={sel} value={d.actual_return_day} onChange={(e) => set("actual_return_day", e.target.value)}>
                   <option value="">—</option>
