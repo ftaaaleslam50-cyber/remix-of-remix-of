@@ -594,10 +594,41 @@ function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
   );
 }
 
+/** كل تواريخ العودة الموجودة فعليًا في الحجوزات مع عدد الركاب. */
+function useReturnDateIndex() {
+  return useQuery({
+    queryKey: ["return-date-index"],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("actual_return_date,passenger_count,return_bus_id,return_seat_numbers")
+        .is("deleted_at", null)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      const map: Record<string, { pax: number; done: number; count: number }> = {};
+      let unscheduled = 0;
+      for (const b of (data ?? []) as {
+        actual_return_date: string | null; passenger_count: number;
+        return_bus_id: string | null; return_seat_numbers: string[] | null;
+      }[]) {
+        if (!b.actual_return_date) { unscheduled += b.passenger_count || 1; continue; }
+        const e = (map[b.actual_return_date] ??= { pax: 0, done: 0, count: 0 });
+        e.pax += b.passenger_count || 1;
+        e.count += 1;
+        if (b.return_bus_id) e.done += b.return_seat_numbers?.length ?? 0;
+      }
+      return { map, unscheduled };
+    },
+  });
+}
+
 /** تبويب «العودة» داخل إدارة الحجوزات — اختيار تاريخ العودة وعرض ركابها وتوزيعهم. */
 export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   const [date, setDate] = useState(todayIso());
+  const [autoPicked, setAutoPicked] = useState(false);
   const { templates, buses, assignedBuses, bookings } = useReturnData(date);
+  const index = useReturnDateIndex();
 
   const allTrips = useMemo(
     () => (templates.data ?? [])
@@ -607,33 +638,70 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     [templates.data],
   );
 
+  // تواريخ العودة المستخرجة من الحجوزات فعليًا (حتى لو لم تُنشأ لها رحلة عودة)
+  const dateList = useMemo(() => {
+    const today = todayIso();
+    const keys = new Set<string>(Object.keys(index.data?.map ?? {}));
+    for (const t of allTrips) if (t.return_date) keys.add(t.return_date);
+    return Array.from(keys).sort().filter((d) => d >= addDays(today, -30));
+  }, [index.data, allTrips]);
+
+  // أول تاريخ عودة قادم يُختار تلقائيًا بدل «اليوم» الفارغ
+  useEffect(() => {
+    if (autoPicked || dateList.length === 0) return;
+    const today = todayIso();
+    const next = dateList.find((d) => d >= today) ?? dateList[dateList.length - 1];
+    if (next) setDate(next);
+    setAutoPicked(true);
+  }, [dateList, autoPicked]);
+
   const dayTrips = useMemo(
     () => allTrips.filter((t) => (t.return_date ? t.return_date === date : t.weekday === weekdayOf(date))),
     [allTrips, date],
   );
 
+  const rows = bookings.data ?? [];
+  const totalPax = rows.reduce((s, b) => s + (b.passenger_count || 1), 0);
+  const donePax = rows.reduce((s, b) => s + (b.return_bus_id ? b.return_seat_numbers?.length ?? 0 : 0), 0);
+  const tripFor = (d: string) => allTrips.find((t) => t.return_date === d);
+
   return (
     <div className="space-y-4">
-      {/* استعراض رحلات العودة المتاحة والانتقال إليها بضغطة */}
-      <div className="surface-card p-4">
-        <div className="text-sm font-bold mb-2 flex items-center gap-2"><CalendarDays className="h-4 w-4" /> رحلات العودة</div>
-        {allTrips.length === 0 ? (
-          <div className="text-xs text-muted-foreground">لا توجد رحلات عودة — أنشئها من «إدارة الرحلات ← إدارة رحلات العودة».</div>
+      {/* شريط تواريخ العودة الحقيقية مع عدّاداتها */}
+      <div className="surface-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-sm font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> تواريخ العودة</div>
+          <div className="flex gap-2 text-xs">
+            <Badge variant="secondary">إجمالي التواريخ: {dateList.length}</Badge>
+            {(index.data?.unscheduled ?? 0) > 0 && (
+              <Badge className="bg-warning text-white">بلا تاريخ عودة: {index.data?.unscheduled}</Badge>
+            )}
+          </div>
+        </div>
+
+        {index.isLoading ? (
+          <div className="text-xs text-muted-foreground">جارٍ التحميل…</div>
+        ) : dateList.length === 0 ? (
+          <div className="text-xs text-muted-foreground">لا توجد تواريخ عودة — أضف تاريخ عودة للرحلات أو أنشئ رحلة عودة.</div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {allTrips.map((t) => {
-              const on = !!t.return_date && t.return_date === date;
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {dateList.map((d) => {
+              const s = index.data?.map[d];
+              const on = d === date;
+              const t = tripFor(d);
               return (
-                <Button
-                  key={t.id}
-                  size="sm"
-                  variant={on ? "default" : "outline"}
-                  className="rounded-full"
-                  onClick={() => t.return_date && setDate(t.return_date)}
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDate(d)}
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-right transition ${on ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
                 >
-                  {t.name}
-                  {t.return_date ? ` — ${formatTripDate(t.return_date)}` : ""}
-                </Button>
+                  <div className="text-xs font-extrabold text-[color:var(--color-navy)]">{formatTripDate(d)}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {t ? t.name : "بدون رحلة عودة"} • {s?.pax ?? 0} راكب
+                    {s && s.pax > s.done ? ` • ${s.pax - s.done} غير موزع` : ""}
+                  </div>
+                </button>
               );
             })}
           </div>
@@ -642,16 +710,28 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 
       <ReturnDateBar date={date} onChange={setDate} />
 
+      <div className="surface-card p-4 flex flex-wrap gap-2 text-xs">
+        <Badge variant="secondary">حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)</Badge>
+        <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
+        <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
+      </div>
+
+      {bookings.isError && (
+        <div className="surface-card p-4 text-sm text-destructive">
+          تعذّر جلب حجوزات العودة: {(bookings.error as Error)?.message}
+        </div>
+      )}
+
       {dayTrips.length === 0 ? (
         <div className="surface-card p-6 space-y-3">
           <div className="text-sm font-bold">
-            الحجوزات المرتبطة بعودة {formatTripDate(date)}: {(bookings.data ?? []).length}
+            الحجوزات المرتبطة بعودة {formatTripDate(date)}: {rows.length}
           </div>
           <p className="text-xs text-muted-foreground">
             لا توجد رحلة عودة بهذا التاريخ — أنشئها من «إدارة الرحلات ← إدارة رحلات العودة» لتتمكن من التوزيع.
           </p>
           <div className="flex flex-wrap gap-2">
-            {(bookings.data ?? []).map((b) => (
+            {rows.map((b) => (
               <Badge key={b.id} variant="outline">{b.customer_name || b.booking_code} — غير موزع</Badge>
             ))}
           </div>
@@ -664,7 +744,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
             date={date}
             buses={buses.data ?? []}
             assigned={(assignedBuses.data ?? []).filter((x) => x.return_trip_id === t.id)}
-            bookings={bookings.data ?? []}
+            bookings={rows}
             ownerId={ownerId}
           />
         ))
@@ -672,4 +752,5 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     </div>
   );
 }
+
 
