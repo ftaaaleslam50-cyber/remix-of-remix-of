@@ -671,6 +671,7 @@ export type Database = {
           layout_id: string | null
           model: string | null
           name: string | null
+          open_return_price: number
           outbound_price: number
           plate: string | null
           price_addition: number
@@ -701,6 +702,7 @@ export type Database = {
           layout_id?: string | null
           model?: string | null
           name?: string | null
+          open_return_price?: number
           outbound_price?: number
           plate?: string | null
           price_addition?: number
@@ -731,6 +733,7 @@ export type Database = {
           layout_id?: string | null
           model?: string | null
           name?: string | null
+          open_return_price?: number
           outbound_price?: number
           plate?: string | null
           price_addition?: number
