@@ -1529,7 +1529,7 @@ function UnifiedBookingsTab(props: {
                     extension_nights: Number(b.extension_nights ?? 0),
                     trip_id: b.trip_id ?? null,
                     bus_id: b.bus_id ?? null,
-                    trip_mode: ((b.trip_mode ?? "round") as "round" | "outbound" | "return"),
+                    trip_mode: ((b.trip_mode ?? "round") as "round" | "outbound" | "return" | "round_open"),
                     seat_numbers: b.seat_numbers ?? [],
                     actual_return_day: b.actual_return_day ?? "",
                     coupon_code: b.coupon_code ?? "",

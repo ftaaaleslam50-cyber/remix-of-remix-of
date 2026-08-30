@@ -42,7 +42,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
-import { formatReturnOption } from "@/lib/trip-dates";
+import { formatReturnOption, formatTripDate } from "@/lib/trip-dates";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
@@ -163,7 +165,7 @@ function BookingPage() {
       let query = supabase
         .from("buses")
         .select(
-          "id,trip_id,bus_number,name,capacity,active,status,priority,is_active_booking,blocked_seats,layout,layout_id,image_url,bus_type,details,price_addition,round_trip_price,outbound_price,return_price,plate,model,created_at,updated_at",
+          "id,trip_id,bus_number,name,capacity,active,status,priority,is_active_booking,blocked_seats,layout,layout_id,image_url,bus_type,details,price_addition,round_trip_price,outbound_price,return_price,open_return_price,plate,model,created_at,updated_at",
         )
         .in("status", ["active"]);
       if (joinIds.length > 0) {
@@ -557,8 +559,11 @@ function BookingPage() {
         if (noBus) return null;
         if (!tripId) return "يجب اختيار الرحلة أولاً";
         if (!busId) return "يجب اختيار الحافلة للمتابعة";
+        if (tripMode === "round_open" && !/^\d{4}-\d{2}-\d{2}$/.test(actualReturnDay))
+          return "يجب اختيار تاريخ العودة من التقويم";
         const ro = selectedTrip?.return_options ?? [];
-        if (tripMode !== "outbound" && ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
+        if (tripMode !== "outbound" && tripMode !== "round_open" && ro.length > 1 && !actualReturnDay)
+          return "يجب اختيار موعد العودة";
         return null;
       }
       case "المقاعد":
@@ -1430,21 +1435,32 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
 }
 
 /** نوع الرحلة داخل بطاقة الحافلة */
-type TripMode = "round" | "outbound" | "return";
+type TripMode = "round" | "outbound" | "return" | "round_open";
 
 const TRIP_MODE_LABEL: Record<TripMode, string> = {
   round: "ذهاب وعودة",
   outbound: "ذهاب فقط",
   return: "عودة فقط",
+  round_open: "ذهاب وعودة في رحلة أخرى",
 };
 
 /** سعر الحافلة للفرد حسب نوع الرحلة (مع رجوع للسعر القديم عند عدم التعبئة). */
 function busPriceFor(bus: Record<string, unknown> | null, mode: TripMode): number {
   if (!bus) return 0;
   const legacy = Number((bus as { price_addition?: number }).price_addition ?? 0) || 0;
-  const key = mode === "outbound" ? "outbound_price" : mode === "return" ? "return_price" : "round_trip_price";
-  const v = Number((bus as Record<string, number | undefined>)[key] ?? 0) || 0;
-  return v > 0 ? v : mode === "round" ? legacy : v;
+  const key =
+    mode === "outbound"
+      ? "outbound_price"
+      : mode === "return"
+        ? "return_price"
+        : mode === "round_open"
+          ? "open_return_price"
+          : "round_trip_price";
+  const rec = bus as Record<string, number | undefined>;
+  let v = Number(rec[key] ?? 0) || 0;
+  // «ذهاب وعودة في رحلة أخرى» يرجع لسعر الذهاب والعودة عند عدم تعبئته.
+  if (v <= 0 && mode === "round_open") v = Number(rec["round_trip_price"] ?? 0) || 0;
+  return v > 0 ? v : mode === "round" || mode === "round_open" ? legacy : v;
 }
 
 function StepTripBus({
@@ -1593,8 +1609,8 @@ function StepTripBus({
                             <div className="border-t border-border p-3 space-y-3">
                               <div>
                                 <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-2">نوع الرحلة</p>
-                                <div className="grid gap-2 sm:grid-cols-3">
-                                  {(["round", "outbound", "return"] as TripMode[]).map((m) => {
+                                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+                                  {(["round", "outbound", "return", "round_open"] as TripMode[]).map((m) => {
                                     const price = busPriceFor(b as unknown as Record<string, unknown>, m);
                                     const on = tripMode === m;
                                     return (
@@ -1621,7 +1637,50 @@ function StepTripBus({
                                 </div>
                               </div>
 
-                              {hasMultipleReturns && tripMode !== "outbound" && (
+                              {tripMode === "round_open" && (
+                                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
+                                  <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-1">
+                                    اختر تاريخ العودة من التقويم
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mb-2">
+                                    ستعود مع رحلة أخرى — حدد تاريخ عودتك وسيظهر في التذكرة وجميع كشوفات النظام.
+                                  </p>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full justify-start rounded-xl text-right font-bold"
+                                      >
+                                        <Calendar className="h-4 w-4 ml-2" />
+                                        {actualReturnDay && /^\d{4}-\d{2}-\d{2}$/.test(actualReturnDay)
+                                          ? formatTripDate(actualReturnDay)
+                                          : "اختر تاريخ العودة"}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <CalendarPicker
+                                        mode="single"
+                                        selected={
+                                          actualReturnDay && /^\d{4}-\d{2}-\d{2}$/.test(actualReturnDay)
+                                            ? new Date(`${actualReturnDay}T00:00:00`)
+                                            : undefined
+                                        }
+                                        onSelect={(d) => {
+                                          if (!d) return;
+                                          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                                          setActualReturnDay(iso);
+                                        }}
+                                        disabled={(d) => d < new Date(new Date().toDateString())}
+                                        initialFocus
+                                        className="p-3 pointer-events-auto"
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                              )}
+
+                              {hasMultipleReturns && tripMode !== "outbound" && tripMode !== "round_open" && (
                                 <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
                                   <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-1">
                                     اختر موعد العودة

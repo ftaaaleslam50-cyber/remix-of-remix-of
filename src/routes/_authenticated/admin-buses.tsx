@@ -40,6 +40,7 @@ interface BusRow {
   round_trip_price: number;
   outbound_price: number;
   return_price: number;
+  open_return_price: number;
   direction: "outbound" | "return";
 }
 
@@ -220,6 +221,7 @@ function AdminBuses() {
       round_trip_price: b.round_trip_price,
       outbound_price: b.outbound_price,
       return_price: b.return_price,
+      open_return_price: b.open_return_price,
       direction: b.direction ?? "outbound",
       status: "active",
       active: true,
@@ -259,6 +261,7 @@ function AdminBuses() {
       round_trip_price: Number(b.round_trip_price) || 0,
       outbound_price: Number(b.outbound_price) || 0,
       return_price: Number(b.return_price) || 0,
+      open_return_price: Number(b.open_return_price) || 0,
       direction: b.direction === "return" ? "return" : "outbound",
     };
 
@@ -431,6 +434,7 @@ function AdminBuses() {
                   <TableHead>ذهاب وعودة</TableHead>
                   <TableHead>ذهاب فقط</TableHead>
                   <TableHead>عودة فقط</TableHead>
+                  <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
                   <TableHead>صورة</TableHead>
                   <TableHead>اسم السائق</TableHead>
                   <TableHead>جوال السائق</TableHead>
@@ -699,6 +703,15 @@ function BusEditRow({
           className="h-9 w-24"
           value={local.return_price ?? 0}
           onChange={(e) => setLocal({ ...local, return_price: Number(e.target.value) })}
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={local.open_return_price ?? 0}
+          onChange={(e) => setLocal({ ...local, open_return_price: Number(e.target.value) })}
         />
       </TableCell>
 
