@@ -261,6 +261,7 @@ function AdminBuses() {
       round_trip_price: Number(b.round_trip_price) || 0,
       outbound_price: Number(b.outbound_price) || 0,
       return_price: Number(b.return_price) || 0,
+      open_return_price: Number(b.open_return_price) || 0,
       direction: b.direction === "return" ? "return" : "outbound",
     };
 
