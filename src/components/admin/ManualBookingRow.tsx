@@ -380,6 +380,10 @@ export function ManualBookingRow({
       status: d.status,
       notes: d.notes.trim() || null,
       actual_return_day: d.trip_mode === "outbound" ? null : d.actual_return_day || selectedTrip?.return_day || null,
+      // «ذهاب وعودة في رحلة أخرى»: تاريخ العودة المختار من التقويم يسري على كل النظام.
+      ...(d.trip_mode === "round_open" && /^\d{4}-\d{2}-\d{2}$/.test(d.actual_return_day)
+        ? { return_date: d.actual_return_day }
+        : {}),
     };
 
     const linkedRepresentative = reps.find((r) => r.name === d.rep_name.trim() && r.user_id);
