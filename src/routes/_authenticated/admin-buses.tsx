@@ -221,6 +221,7 @@ function AdminBuses() {
       round_trip_price: b.round_trip_price,
       outbound_price: b.outbound_price,
       return_price: b.return_price,
+      open_return_price: b.open_return_price,
       direction: b.direction ?? "outbound",
       status: "active",
       active: true,
