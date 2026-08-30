@@ -42,7 +42,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { getClientIp, getDeviceId } from "@/lib/client-ip";
 import { BRAND } from "@/lib/brand";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
-import { formatReturnOption } from "@/lib/trip-dates";
+import { formatReturnOption, formatTripDate } from "@/lib/trip-dates";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
@@ -1631,6 +1633,49 @@ function StepTripBus({
                                   })}
                                 </div>
                               </div>
+
+                              {tripMode === "round_open" && (
+                                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
+                                  <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-1">
+                                    اختر تاريخ العودة من التقويم
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mb-2">
+                                    ستعود مع رحلة أخرى — حدد تاريخ عودتك وسيظهر في التذكرة وجميع كشوفات النظام.
+                                  </p>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full justify-start rounded-xl text-right font-bold"
+                                      >
+                                        <Calendar className="h-4 w-4 ml-2" />
+                                        {actualReturnDay && /^\d{4}-\d{2}-\d{2}$/.test(actualReturnDay)
+                                          ? formatTripDate(actualReturnDay)
+                                          : "اختر تاريخ العودة"}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <CalendarPicker
+                                        mode="single"
+                                        selected={
+                                          actualReturnDay && /^\d{4}-\d{2}-\d{2}$/.test(actualReturnDay)
+                                            ? new Date(`${actualReturnDay}T00:00:00`)
+                                            : undefined
+                                        }
+                                        onSelect={(d) => {
+                                          if (!d) return;
+                                          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                                          setActualReturnDay(iso);
+                                        }}
+                                        disabled={(d) => d < new Date(new Date().toDateString())}
+                                        initialFocus
+                                        className="p-3 pointer-events-auto"
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                              )}
 
                               {hasMultipleReturns && tripMode !== "outbound" && tripMode !== "round_open" && (
                                 <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
