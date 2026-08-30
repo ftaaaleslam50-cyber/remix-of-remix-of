@@ -26,6 +26,7 @@ interface TripRow {
   departure_date: string | null;
   return_date: string | null;
   auto_advance: boolean;
+  clone_buses_on_advance: boolean;
   recurrence_weeks: number;
   departure_time: string | null;
   return_time: string | null;
@@ -134,7 +135,7 @@ function AdminTrips() {
     const { error } = await supabase.from("trips").update({
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
       departure_date: t.departure_date || null, return_date: t.return_date || null,
-      auto_advance: t.auto_advance, recurrence_weeks: Math.max(1, Number(t.recurrence_weeks) || 1),
+      auto_advance: t.auto_advance, clone_buses_on_advance: !!t.clone_buses_on_advance, recurrence_weeks: Math.max(1, Number(t.recurrence_weeks) || 1),
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
       return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
@@ -259,6 +260,15 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
         <div><Label className="text-xs">تكرار كل (أسابيع)</Label><Input type="number" min={1} value={local.recurrence_weeks ?? 1} onChange={(e) => setLocal({ ...local, recurrence_weeks: Number(e.target.value) })} /></div>
         <div className="flex items-end gap-2">
           <div className="flex items-center gap-2"><Switch checked={local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} /><span className="text-xs">تقدّم تلقائي أسبوعي</span></div>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={!!local.clone_buses_on_advance}
+              onCheckedChange={(v) => setLocal({ ...local, clone_buses_on_advance: v })}
+            />
+            <span className="text-xs">إنشاء حافلة جديدة مع الرحلة الجديدة</span>
+          </div>
         </div>
         <div><Label className="text-xs">يوم المغادرة</Label><Input placeholder="الخميس 15/8" value={local.departure_day} onChange={(e) => setLocal({ ...local, departure_day: e.target.value })} /></div>
         <div><Label className="text-xs">وقت المغادرة</Label><Input type="time" value={local.departure_time ?? ""} onChange={(e) => setLocal({ ...local, departure_time: e.target.value })} /></div>
