@@ -434,6 +434,7 @@ function AdminBuses() {
                   <TableHead>ذهاب وعودة</TableHead>
                   <TableHead>ذهاب فقط</TableHead>
                   <TableHead>عودة فقط</TableHead>
+                  <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
                   <TableHead>صورة</TableHead>
                   <TableHead>اسم السائق</TableHead>
                   <TableHead>جوال السائق</TableHead>
