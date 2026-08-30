@@ -163,7 +163,7 @@ function BookingPage() {
       let query = supabase
         .from("buses")
         .select(
-          "id,trip_id,bus_number,name,capacity,active,status,priority,is_active_booking,blocked_seats,layout,layout_id,image_url,bus_type,details,price_addition,round_trip_price,outbound_price,return_price,plate,model,created_at,updated_at",
+          "id,trip_id,bus_number,name,capacity,active,status,priority,is_active_booking,blocked_seats,layout,layout_id,image_url,bus_type,details,price_addition,round_trip_price,outbound_price,return_price,open_return_price,plate,model,created_at,updated_at",
         )
         .in("status", ["active"]);
       if (joinIds.length > 0) {
@@ -1430,21 +1430,32 @@ function StepRoom({ value, onChange, forced }: { value: RoomType; onChange: (v: 
 }
 
 /** نوع الرحلة داخل بطاقة الحافلة */
-type TripMode = "round" | "outbound" | "return";
+type TripMode = "round" | "outbound" | "return" | "round_open";
 
 const TRIP_MODE_LABEL: Record<TripMode, string> = {
   round: "ذهاب وعودة",
   outbound: "ذهاب فقط",
   return: "عودة فقط",
+  round_open: "ذهاب وعودة في رحلة أخرى",
 };
 
 /** سعر الحافلة للفرد حسب نوع الرحلة (مع رجوع للسعر القديم عند عدم التعبئة). */
 function busPriceFor(bus: Record<string, unknown> | null, mode: TripMode): number {
   if (!bus) return 0;
   const legacy = Number((bus as { price_addition?: number }).price_addition ?? 0) || 0;
-  const key = mode === "outbound" ? "outbound_price" : mode === "return" ? "return_price" : "round_trip_price";
-  const v = Number((bus as Record<string, number | undefined>)[key] ?? 0) || 0;
-  return v > 0 ? v : mode === "round" ? legacy : v;
+  const key =
+    mode === "outbound"
+      ? "outbound_price"
+      : mode === "return"
+        ? "return_price"
+        : mode === "round_open"
+          ? "open_return_price"
+          : "round_trip_price";
+  const rec = bus as Record<string, number | undefined>;
+  let v = Number(rec[key] ?? 0) || 0;
+  // «ذهاب وعودة في رحلة أخرى» يرجع لسعر الذهاب والعودة عند عدم تعبئته.
+  if (v <= 0 && mode === "round_open") v = Number(rec["round_trip_price"] ?? 0) || 0;
+  return v > 0 ? v : mode === "round" || mode === "round_open" ? legacy : v;
 }
 
 function StepTripBus({
@@ -1593,8 +1604,8 @@ function StepTripBus({
                             <div className="border-t border-border p-3 space-y-3">
                               <div>
                                 <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-2">نوع الرحلة</p>
-                                <div className="grid gap-2 sm:grid-cols-3">
-                                  {(["round", "outbound", "return"] as TripMode[]).map((m) => {
+                                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+                                  {(["round", "outbound", "return", "round_open"] as TripMode[]).map((m) => {
                                     const price = busPriceFor(b as unknown as Record<string, unknown>, m);
                                     const on = tripMode === m;
                                     return (
@@ -1621,7 +1632,7 @@ function StepTripBus({
                                 </div>
                               </div>
 
-                              {hasMultipleReturns && tripMode !== "outbound" && (
+                              {hasMultipleReturns && tripMode !== "outbound" && tripMode !== "round_open" && (
                                 <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
                                   <p className="text-xs font-extrabold text-[color:var(--color-navy)] mb-1">
                                     اختر موعد العودة
