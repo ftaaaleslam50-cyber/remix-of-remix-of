@@ -684,7 +684,7 @@ export type Database = {
         Insert: {
           active?: boolean
           blocked_seats?: string[]
-          bus_number: number
+          bus_number?: number
           bus_type?: string | null
           capacity?: number
           created_at?: string
@@ -1569,6 +1569,7 @@ export type Database = {
           active: boolean
           auto_advance: boolean
           capacity: number
+          clone_buses_on_advance: boolean
           created_at: string
           departure_date: string | null
           departure_day: string
@@ -1588,6 +1589,7 @@ export type Database = {
           active?: boolean
           auto_advance?: boolean
           capacity?: number
+          clone_buses_on_advance?: boolean
           created_at?: string
           departure_date?: string | null
           departure_day: string
@@ -1607,6 +1609,7 @@ export type Database = {
           active?: boolean
           auto_advance?: boolean
           capacity?: number
+          clone_buses_on_advance?: boolean
           created_at?: string
           departure_date?: string | null
           departure_day?: string
