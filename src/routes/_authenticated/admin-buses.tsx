@@ -108,11 +108,16 @@ function AdminBuses() {
     enabled: isAdmin === true,
     queryFn: async () => {
       const [{ data: trips }, { data: links }] = await Promise.all([
-        supabase.from("trips").select("id,name"),
+        supabase.from("trips").select("id,name,departure_date"),
         supabase.from("trip_buses").select("trip_id,bus_id"),
       ]);
+      const fmtDate = (d?: string | null) =>
+        d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" }) : "";
       const names: Record<string, string> = {};
-      for (const t of ((trips ?? []) as { id: string; name: string }[])) names[t.id] = t.name;
+      for (const t of ((trips ?? []) as { id: string; name: string; departure_date?: string | null }[])) {
+        const d = fmtDate(t.departure_date);
+        names[t.id] = d ? `${t.name} (${d})` : t.name;
+      }
       const byBus: Record<string, string[]> = {};
       for (const l of ((links ?? []) as { trip_id: string; bus_id: string }[])) {
         const label = names[l.trip_id];
