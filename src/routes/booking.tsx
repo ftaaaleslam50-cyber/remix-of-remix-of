@@ -559,8 +559,11 @@ function BookingPage() {
         if (noBus) return null;
         if (!tripId) return "يجب اختيار الرحلة أولاً";
         if (!busId) return "يجب اختيار الحافلة للمتابعة";
+        if (tripMode === "round_open" && !/^\d{4}-\d{2}-\d{2}$/.test(actualReturnDay))
+          return "يجب اختيار تاريخ العودة من التقويم";
         const ro = selectedTrip?.return_options ?? [];
-        if (tripMode !== "outbound" && ro.length > 1 && !actualReturnDay) return "يجب اختيار موعد العودة";
+        if (tripMode !== "outbound" && tripMode !== "round_open" && ro.length > 1 && !actualReturnDay)
+          return "يجب اختيار موعد العودة";
         return null;
       }
       case "المقاعد":
