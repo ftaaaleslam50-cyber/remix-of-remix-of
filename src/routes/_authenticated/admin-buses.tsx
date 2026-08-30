@@ -103,6 +103,26 @@ function AdminBuses() {
     },
   });
 
+  const { data: tripsIndex = { names: {}, byBus: {} } } = useQuery({
+    queryKey: ["admin-buses-trips-index"],
+    enabled: isAdmin === true,
+    queryFn: async () => {
+      const [{ data: trips }, { data: links }] = await Promise.all([
+        supabase.from("trips").select("id,name"),
+        supabase.from("trip_buses").select("trip_id,bus_id"),
+      ]);
+      const names: Record<string, string> = {};
+      for (const t of ((trips ?? []) as { id: string; name: string }[])) names[t.id] = t.name;
+      const byBus: Record<string, string[]> = {};
+      for (const l of ((links ?? []) as { trip_id: string; bus_id: string }[])) {
+        const label = names[l.trip_id];
+        if (!label) continue;
+        (byBus[l.bus_id] ??= []).push(label);
+      }
+      return { names, byBus };
+    },
+  });
+
   const { data: layouts = [] } = useQuery({
     queryKey: ["bus-layouts"],
     enabled: isAdmin === true,
@@ -155,12 +175,10 @@ function AdminBuses() {
   });
 
   async function addBus() {
-    const next = buses.reduce((m, b) => Math.max(m, b.bus_number), 0) + 1;
-
     const { error } = await supabase.from("buses").insert({
-      bus_number: next,
+      bus_number: 0,
       capacity: 49,
-      name: `حافلة ${next}`,
+      name: "حافلة جديدة",
       layout: "A",
       status: "active",
       active: true,
@@ -179,11 +197,9 @@ function AdminBuses() {
   }
 
   async function duplicateBus(b: BusRow) {
-    const next = buses.reduce((m, x) => Math.max(m, x.bus_number), 0) + 1;
-
     const { error } = await supabase.from("buses").insert({
-      bus_number: next,
-      name: b.name ? `${b.name} (نسخة)` : `حافلة ${next}`,
+      bus_number: b.bus_number ?? 0,
+      name: b.name ? `${b.name} (نسخة)` : "حافلة (نسخة)",
       plate: null,
       model: b.model,
       bus_type: b.bus_type,
@@ -219,7 +235,7 @@ function AdminBuses() {
 
   async function save(b: BusRow) {
     const patch: Record<string, unknown> = {
-      bus_number: Number(b.bus_number) || 1,
+      bus_number: Number(b.bus_number) || 0,
       name: b.name,
       plate: b.plate,
       model: b.model,
@@ -378,7 +394,15 @@ function AdminBuses() {
           { key: "outbound", title: "حافلات الذهاب" },
           { key: "return", title: "حافلات العودة" },
         ] as const).map((group) => {
-          const list = buses.filter((b) => (b.direction ?? "outbound") === group.key);
+          const STATUS_RANK: Record<string, number> = { active: 0, maintenance: 1, stopped: 2 };
+          const list = buses
+            .filter((b) => (b.direction ?? "outbound") === group.key)
+            .slice()
+            .sort(
+              (a, b) =>
+                (STATUS_RANK[a.status] ?? 3) - (STATUS_RANK[b.status] ?? 3) ||
+                (a.bus_number ?? 0) - (b.bus_number ?? 0),
+            );
           return (
         <div className="surface-card p-6" key={group.key}>
           <div className="flex items-center justify-between mb-4">
@@ -391,6 +415,7 @@ function AdminBuses() {
                 <TableRow>
                   <TableHead>رقم الحافلة</TableHead>
                   <TableHead>الاسم</TableHead>
+                  <TableHead>الرحلة المرتبطة</TableHead>
                   <TableHead>اللوحة</TableHead>
                   <TableHead>الطراز</TableHead>
                   <TableHead>النوع</TableHead>
@@ -413,7 +438,7 @@ function AdminBuses() {
               <TableBody>
                 {list.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={18} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={19} className="text-center py-10 text-muted-foreground">
                       لا توجد حافلات
                     </TableCell>
                   </TableRow>
@@ -424,6 +449,12 @@ function AdminBuses() {
                     key={b.id}
                     bus={b}
                     used={bookingCounts[b.id] ?? 0}
+                    tripLabels={[
+                      ...(tripsIndex.byBus[b.id] ?? []),
+                      ...(b.trip_id && tripsIndex.names[b.trip_id] && !(tripsIndex.byBus[b.id] ?? []).includes(tripsIndex.names[b.trip_id])
+                        ? [tripsIndex.names[b.trip_id]]
+                        : []),
+                    ]}
                     layouts={layouts}
                     onSave={save}
                     onDelete={() => del(b.id)}
@@ -460,6 +491,7 @@ function AdminBuses() {
 function BusEditRow({
   bus,
   used,
+  tripLabels,
   layouts,
   onSave,
   onDelete,
@@ -468,6 +500,7 @@ function BusEditRow({
 }: {
   bus: BusRow;
   used: number;
+  tripLabels: string[];
   layouts: LayoutRow[];
   onSave: (b: BusRow) => void;
   onDelete: () => void;
@@ -486,14 +519,13 @@ function BusEditRow({
     <TableRow>
       <TableCell>
         <Input
-          type="number"
-          min={1}
+          inputMode="numeric"
           className="h-9 w-20"
-          value={local.bus_number ?? ""}
+          value={String(local.bus_number ?? 0)}
           onChange={(e) =>
             setLocal({
               ...local,
-              bus_number: Number(e.target.value) || 0,
+              bus_number: Number(e.target.value.replace(/\D/g, "")) || 0,
             })
           }
         />
@@ -510,6 +542,20 @@ function BusEditRow({
             })
           }
         />
+      </TableCell>
+
+      <TableCell>
+        {tripLabels.length ? (
+          <div className="flex flex-col gap-1 max-w-[160px]">
+            {tripLabels.map((label) => (
+              <span key={label} className="text-xs font-bold text-[color:var(--color-navy)] truncate">
+                {label}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">غير مرتبطة</span>
+        )}
       </TableCell>
 
       <TableCell>

@@ -26,22 +26,24 @@ export function subscribeAuthState(subscriber: (next: AuthSnapshot) => void) {
 }
 
 /** Initializes one shared auth listener and resolves the persisted session once. */
-export function ensureAuthInitialized(): Promise<AuthSnapshot> {
-  if (initialization) return initialization;
+export async function ensureAuthInitialized(): Promise<AuthSnapshot> {
+  if (!initialization) {
+    initialization = (async () => {
+      supabase.auth.onAuthStateChange((_event, session) => {
+        revision += 1;
+        publish({ session, loading: false });
+      });
 
-  initialization = (async () => {
-    supabase.auth.onAuthStateChange((_event, session) => {
-      revision += 1;
-      publish({ session, loading: false });
-    });
+      const startedAtRevision = revision;
+      const { data, error } = await supabase.auth.getSession();
+      if (startedAtRevision === revision) {
+        publish({ session: error ? null : data.session, loading: false });
+      }
+      return snapshot;
+    })();
+  }
 
-    const startedAtRevision = revision;
-    const { data, error } = await supabase.auth.getSession();
-    if (startedAtRevision === revision) {
-      publish({ session: error ? null : data.session, loading: false });
-    }
-    return snapshot;
-  })();
-
-  return initialization;
+  await initialization;
+  // Always return the latest snapshot (the memoized promise resolves only once).
+  return snapshot;
 }
