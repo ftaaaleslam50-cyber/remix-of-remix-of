@@ -707,6 +707,15 @@ function BusEditRow({
       </TableCell>
 
       <TableCell>
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={local.open_return_price ?? 0}
+          onChange={(e) => setLocal({ ...local, open_return_price: Number(e.target.value) })}
+        />
+      </TableCell>
+
+      <TableCell>
         <AssetField
           compact
           value={local.image_url}
