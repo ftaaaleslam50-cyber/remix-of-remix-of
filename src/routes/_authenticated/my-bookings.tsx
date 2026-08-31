@@ -54,6 +54,8 @@ function MyBookingsPage() {
   const [isRep, setIsRep] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);
+  const [search, setSearch] = useState("");
+
 
   useEffect(() => {
     (async () => {
