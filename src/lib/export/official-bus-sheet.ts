@@ -549,21 +549,27 @@ export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | 
 </style></head><body>
 <table class="head"><colgroup>${colgroup}</colgroup><tbody>${headerHtml}</tbody></table>
 
-<table class="main"><colgroup>${colgroup}</colgroup>
-  <thead><tr>${TABLE_COLUMNS.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+<table class="main"><colgroup>${mainColgroup}</colgroup>
+  <thead><tr>${keep.map((i) => `<th>${esc(TABLE_COLUMNS[i])}</th>`).join("")}</tr></thead>
   <tbody>
     ${input.rows
-      .map((r, i) => `<tr>${rowValues(r, i).map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`)
+      .map((r, i) => {
+        const vals = rowValues(r, i);
+        return `<tr>${keep.map((ci) => `<td>${esc(vals[ci])}</td>`).join("")}</tr>`;
+      })
       .join("")}
   </tbody>
-  <tfoot><tr>
-    <td>الإجمالي</td><td></td><td></td><td></td><td></td>
-    <td>${sum((r) => r.count)}</td><td></td><td></td><td></td><td></td>
-    <td>${sum((r) => r.packageTotal ?? 0)}</td><td></td>
-    <td>${sum((r) => r.extensionTotal ?? 0)}</td>
-    <td>${sum(rowTotal)}</td><td></td>
-  </tr></tfoot>
+  <tfoot><tr>${(() => {
+    const f: Array<string | number> = new Array(TABLE_COLUMNS.length).fill("");
+    f[0] = "الإجمالي";
+    f[5] = sum((r) => r.count);
+    f[10] = sum((r) => r.packageTotal ?? 0);
+    f[12] = sum((r) => r.extensionTotal ?? 0);
+    f[13] = sum(rowTotal);
+    return keep.map((ci) => `<td>${esc(f[ci])}</td>`).join("");
+  })()}</tr></tfoot>
 </table>
+
 <script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350);}</script>
 </body></html>`;
 
