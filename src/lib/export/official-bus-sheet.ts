@@ -419,14 +419,20 @@ function headerGrid(cells: GridCell[], rows: number, cols: number): string {
   return html;
 }
 
-export function printOfficialSheet(input: OfficialSheetInput): boolean {
+/** Columns hidden in the "كشف التفويج" variant: rep + all money columns. */
+const TAFWEEJ_HIDDEN = new Set([1, 10, 12, 13]);
+
+export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | "tafweej" = "full"): boolean {
   const C = SHEET_COLORS;
   const h = input.header;
   const { hotels, matrix } = roomsMatrix(input.rows);
   const rc = returnCounts(input.rows).slice(0, 2);
   const sum = (pick: (r: OfficialSheetRow) => number) => input.rows.reduce((s, r) => s + (pick(r) || 0), 0);
+  const hidden = variant === "tafweej" ? TAFWEEJ_HIDDEN : new Set<number>();
+  const keep = TABLE_COLUMNS.map((_, i) => i).filter((i) => !hidden.has(i));
 
   const COLS = TABLE_COLUMNS.length; // 15
+
   const cells: GridCell[] = [
     { r: 1, c: 1, rs: 6, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
     { r: 1, c: 3, cs: 2, v: "ذهاب", cls: "cream red", style: "font-size:17px" },
