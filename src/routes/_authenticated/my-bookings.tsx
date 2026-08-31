@@ -200,7 +200,15 @@ function MyBookingsPage() {
           </div>
         )}
 
-
+        <div className="relative mb-5">
+          <Search className="h-4 w-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث بالاسم أو جزء منه، أو برقم الحجز/الجوال"
+            className="pr-9 rounded-xl h-11"
+          />
+        </div>
 
         {isLoading ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
@@ -210,9 +218,18 @@ function MyBookingsPage() {
             <p className="mt-4 font-semibold text-lg">لا توجد لديك حجوزات بعد.</p>
             <Link to="/booking"><Button className="mt-6 h-14 px-8 text-lg btn-primary-glow rounded-xl">ابدأ الحجز</Button></Link>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="surface-card p-10 text-center text-muted-foreground">لا توجد نتائج مطابقة للبحث.</div>
         ) : (
-          <div className="grid gap-4">
-            {sorted.map((b) => {
+          <div className="space-y-8">
+            {groups.map((g) => (
+              <section key={g.title}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="font-extrabold text-lg">{g.title}</h2>
+                  <Badge variant="secondary" className="rounded-full">{g.items.length}</Badge>
+                </div>
+                <div className="grid gap-4">
+            {g.items.map((b) => {
               const eff = effectiveStatus(b);
               const canModify = eff === "active";
               const cardStyle =
@@ -233,8 +250,9 @@ function MyBookingsPage() {
                         {b.no_hotel && <Badge variant="outline">بدون فندق</Badge>}
                         {b.no_bus && <Badge variant="outline">بدون حافلة</Badge>}
                       </div>
-                      <p className="mt-2 flex items-center gap-2 font-bold text-base">
-                        <User className="h-4 w-4 text-primary" /> {b.customer_name || "—"}
+                      <p className="mt-2 flex items-start gap-2 font-bold text-base">
+                        <User className="h-4 w-4 text-primary shrink-0 mt-1" />
+                        <span className="break-words whitespace-normal">{b.customer_name || "—"}</span>
                       </p>
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
@@ -268,8 +286,12 @@ function MyBookingsPage() {
                 </div>
               );
             })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
+
       </div>
 
       <Dialog open={!!details} onOpenChange={(o) => !o && setDetails(null)}>
