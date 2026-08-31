@@ -36,7 +36,7 @@ export function useSheetLogo() {
   });
 }
 
-type Job = "excel" | "pdf" | "raw-excel" | "raw-pdf";
+type Job = "excel" | "pdf" | "raw-excel" | "raw-pdf" | "tafweej-pdf";
 
 /** النموذج الرسمي الوحيد لكشف الرحلة — 4 خيارات تصدير. */
 export function ExportSheetDialog(props: {
