@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/my-bookings")({
 });
 
 interface MyBooking {
-  id: string; booking_code: string; status: string; created_at: string;
+  id: string; booking_code: string; status: string; created_at: string; no_show?: boolean | null;
   customer_name: string | null; passenger_count: number; total_price: number;
   trip_id: string | null; bus_id: string | null; no_hotel: boolean; no_bus: boolean;
   seat_numbers: string[] | null;
@@ -42,7 +42,8 @@ function isPast(dateStr?: string | null) {
   return d.getTime() < Date.now();
 }
 
-function effectiveStatus(b: MyBooking): "cancelled" | "completed" | "active" {
+function effectiveStatus(b: MyBooking): "no_show" | "cancelled" | "completed" | "active" {
+  if (b.no_show) return "no_show";
   if (b.status === "cancelled") return "cancelled";
   if (isPast(b.trips?.departure_day)) return "completed";
   return "active";
@@ -79,9 +80,9 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
         .eq("created_by", uid)
-        .is("deleted_at", null)
+        .or("deleted_at.is.null,no_show.is.true")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as MyBooking[];
@@ -89,7 +90,7 @@ function MyBookingsPage() {
   });
 
   const sorted = useMemo(() => {
-    const order = { active: 0, completed: 1, cancelled: 2 } as const;
+    const order = { active: 0, completed: 1, no_show: 2, cancelled: 3 } as const;
     return [...bookings].sort((a, b) => {
       const sa = effectiveStatus(a), sb = effectiveStatus(b);
       if (order[sa] !== order[sb]) return order[sa] - order[sb];
@@ -234,10 +235,12 @@ function MyBookingsPage() {
               const eff = effectiveStatus(b);
               const canModify = eff === "active";
               const cardStyle =
+                eff === "no_show" ? "bg-red-50 border-red-300 dark:bg-red-950/30 dark:border-red-800" :
                 eff === "cancelled" ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900" :
                 eff === "completed" ? "bg-gray-50 border-gray-200 dark:bg-gray-900/40 dark:border-gray-800 opacity-90" :
                 "";
               const badge =
+                eff === "no_show" ? { cls: "bg-red-600 text-white", label: "❌ لم يحضر" } :
                 eff === "cancelled" ? { cls: "bg-red-500 text-white", label: "ملغي" } :
                 eff === "completed" ? { cls: "bg-gray-500 text-white", label: "مكتمل" } :
                 { cls: "bg-green-600 text-white", label: "نشط" };
@@ -300,7 +303,7 @@ function MyBookingsPage() {
           <DialogHeader><DialogTitle>تفاصيل الحجز</DialogTitle></DialogHeader>
           {details && (() => {
             const eff = effectiveStatus(details);
-            const badge = eff === "cancelled" ? "ملغي" : eff === "completed" ? "مكتمل" : "نشط";
+            const badge = eff === "no_show" ? "لم يحضر" : eff === "cancelled" ? "ملغي" : eff === "completed" ? "مكتمل" : "نشط";
             const rows: [string, React.ReactNode][] = [
               ["رقم الحجز", <span className="font-mono">{details.booking_code}</span>],
               ["تاريخ الحجز", new Date(details.created_at).toLocaleDateString("ar")],
