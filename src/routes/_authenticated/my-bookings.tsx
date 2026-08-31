@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User, PlusCircle } from "lucide-react";
+import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User, PlusCircle, Search } from "lucide-react";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,8 @@ function MyBookingsPage() {
   const [isRep, setIsRep] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);
+  const [search, setSearch] = useState("");
+
 
   useEffect(() => {
     (async () => {
@@ -93,6 +96,59 @@ function MyBookingsPage() {
       return (b.trips?.departure_day || "").localeCompare(a.trips?.departure_day || "");
     });
   }, [bookings]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((b) =>
+      (b.customer_name || "").toLowerCase().includes(q) ||
+      (b.booking_code || "").toLowerCase().includes(q) ||
+      (b.contact_phone || "").includes(q)
+    );
+  }, [sorted, search]);
+
+  const groups = useMemo(() => {
+    const startOfWeek = (d: Date) => {
+      const x = new Date(d); x.setHours(0, 0, 0, 0);
+      x.setDate(x.getDate() - x.getDay()); // الأحد
+      return x;
+    };
+    const thisWeekStart = startOfWeek(new Date()).getTime();
+    const lastWeekStart = thisWeekStart - 7 * 86400000;
+
+    const refTime = (b: MyBooking) => {
+      const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
+      const t = new Date(s as string).getTime();
+      return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
+    };
+    const tripLabel = (b: MyBooking) =>
+      b.trips ? tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day) : "بدون رحلة";
+
+    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
+    for (const b of filtered) {
+      const t = refTime(b);
+      if (t >= thisWeekStart) buckets.current.push(b);
+      else if (t >= lastWeekStart) buckets.last.push(b);
+      else buckets.older.push(b);
+    }
+
+    const out: { title: string; items: MyBooking[] }[] = [];
+    const push = (title: string, items: MyBooking[], forceByTrip = false) => {
+      if (!items.length) return;
+      if (!forceByTrip && items.length < 10) { out.push({ title, items }); return; }
+      const byTrip = new Map<string, MyBooking[]>();
+      for (const b of items) {
+        const k = String(tripLabel(b));
+        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
+      }
+      for (const [k, v] of byTrip) out.push({ title: `${title} — ${k}`, items: v });
+    };
+    push("حجوزات الأسبوع الحالي", buckets.current);
+    push("حجوزات الأسبوع الماضي", buckets.last);
+    push("حجوزات سابقة", buckets.older, true);
+    return out;
+  }, [filtered]);
+
 
   async function deleteBooking(b: MyBooking) {
     const blocked = await bookingBlockedMessage();
@@ -145,7 +201,15 @@ function MyBookingsPage() {
           </div>
         )}
 
-
+        <div className="relative mb-5">
+          <Search className="h-4 w-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث بالاسم أو جزء منه، أو برقم الحجز/الجوال"
+            className="pr-9 rounded-xl h-11"
+          />
+        </div>
 
         {isLoading ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
@@ -155,9 +219,18 @@ function MyBookingsPage() {
             <p className="mt-4 font-semibold text-lg">لا توجد لديك حجوزات بعد.</p>
             <Link to="/booking"><Button className="mt-6 h-14 px-8 text-lg btn-primary-glow rounded-xl">ابدأ الحجز</Button></Link>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="surface-card p-10 text-center text-muted-foreground">لا توجد نتائج مطابقة للبحث.</div>
         ) : (
-          <div className="grid gap-4">
-            {sorted.map((b) => {
+          <div className="space-y-8">
+            {groups.map((g) => (
+              <section key={g.title}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="font-extrabold text-lg">{g.title}</h2>
+                  <Badge variant="secondary" className="rounded-full">{g.items.length}</Badge>
+                </div>
+                <div className="grid gap-4">
+            {g.items.map((b) => {
               const eff = effectiveStatus(b);
               const canModify = eff === "active";
               const cardStyle =
@@ -178,8 +251,9 @@ function MyBookingsPage() {
                         {b.no_hotel && <Badge variant="outline">بدون فندق</Badge>}
                         {b.no_bus && <Badge variant="outline">بدون حافلة</Badge>}
                       </div>
-                      <p className="mt-2 flex items-center gap-2 font-bold text-base">
-                        <User className="h-4 w-4 text-primary" /> {b.customer_name || "—"}
+                      <p className="mt-2 flex items-start gap-2 font-bold text-base">
+                        <User className="h-4 w-4 text-primary shrink-0 mt-1" />
+                        <span className="break-words whitespace-normal">{b.customer_name || "—"}</span>
                       </p>
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
@@ -213,8 +287,12 @@ function MyBookingsPage() {
                 </div>
               );
             })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
+
       </div>
 
       <Dialog open={!!details} onOpenChange={(o) => !o && setDetails(null)}>
