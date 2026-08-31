@@ -36,7 +36,7 @@ export function useSheetLogo() {
   });
 }
 
-type Job = "excel" | "pdf" | "raw-excel" | "raw-pdf";
+type Job = "excel" | "pdf" | "raw-excel" | "raw-pdf" | "tafweej-pdf";
 
 /** النموذج الرسمي الوحيد لكشف الرحلة — 4 خيارات تصدير. */
 export function ExportSheetDialog(props: {
@@ -60,9 +60,15 @@ export function ExportSheetDialog(props: {
         downloadBlob(await buildRawWorkbook(input), `${d.filename}-raw.xlsx`);
         toast.success("تم تنزيل Excel خام");
       } else {
-        const ok = job === "pdf" ? printOfficialSheet(input) : printRawSheet(input);
+        const ok =
+          job === "pdf"
+            ? printOfficialSheet(input)
+            : job === "tafweej-pdf"
+              ? printOfficialSheet({ ...input, title: d.title.replace("كشف رحلة", "كشف التفويج") }, "tafweej")
+              : printRawSheet(input);
         if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
       }
+
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر التصدير");
     } finally {
@@ -136,7 +142,23 @@ export function ExportSheetDialog(props: {
               <Icon job="raw-pdf" /> تنزيل PDF خام
             </Button>
           </div>
+
+          <div className="rounded-2xl border p-4 sm:p-5 flex flex-col items-center text-center gap-2 sm:col-span-2">
+            <FileText className="h-10 w-10 text-primary" />
+            <p className="font-extrabold">كشف التفويج PDF</p>
+            <p className="text-xs text-muted-foreground">
+              نفس قالب كشف الرحلة لكن بدون عمود المندوب وبدون أي بيانات مالية (إجمالي الباقة والتمديد والإجمالي).
+            </p>
+            <Button
+              onClick={() => run("tafweej-pdf")}
+              disabled={busy !== null}
+              className="rounded-full mt-1 w-full"
+            >
+              <Icon job="tafweej-pdf" /> كشف التفويج PDF
+            </Button>
+          </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );

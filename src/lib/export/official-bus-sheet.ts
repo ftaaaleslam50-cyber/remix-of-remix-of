@@ -419,14 +419,20 @@ function headerGrid(cells: GridCell[], rows: number, cols: number): string {
   return html;
 }
 
-export function printOfficialSheet(input: OfficialSheetInput): boolean {
+/** Columns hidden in the "كشف التفويج" variant: rep + all money columns. */
+const TAFWEEJ_HIDDEN = new Set([1, 10, 12, 13]);
+
+export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | "tafweej" = "full"): boolean {
   const C = SHEET_COLORS;
   const h = input.header;
   const { hotels, matrix } = roomsMatrix(input.rows);
   const rc = returnCounts(input.rows).slice(0, 2);
   const sum = (pick: (r: OfficialSheetRow) => number) => input.rows.reduce((s, r) => s + (pick(r) || 0), 0);
+  const hidden = variant === "tafweej" ? TAFWEEJ_HIDDEN : new Set<number>();
+  const keep = TABLE_COLUMNS.map((_, i) => i).filter((i) => !hidden.has(i));
 
   const COLS = TABLE_COLUMNS.length; // 15
+
   const cells: GridCell[] = [
     { r: 1, c: 1, rs: 6, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
     { r: 1, c: 3, cs: 2, v: "ذهاب", cls: "cream red", style: "font-size:17px" },
@@ -507,9 +513,14 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
   const headerHtml = headerGrid(cells, 10, COLS);
   const totalW = COL_WIDTHS.reduce((a, b) => a + b, 0);
   const colgroup = COL_WIDTHS.map((w) => `<col style="width:${((w / totalW) * 100).toFixed(2)}%">`).join("");
+  const keptW = keep.reduce((a, i) => a + COL_WIDTHS[i], 0);
+  const mainColgroup = keep
+    .map((i) => `<col style="width:${((COL_WIDTHS[i] / keptW) * 100).toFixed(2)}%">`)
+    .join("");
 
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<title>${esc(input.title ?? "كشف رحله")}</title>
+<title>${esc(input.title ?? (variant === "tafweej" ? "كشف التفويج" : "كشف رحله"))}</title>
+
 <style>
   @page { size: A4 landscape; margin: 6mm; }
   html, body { width: 285mm; }
@@ -538,21 +549,27 @@ export function printOfficialSheet(input: OfficialSheetInput): boolean {
 </style></head><body>
 <table class="head"><colgroup>${colgroup}</colgroup><tbody>${headerHtml}</tbody></table>
 
-<table class="main"><colgroup>${colgroup}</colgroup>
-  <thead><tr>${TABLE_COLUMNS.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+<table class="main"><colgroup>${mainColgroup}</colgroup>
+  <thead><tr>${keep.map((i) => `<th>${esc(TABLE_COLUMNS[i])}</th>`).join("")}</tr></thead>
   <tbody>
     ${input.rows
-      .map((r, i) => `<tr>${rowValues(r, i).map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`)
+      .map((r, i) => {
+        const vals = rowValues(r, i);
+        return `<tr>${keep.map((ci) => `<td>${esc(vals[ci])}</td>`).join("")}</tr>`;
+      })
       .join("")}
   </tbody>
-  <tfoot><tr>
-    <td>الإجمالي</td><td></td><td></td><td></td><td></td>
-    <td>${sum((r) => r.count)}</td><td></td><td></td><td></td><td></td>
-    <td>${sum((r) => r.packageTotal ?? 0)}</td><td></td>
-    <td>${sum((r) => r.extensionTotal ?? 0)}</td>
-    <td>${sum(rowTotal)}</td><td></td>
-  </tr></tfoot>
+  <tfoot><tr>${(() => {
+    const f: Array<string | number> = new Array(TABLE_COLUMNS.length).fill("");
+    f[0] = "الإجمالي";
+    f[5] = sum((r) => r.count);
+    f[10] = sum((r) => r.packageTotal ?? 0);
+    f[12] = sum((r) => r.extensionTotal ?? 0);
+    f[13] = sum(rowTotal);
+    return keep.map((ci) => `<td>${esc(f[ci])}</td>`).join("");
+  })()}</tr></tfoot>
 </table>
+
 <script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350);}</script>
 </body></html>`;
 
