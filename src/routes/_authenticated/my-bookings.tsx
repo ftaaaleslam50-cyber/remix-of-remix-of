@@ -94,6 +94,59 @@ function MyBookingsPage() {
     });
   }, [bookings]);
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((b) =>
+      (b.customer_name || "").toLowerCase().includes(q) ||
+      (b.booking_code || "").toLowerCase().includes(q) ||
+      (b.contact_phone || "").includes(q)
+    );
+  }, [sorted, search]);
+
+  const groups = useMemo(() => {
+    const startOfWeek = (d: Date) => {
+      const x = new Date(d); x.setHours(0, 0, 0, 0);
+      x.setDate(x.getDate() - x.getDay()); // الأحد
+      return x;
+    };
+    const thisWeekStart = startOfWeek(new Date()).getTime();
+    const lastWeekStart = thisWeekStart - 7 * 86400000;
+
+    const refTime = (b: MyBooking) => {
+      const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
+      const t = new Date(s as string).getTime();
+      return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
+    };
+    const tripLabel = (b: MyBooking) =>
+      b.trips ? tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day) : "بدون رحلة";
+
+    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
+    for (const b of filtered) {
+      const t = refTime(b);
+      if (t >= thisWeekStart) buckets.current.push(b);
+      else if (t >= lastWeekStart) buckets.last.push(b);
+      else buckets.older.push(b);
+    }
+
+    const out: { title: string; items: MyBooking[] }[] = [];
+    const push = (title: string, items: MyBooking[], forceByTrip = false) => {
+      if (!items.length) return;
+      if (!forceByTrip && items.length < 10) { out.push({ title, items }); return; }
+      const byTrip = new Map<string, MyBooking[]>();
+      for (const b of items) {
+        const k = String(tripLabel(b));
+        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
+      }
+      for (const [k, v] of byTrip) out.push({ title: `${title} — ${k}`, items: v });
+    };
+    push("حجوزات الأسبوع الحالي", buckets.current);
+    push("حجوزات الأسبوع الماضي", buckets.last);
+    push("حجوزات سابقة", buckets.older, true);
+    return out;
+  }, [filtered]);
+
+
   async function deleteBooking(b: MyBooking) {
     const blocked = await bookingBlockedMessage();
     if (blocked) return toast.error(blocked);
