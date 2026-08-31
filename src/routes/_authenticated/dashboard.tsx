@@ -19,6 +19,7 @@ import {
   Trash2,
   Plus,
   Archive,
+  UserX,
   RotateCcw,
   IdCard,
   MessageCircle,
@@ -95,6 +96,7 @@ interface BookingRow {
   discount_amount?: number;
   coupon_code?: string | null;
   deleted_at?: string | null;
+  no_show?: boolean | null;
   notes?: string | null;
   actual_return_day?: string | null;
   nationality?: string | null;
@@ -163,7 +165,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -195,6 +197,22 @@ function Dashboard() {
     toast.success("تم الاسترجاع والتفعيل");
     qc.invalidateQueries({ queryKey: ["admin-bookings"] });
   }
+  async function markNoShow(b: BookingRow) {
+    const next = !b.no_show;
+    if (next && !confirm(`تسجيل "لم يحضر" للحجز ${b.booking_code}؟ سيتم أرشفته واستبعاده من العدادات والكشوفات والعودات.`)) return;
+    const { error } = await supabase
+      .from("bookings")
+      .update(
+        next
+          ? { no_show: true, no_show_at: new Date().toISOString(), status: "cancelled", deleted_at: new Date().toISOString() }
+          : { no_show: false, no_show_at: null, status: "confirmed", deleted_at: null },
+      )
+      .eq("id", b.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ? "تم تسجيل: لم يحضر" : "تم التراجع عن: لم يحضر");
+    qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+  }
+
   async function setBookingStatus(id: string, status: string) {
     const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
@@ -417,6 +435,7 @@ function Dashboard() {
               archiveBooking={archiveBooking}
               restoreBooking={restoreBooking}
               permanentDelete={permanentDelete}
+              markNoShow={markNoShow}
               setBookingStatus={setBookingStatus}
 
               downloadIdImage={downloadIdImage}
@@ -501,6 +520,7 @@ function UnifiedBookingsTab(props: {
   archiveBooking: (id: string) => void;
   restoreBooking: (id: string) => void;
   permanentDelete: (id: string) => void;
+  markNoShow: (b: BookingRow) => void;
   setBookingStatus: (id: string, status: string) => void;
   downloadIdImage: (b: BookingRow) => void;
 }) {
@@ -512,6 +532,7 @@ function UnifiedBookingsTab(props: {
     archiveBooking,
     restoreBooking,
     permanentDelete,
+    markNoShow,
     setBookingStatus,
     downloadIdImage,
 
@@ -1563,7 +1584,11 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
                 <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
                 <TableCell>
-                  <Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge>
+                  {b.no_show ? (
+                    <Badge variant="destructive" className="gap-1"><UserX className="h-3 w-3" /> لم يحضر</Badge>
+                  ) : (
+                    <Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{formatDate(b.created_at)}</TableCell>
                 <TableCell>
@@ -1615,6 +1640,15 @@ function UnifiedBookingsTab(props: {
                         {b.status === "confirmed" ? <XCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title={b.no_show ? "إلغاء: لم يحضر" : "لم يحضر"}
+                      className={b.no_show ? "text-destructive border-destructive/50 bg-destructive/10" : "text-destructive border-destructive/40 hover:bg-destructive/10"}
+                      onClick={() => markNoShow(b)}
+                    >
+                      <UserX className="h-3 w-3" />
+                    </Button>
                     {!b.deleted_at && (
                       <Button size="sm" variant="outline" title="أرشفة" onClick={() => archiveBooking(b.id)}>
                         <Archive className="h-3 w-3" />
