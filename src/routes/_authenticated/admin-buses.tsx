@@ -104,7 +104,7 @@ function AdminBuses() {
     },
   });
 
-  const { data: tripsIndex = { names: {}, byBus: {} } } = useQuery({
+  const { data: tripsIndex = { names: {}, byBus: {}, dateByBus: {} as Record<string, string> } } = useQuery({
     queryKey: ["admin-buses-trips-index"],
     enabled: isAdmin === true,
     queryFn: async () => {
@@ -115,19 +115,25 @@ function AdminBuses() {
       const fmtDate = (d?: string | null) =>
         d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" }) : "";
       const names: Record<string, string> = {};
+      const dates: Record<string, string> = {};
       for (const t of ((trips ?? []) as { id: string; name: string; departure_date?: string | null }[])) {
         const d = fmtDate(t.departure_date);
         names[t.id] = d ? `${t.name} (${d})` : t.name;
+        if (t.departure_date) dates[t.id] = t.departure_date;
       }
       const byBus: Record<string, string[]> = {};
+      const dateByBus: Record<string, string> = {};
       for (const l of ((links ?? []) as { trip_id: string; bus_id: string }[])) {
         const label = names[l.trip_id];
         if (!label) continue;
         (byBus[l.bus_id] ??= []).push(label);
+        const d = dates[l.trip_id];
+        if (d && (!dateByBus[l.bus_id] || d > dateByBus[l.bus_id])) dateByBus[l.bus_id] = d;
       }
-      return { names, byBus };
+      return { names, byBus, dateByBus };
     },
   });
+
 
   const { data: layouts = [] } = useQuery({
     queryKey: ["bus-layouts"],
