@@ -439,6 +439,8 @@ export type Database = {
           nationality: string | null
           no_bus: boolean
           no_hotel: boolean
+          no_show: boolean
+          no_show_at: string | null
           notes: string | null
           package_id: string | null
           passenger_count: number
@@ -488,6 +490,8 @@ export type Database = {
           nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
+          no_show?: boolean
+          no_show_at?: string | null
           notes?: string | null
           package_id?: string | null
           passenger_count: number
@@ -537,6 +541,8 @@ export type Database = {
           nationality?: string | null
           no_bus?: boolean
           no_hotel?: boolean
+          no_show?: boolean
+          no_show_at?: string | null
           notes?: string | null
           package_id?: string | null
           passenger_count?: number
