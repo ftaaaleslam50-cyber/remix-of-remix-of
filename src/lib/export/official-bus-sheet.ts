@@ -513,9 +513,14 @@ export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | 
   const headerHtml = headerGrid(cells, 10, COLS);
   const totalW = COL_WIDTHS.reduce((a, b) => a + b, 0);
   const colgroup = COL_WIDTHS.map((w) => `<col style="width:${((w / totalW) * 100).toFixed(2)}%">`).join("");
+  const keptW = keep.reduce((a, i) => a + COL_WIDTHS[i], 0);
+  const mainColgroup = keep
+    .map((i) => `<col style="width:${((COL_WIDTHS[i] / keptW) * 100).toFixed(2)}%">`)
+    .join("");
 
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<title>${esc(input.title ?? "كشف رحله")}</title>
+<title>${esc(input.title ?? (variant === "tafweej" ? "كشف التفويج" : "كشف رحله"))}</title>
+
 <style>
   @page { size: A4 landscape; margin: 6mm; }
   html, body { width: 285mm; }
