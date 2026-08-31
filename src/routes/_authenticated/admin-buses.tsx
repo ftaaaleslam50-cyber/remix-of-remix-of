@@ -63,6 +63,53 @@ const STATUS_COLOR: Record<BusRow["status"], string> = {
   stopped: "bg-destructive",
 };
 
+/** بداية الأسبوع (الأحد) لتاريخ معيّن */
+function weekStart(d: Date) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+
+function weekTitle(offset: number) {
+  if (offset === 0) return "الأسبوع الحالي";
+  if (offset === 1) return "الأسبوع القادم";
+  if (offset === -1) return "الأسبوع الماضي";
+  if (offset === -2) return "الأسبوع قبل الماضي";
+  if (offset > 1) return `بعد ${offset} أسابيع`;
+  return `قبل ${Math.abs(offset)} أسابيع`;
+}
+
+function groupBusesByWeek(list: BusRow[], getDate: (b: BusRow) => string | null) {
+  const nowWeek = weekStart(new Date()).getTime();
+  const buckets = new Map<number | "none", BusRow[]>();
+
+  for (const b of list) {
+    const raw = getDate(b);
+    let key: number | "none" = "none";
+    if (raw) {
+      const ws = weekStart(new Date(raw + "T00:00:00")).getTime();
+      key = Math.round((ws - nowWeek) / (7 * 86400000));
+    }
+    const arr = buckets.get(key) ?? [];
+    arr.push(b);
+    buckets.set(key, arr);
+  }
+
+  return [...buckets.entries()]
+    .sort((a, b) => {
+      if (a[0] === "none") return 1;
+      if (b[0] === "none") return -1;
+      return (b[0] as number) - (a[0] as number);
+    })
+    .map(([key, items]) => ({
+      key: String(key),
+      title: key === "none" ? "بدون رحلة مرتبطة" : weekTitle(key as number),
+      current: key === 0,
+      items,
+    }));
+}
+
+
 function AdminBuses() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -104,7 +151,7 @@ function AdminBuses() {
     },
   });
 
-  const { data: tripsIndex = { names: {}, byBus: {} } } = useQuery({
+  const { data: tripsIndex = { names: {}, byBus: {}, dateByBus: {} as Record<string, string>, dates: {} as Record<string, string> } } = useQuery({
     queryKey: ["admin-buses-trips-index"],
     enabled: isAdmin === true,
     queryFn: async () => {
@@ -115,19 +162,25 @@ function AdminBuses() {
       const fmtDate = (d?: string | null) =>
         d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" }) : "";
       const names: Record<string, string> = {};
+      const dates: Record<string, string> = {};
       for (const t of ((trips ?? []) as { id: string; name: string; departure_date?: string | null }[])) {
         const d = fmtDate(t.departure_date);
         names[t.id] = d ? `${t.name} (${d})` : t.name;
+        if (t.departure_date) dates[t.id] = t.departure_date;
       }
       const byBus: Record<string, string[]> = {};
+      const dateByBus: Record<string, string> = {};
       for (const l of ((links ?? []) as { trip_id: string; bus_id: string }[])) {
         const label = names[l.trip_id];
         if (!label) continue;
         (byBus[l.bus_id] ??= []).push(label);
+        const d = dates[l.trip_id];
+        if (d && (!dateByBus[l.bus_id] || d > dateByBus[l.bus_id])) dateByBus[l.bus_id] = d;
       }
-      return { names, byBus };
+      return { names, byBus, dateByBus, dates };
     },
   });
+
 
   const { data: layouts = [] } = useQuery({
     queryKey: ["bus-layouts"],
@@ -411,72 +464,98 @@ function AdminBuses() {
                 (STATUS_RANK[a.status] ?? 3) - (STATUS_RANK[b.status] ?? 3) ||
                 (a.bus_number ?? 0) - (b.bus_number ?? 0),
             );
+
+          const busDate = (b: BusRow) =>
+            tripsIndex.dateByBus[b.id] ?? (b.trip_id ? tripsIndex.dates[b.trip_id] : undefined) ?? null;
+
+          const weekGroups = groupBusesByWeek(list, busDate);
+
           return (
         <div className="surface-card p-6" key={group.key}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-extrabold">{group.title} ({list.length})</h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>رقم الحافلة</TableHead>
-                  <TableHead>الاسم</TableHead>
-                  <TableHead>الرحلة المرتبطة</TableHead>
-                  <TableHead>اللوحة</TableHead>
-                  <TableHead>الطراز</TableHead>
-                  <TableHead>النوع</TableHead>
-                  <TableHead>الاتجاه</TableHead>
-                  <TableHead>القالب</TableHead>
-                  <TableHead>السعة</TableHead>
-                  <TableHead>المحجوز</TableHead>
-                  <TableHead>ذهاب وعودة</TableHead>
-                  <TableHead>ذهاب فقط</TableHead>
-                  <TableHead>عودة فقط</TableHead>
-                  <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
-                  <TableHead>صورة</TableHead>
-                  <TableHead>اسم السائق</TableHead>
-                  <TableHead>جوال السائق</TableHead>
-                  <TableHead>هوية السائق</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
+          {list.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">لا توجد حافلات</div>
+          )}
 
-              <TableBody>
-                {list.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={19} className="text-center py-10 text-muted-foreground">
-                      لا توجد حافلات
-                    </TableCell>
-                  </TableRow>
-                )}
+          <div className="space-y-4">
+            {weekGroups.map((wg, gi) => (
+              <div
+                key={wg.key}
+                className="flex items-stretch gap-0 rounded-xl border overflow-hidden"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--color-navy) 18%, transparent)",
+                  background: `color-mix(in srgb, var(--color-navy) ${gi % 2 === 0 ? 4 : 8}%, transparent)`,
+                }}
+              >
+                <div
+                  className="flex items-center justify-center px-2 py-3 text-[11px] font-extrabold text-white shrink-0"
+                  style={{
+                    writingMode: "vertical-rl",
+                    background: `color-mix(in srgb, var(--color-navy) ${wg.current ? 100 : 55 - gi * 6}%, transparent)`,
+                  }}
+                >
+                  {wg.title} ({wg.items.length})
+                </div>
 
-                {list.map((b) => (
-                  <BusEditRow
-                    key={b.id}
-                    bus={b}
-                    used={bookingCounts[b.id] ?? 0}
-                    tripLabels={[
-                      ...(tripsIndex.byBus[b.id] ?? []),
-                      ...(b.trip_id && tripsIndex.names[b.trip_id] && !(tripsIndex.byBus[b.id] ?? []).includes(tripsIndex.names[b.trip_id])
-                        ? [tripsIndex.names[b.trip_id]]
-                        : []),
-                    ]}
-                    layouts={layouts}
-                    onSave={save}
-                    onDelete={() => del(b.id)}
-                    onDuplicate={() => duplicateBus(b)}
-                    onTransfer={() => setTransferFrom(b)}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+                <div className="overflow-x-auto flex-1">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>رقم الحافلة</TableHead>
+                        <TableHead>الاسم</TableHead>
+                        <TableHead>الرحلة المرتبطة</TableHead>
+                        <TableHead>اللوحة</TableHead>
+                        <TableHead>الطراز</TableHead>
+                        <TableHead>النوع</TableHead>
+                        <TableHead>الاتجاه</TableHead>
+                        <TableHead>القالب</TableHead>
+                        <TableHead>السعة</TableHead>
+                        <TableHead>المحجوز</TableHead>
+                        <TableHead>ذهاب وعودة</TableHead>
+                        <TableHead>ذهاب فقط</TableHead>
+                        <TableHead>عودة فقط</TableHead>
+                        <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
+                        <TableHead>صورة</TableHead>
+                        <TableHead>اسم السائق</TableHead>
+                        <TableHead>جوال السائق</TableHead>
+                        <TableHead>هوية السائق</TableHead>
+                        <TableHead>الحالة</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {wg.items.map((b) => (
+                        <BusEditRow
+                          key={b.id}
+                          bus={b}
+                          used={bookingCounts[b.id] ?? 0}
+                          tripLabels={[
+                            ...(tripsIndex.byBus[b.id] ?? []),
+                            ...(b.trip_id && tripsIndex.names[b.trip_id] && !(tripsIndex.byBus[b.id] ?? []).includes(tripsIndex.names[b.trip_id])
+                              ? [tripsIndex.names[b.trip_id]]
+                              : []),
+                          ]}
+                          layouts={layouts}
+                          onSave={save}
+                          onDelete={() => del(b.id)}
+                          onDuplicate={() => duplicateBus(b)}
+                          onTransfer={() => setTransferFrom(b)}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
           );
         })}
+
 
       </main>
 
