@@ -60,9 +60,15 @@ export function ExportSheetDialog(props: {
         downloadBlob(await buildRawWorkbook(input), `${d.filename}-raw.xlsx`);
         toast.success("تم تنزيل Excel خام");
       } else {
-        const ok = job === "pdf" ? printOfficialSheet(input) : printRawSheet(input);
+        const ok =
+          job === "pdf"
+            ? printOfficialSheet(input)
+            : job === "tafweej-pdf"
+              ? printOfficialSheet({ ...input, title: d.title.replace("كشف رحلة", "كشف التفويج") }, "tafweej")
+              : printRawSheet(input);
         if (!ok) toast.error("الرجاء السماح بالنوافذ المنبثقة لإنشاء PDF");
       }
+
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر التصدير");
     } finally {
