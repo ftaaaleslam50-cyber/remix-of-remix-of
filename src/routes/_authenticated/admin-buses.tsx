@@ -104,7 +104,7 @@ function AdminBuses() {
     },
   });
 
-  const { data: tripsIndex = { names: {}, byBus: {}, dateByBus: {} as Record<string, string> } } = useQuery({
+  const { data: tripsIndex = { names: {}, byBus: {}, dateByBus: {} as Record<string, string>, dates: {} as Record<string, string> } } = useQuery({
     queryKey: ["admin-buses-trips-index"],
     enabled: isAdmin === true,
     queryFn: async () => {
@@ -130,7 +130,7 @@ function AdminBuses() {
         const d = dates[l.trip_id];
         if (d && (!dateByBus[l.bus_id] || d > dateByBus[l.bus_id])) dateByBus[l.bus_id] = d;
       }
-      return { names, byBus, dateByBus };
+      return { names, byBus, dateByBus, dates };
     },
   });
 
