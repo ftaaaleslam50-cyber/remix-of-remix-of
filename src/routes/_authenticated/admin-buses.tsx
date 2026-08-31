@@ -63,6 +63,53 @@ const STATUS_COLOR: Record<BusRow["status"], string> = {
   stopped: "bg-destructive",
 };
 
+/** بداية الأسبوع (الأحد) لتاريخ معيّن */
+function weekStart(d: Date) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+
+function weekTitle(offset: number) {
+  if (offset === 0) return "الأسبوع الحالي";
+  if (offset === 1) return "الأسبوع القادم";
+  if (offset === -1) return "الأسبوع الماضي";
+  if (offset === -2) return "الأسبوع قبل الماضي";
+  if (offset > 1) return `بعد ${offset} أسابيع`;
+  return `قبل ${Math.abs(offset)} أسابيع`;
+}
+
+function groupBusesByWeek(list: BusRow[], getDate: (b: BusRow) => string | null) {
+  const nowWeek = weekStart(new Date()).getTime();
+  const buckets = new Map<number | "none", BusRow[]>();
+
+  for (const b of list) {
+    const raw = getDate(b);
+    let key: number | "none" = "none";
+    if (raw) {
+      const ws = weekStart(new Date(raw + "T00:00:00")).getTime();
+      key = Math.round((ws - nowWeek) / (7 * 86400000));
+    }
+    const arr = buckets.get(key) ?? [];
+    arr.push(b);
+    buckets.set(key, arr);
+  }
+
+  return [...buckets.entries()]
+    .sort((a, b) => {
+      if (a[0] === "none") return 1;
+      if (b[0] === "none") return -1;
+      return (b[0] as number) - (a[0] as number);
+    })
+    .map(([key, items]) => ({
+      key: String(key),
+      title: key === "none" ? "بدون رحلة مرتبطة" : weekTitle(key as number),
+      current: key === 0,
+      items,
+    }));
+}
+
+
 function AdminBuses() {
   const navigate = useNavigate();
   const qc = useQueryClient();
