@@ -417,72 +417,98 @@ function AdminBuses() {
                 (STATUS_RANK[a.status] ?? 3) - (STATUS_RANK[b.status] ?? 3) ||
                 (a.bus_number ?? 0) - (b.bus_number ?? 0),
             );
+
+          const busDate = (b: BusRow) =>
+            tripsIndex.dateByBus[b.id] ?? (b.trip_id ? tripsIndex.dates[b.trip_id] : undefined) ?? null;
+
+          const weekGroups = groupBusesByWeek(list, busDate);
+
           return (
         <div className="surface-card p-6" key={group.key}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-extrabold">{group.title} ({list.length})</h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>رقم الحافلة</TableHead>
-                  <TableHead>الاسم</TableHead>
-                  <TableHead>الرحلة المرتبطة</TableHead>
-                  <TableHead>اللوحة</TableHead>
-                  <TableHead>الطراز</TableHead>
-                  <TableHead>النوع</TableHead>
-                  <TableHead>الاتجاه</TableHead>
-                  <TableHead>القالب</TableHead>
-                  <TableHead>السعة</TableHead>
-                  <TableHead>المحجوز</TableHead>
-                  <TableHead>ذهاب وعودة</TableHead>
-                  <TableHead>ذهاب فقط</TableHead>
-                  <TableHead>عودة فقط</TableHead>
-                  <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
-                  <TableHead>صورة</TableHead>
-                  <TableHead>اسم السائق</TableHead>
-                  <TableHead>جوال السائق</TableHead>
-                  <TableHead>هوية السائق</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
+          {list.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">لا توجد حافلات</div>
+          )}
 
-              <TableBody>
-                {list.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={19} className="text-center py-10 text-muted-foreground">
-                      لا توجد حافلات
-                    </TableCell>
-                  </TableRow>
-                )}
+          <div className="space-y-4">
+            {weekGroups.map((wg, gi) => (
+              <div
+                key={wg.key}
+                className="flex items-stretch gap-0 rounded-xl border overflow-hidden"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--color-navy) 18%, transparent)",
+                  background: `color-mix(in srgb, var(--color-navy) ${gi % 2 === 0 ? 4 : 8}%, transparent)`,
+                }}
+              >
+                <div
+                  className="flex items-center justify-center px-2 py-3 text-[11px] font-extrabold text-white shrink-0"
+                  style={{
+                    writingMode: "vertical-rl",
+                    background: `color-mix(in srgb, var(--color-navy) ${wg.current ? 100 : 55 - gi * 6}%, transparent)`,
+                  }}
+                >
+                  {wg.title} ({wg.items.length})
+                </div>
 
-                {list.map((b) => (
-                  <BusEditRow
-                    key={b.id}
-                    bus={b}
-                    used={bookingCounts[b.id] ?? 0}
-                    tripLabels={[
-                      ...(tripsIndex.byBus[b.id] ?? []),
-                      ...(b.trip_id && tripsIndex.names[b.trip_id] && !(tripsIndex.byBus[b.id] ?? []).includes(tripsIndex.names[b.trip_id])
-                        ? [tripsIndex.names[b.trip_id]]
-                        : []),
-                    ]}
-                    layouts={layouts}
-                    onSave={save}
-                    onDelete={() => del(b.id)}
-                    onDuplicate={() => duplicateBus(b)}
-                    onTransfer={() => setTransferFrom(b)}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+                <div className="overflow-x-auto flex-1">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>رقم الحافلة</TableHead>
+                        <TableHead>الاسم</TableHead>
+                        <TableHead>الرحلة المرتبطة</TableHead>
+                        <TableHead>اللوحة</TableHead>
+                        <TableHead>الطراز</TableHead>
+                        <TableHead>النوع</TableHead>
+                        <TableHead>الاتجاه</TableHead>
+                        <TableHead>القالب</TableHead>
+                        <TableHead>السعة</TableHead>
+                        <TableHead>المحجوز</TableHead>
+                        <TableHead>ذهاب وعودة</TableHead>
+                        <TableHead>ذهاب فقط</TableHead>
+                        <TableHead>عودة فقط</TableHead>
+                        <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
+                        <TableHead>صورة</TableHead>
+                        <TableHead>اسم السائق</TableHead>
+                        <TableHead>جوال السائق</TableHead>
+                        <TableHead>هوية السائق</TableHead>
+                        <TableHead>الحالة</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {wg.items.map((b) => (
+                        <BusEditRow
+                          key={b.id}
+                          bus={b}
+                          used={bookingCounts[b.id] ?? 0}
+                          tripLabels={[
+                            ...(tripsIndex.byBus[b.id] ?? []),
+                            ...(b.trip_id && tripsIndex.names[b.trip_id] && !(tripsIndex.byBus[b.id] ?? []).includes(tripsIndex.names[b.trip_id])
+                              ? [tripsIndex.names[b.trip_id]]
+                              : []),
+                          ]}
+                          layouts={layouts}
+                          onSave={save}
+                          onDelete={() => del(b.id)}
+                          onDuplicate={() => duplicateBus(b)}
+                          onTransfer={() => setTransferFrom(b)}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
           );
         })}
+
 
       </main>
 
