@@ -65,6 +65,7 @@ import { ReturnBookingsTab } from "@/components/admin/ReturnTripsManager";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
+import { removeCurrentPushSubscription } from "@/lib/push-notifications";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
 import { sar, formatDate } from "@/lib/format";
