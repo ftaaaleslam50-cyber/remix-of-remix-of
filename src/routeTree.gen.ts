@@ -34,6 +34,7 @@ import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminBookingsRouteImport } from './routes/_authenticated/admin-bookings'
 import { Route as AuthenticatedAdminAssetsRouteImport } from './routes/_authenticated/admin-assets'
 import { Route as ApiTicketCodeDownloadRouteImport } from './routes/api/ticket.$code.download'
+import { Route as ApiPublicPushVapidKeyRouteImport } from './routes/api/public/push.vapid-key'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push.dispatch'
 import { Route as ApiPublicTicketCodeDownloadRouteImport } from './routes/api/public/ticket.$code.download'
 
@@ -169,6 +170,11 @@ const ApiTicketCodeDownloadRoute = ApiTicketCodeDownloadRouteImport.update({
   path: '/api/ticket/$code/download',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPushVapidKeyRoute = ApiPublicPushVapidKeyRouteImport.update({
+  id: '/api/public/push/vapid-key',
+  path: '/api/public/push/vapid-key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
   id: '/api/public/push/dispatch',
   path: '/api/public/push/dispatch',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
   '/api/public/push/dispatch': typeof ApiPublicPushDispatchRoute
+  '/api/public/push/vapid-key': typeof ApiPublicPushVapidKeyRoute
   '/api/ticket/$code/download': typeof ApiTicketCodeDownloadRoute
   '/api/public/ticket/$code/download': typeof ApiPublicTicketCodeDownloadRoute
 }
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
   '/api/public/push/dispatch': typeof ApiPublicPushDispatchRoute
+  '/api/public/push/vapid-key': typeof ApiPublicPushVapidKeyRoute
   '/api/ticket/$code/download': typeof ApiTicketCodeDownloadRoute
   '/api/public/ticket/$code/download': typeof ApiPublicTicketCodeDownloadRoute
 }
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/ticket/$code': typeof TicketCodeRoute
   '/api/public/push/dispatch': typeof ApiPublicPushDispatchRoute
+  '/api/public/push/vapid-key': typeof ApiPublicPushVapidKeyRoute
   '/api/ticket/$code/download': typeof ApiTicketCodeDownloadRoute
   '/api/public/ticket/$code/download': typeof ApiPublicTicketCodeDownloadRoute
 }
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/ticket/$code'
     | '/api/public/push/dispatch'
+    | '/api/public/push/vapid-key'
     | '/api/ticket/$code/download'
     | '/api/public/ticket/$code/download'
   fileRoutesByTo: FileRoutesByTo
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/ticket/$code'
     | '/api/public/push/dispatch'
+    | '/api/public/push/vapid-key'
     | '/api/ticket/$code/download'
     | '/api/public/ticket/$code/download'
   id:
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/ticket/$code'
     | '/api/public/push/dispatch'
+    | '/api/public/push/vapid-key'
     | '/api/ticket/$code/download'
     | '/api/public/ticket/$code/download'
   fileRoutesById: FileRoutesById
@@ -366,6 +378,7 @@ export interface RootRouteChildren {
   PackagesRoute: typeof PackagesRoute
   TicketCodeRoute: typeof TicketCodeRoute
   ApiPublicPushDispatchRoute: typeof ApiPublicPushDispatchRoute
+  ApiPublicPushVapidKeyRoute: typeof ApiPublicPushVapidKeyRoute
   ApiTicketCodeDownloadRoute: typeof ApiTicketCodeDownloadRoute
   ApiPublicTicketCodeDownloadRoute: typeof ApiPublicTicketCodeDownloadRoute
 }
@@ -547,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTicketCodeDownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/push/vapid-key': {
+      id: '/api/public/push/vapid-key'
+      path: '/api/public/push/vapid-key'
+      fullPath: '/api/public/push/vapid-key'
+      preLoaderRoute: typeof ApiPublicPushVapidKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/push/dispatch': {
       id: '/api/public/push/dispatch'
       path: '/api/public/push/dispatch'
@@ -614,6 +634,7 @@ const rootRouteChildren: RootRouteChildren = {
   PackagesRoute: PackagesRoute,
   TicketCodeRoute: TicketCodeRoute,
   ApiPublicPushDispatchRoute: ApiPublicPushDispatchRoute,
+  ApiPublicPushVapidKeyRoute: ApiPublicPushVapidKeyRoute,
   ApiTicketCodeDownloadRoute: ApiTicketCodeDownloadRoute,
   ApiPublicTicketCodeDownloadRoute: ApiPublicTicketCodeDownloadRoute,
 }
