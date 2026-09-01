@@ -1379,6 +1379,69 @@ export type Database = {
         }
         Relationships: []
       }
+      push_hook_config: {
+        Row: {
+          enabled: boolean
+          endpoint_url: string
+          id: number
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          endpoint_url: string
+          id?: number
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          endpoint_url?: string
+          id?: number
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          is_active: boolean
+          last_error: string | null
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       representatives: {
         Row: {
           active: boolean
