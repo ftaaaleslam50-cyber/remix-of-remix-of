@@ -17,7 +17,7 @@ export const Route = createFileRoute('/api/public/push/dispatch')({
 
         let payload: { notification_id?: string };
         try { payload = await request.json() as { notification_id?: string }; } catch { return json({ error: 'Invalid JSON' }, 400); }
-        if (!payload.notification_id) return json({ error: 'Missing notification id' }, 400);
+        if (!payload.notification_id || !/^[0-9a-f-]{36}$/i.test(payload.notification_id)) return json({ error: 'Invalid notification id' }, 400);
 
         const { data: notification, error: notificationError } = await supabaseAdmin.from('notifications').select('id, title, body, action_url, link, booking_id, type, category, recipient_user_id').eq('id', payload.notification_id).maybeSingle();
         if (notificationError || !notification || !notification.recipient_user_id) return json({ ok: true, sent: 0 });
