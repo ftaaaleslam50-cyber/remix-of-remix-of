@@ -22,6 +22,14 @@ export function PhonePushSettings({ userId }: { userId: string }) {
     else toast.error('تعذر تفعيل إشعارات الهاتف، حاول مرة أخرى.');
   }
 
+  async function disable() {
+    setBusy(true);
+    await removeCurrentPushSubscription(userId);
+    setEnabled(false);
+    setBusy(false);
+    toast.success('تم إيقاف إشعارات هذا الجهاز');
+  }
+
   return (
     <section className="surface-card p-5 space-y-4" dir="rtl">
       <div className="flex items-start gap-3">
@@ -32,7 +40,7 @@ export function PhonePushSettings({ userId }: { userId: string }) {
       {permission === 'denied' && <p className="text-xs text-destructive">تم منع الإشعارات. افتح إعدادات المتصفح أو الهاتف واسمح بها ثم أعد المحاولة.</p>}
       {permission === 'unsupported' && <p className="text-xs text-muted-foreground">تحتاج هذه الميزة إلى Android Chrome أو Safari الحديث بعد إضافة الموقع إلى الشاشة الرئيسية.</p>}
       {!enabled && permission !== 'denied' && permission !== 'unsupported' && <Button onClick={enable} disabled={busy} className="w-full h-11 rounded-xl font-bold"><Smartphone className="h-4 w-4 ml-2" />{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تفعيل إشعارات الهاتف'}</Button>}
-      {enabled && <p className="text-xs text-emerald-700">ستصل الإشعارات إلى قائمة إشعارات جهازك، ويمكن ربط أكثر من جهاز بحسابك.</p>}
+      {enabled && <div className="space-y-3"><p className="text-xs text-emerald-700">ستصل الإشعارات إلى قائمة إشعارات جهازك، ويمكن ربط أكثر من جهاز بحسابك.</p><Button onClick={disable} disabled={busy} variant="outline" className="w-full h-10 rounded-xl font-bold">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellOff className="h-4 w-4 ml-2" />}إيقاف إشعارات هذا الجهاز</Button></div>}
     </section>
   );
 }
