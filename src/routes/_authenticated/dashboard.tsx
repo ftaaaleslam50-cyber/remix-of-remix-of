@@ -236,6 +236,7 @@ function Dashboard() {
   }
 
   async function signOut() {
+    await removeCurrentPushSubscription(currentUser?.id ?? null);
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
   }
