@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BookNowLink } from "@/components/site/BookNowLink";
 import { NotificationBell } from "@/components/site/NotificationBell";
 import { UserNotificationBell } from "@/components/site/UserNotificationBell";
+import { removeCurrentPushSubscription } from "@/lib/push-notifications";
 
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -51,6 +52,7 @@ export function Navbar() {
   }, [authLoading, user?.id]);
 
   async function signOut() {
+    await removeCurrentPushSubscription(userId);
     await supabase.auth.signOut();
     navigate({ to: "/" });
   }
