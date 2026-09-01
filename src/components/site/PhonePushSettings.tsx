@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff, Loader2, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { getPushPermission, hasCurrentPushSubscription, registerPushSubscription, type PushPermissionState } from '@/lib/push-notifications';
+import { getPushPermission, hasCurrentPushSubscription, registerPushSubscription, removeCurrentPushSubscription, type PushPermissionState } from '@/lib/push-notifications';
 
 export function PhonePushSettings({ userId }: { userId: string }) {
   const [permission, setPermission] = useState<PushPermissionState>(() => getPushPermission());
