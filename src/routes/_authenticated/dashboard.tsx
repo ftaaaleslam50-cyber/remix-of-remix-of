@@ -1856,6 +1856,52 @@ function PackageEditor({
         <Label className="text-xs">الوصف</Label>
         <Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} />
       </div>
+
+      {/* Availability rules */}
+      <div className="md:col-span-6 grid md:grid-cols-3 gap-3 rounded-xl bg-muted/50 p-3">
+        <div>
+          <Label className="text-xs">نوع الحجز المتاح</Label>
+          <div className="flex gap-3 mt-2">
+            {(["individual", "family"] as const).map((t) => {
+              const cur = local.allowed_booking_types && local.allowed_booking_types.length > 0 ? local.allowed_booking_types : ["individual", "family"];
+              const on = cur.includes(t);
+              return (
+                <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={on}
+                    onCheckedChange={(v) => {
+                      const next = v ? Array.from(new Set([...cur, t])) : cur.filter((x) => x !== t);
+                      setLocal({ ...local, allowed_booking_types: next });
+                    }}
+                  />
+                  {t === "individual" ? "أفراد" : "عوائل"}
+                </label>
+              );
+            })}
+          </div>
+          {local.allowed_booking_types && local.allowed_booking_types.length === 0 && (
+            <p className="text-[10px] text-destructive mt-1">اختر نوعًا واحدًا على الأقل (سيُحفظ كـ الاثنين).</p>
+          )}
+        </div>
+        <div>
+          <Label className="text-xs">أقصى عدد أفراد (فارغ = بلا حد)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={5}
+            value={local.max_passengers ?? ""}
+            onChange={(e) => setLocal({ ...local, max_passengers: e.target.value === "" ? null : Number(e.target.value) })}
+            placeholder="مثال: 4"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">الرحلات المتاح فيها (لا شيء = كل الرحلات)</Label>
+          <HotelTripsPicker
+            value={local.trip_ids ?? []}
+            onChange={(ids) => setLocal({ ...local, trip_ids: ids })}
+          />
+        </div>
+      </div>
       <div className="flex items-center gap-2 md:col-span-6">
         <div className="flex items-center gap-2">
           <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
