@@ -1034,6 +1034,7 @@ export type Database = {
       }
       hotels: {
         Row: {
+          allowed_booking_types: string[]
           amenities: string[]
           available: boolean
           created_at: string
@@ -1044,14 +1045,17 @@ export type Database = {
           id: string
           image_url: string
           is_no_hotel: boolean
+          max_passengers: number | null
           name: string
           price_addition: number
           price_label: string
           rating: number
           stars: number
+          trip_ids: string[]
           updated_at: string
         }
         Insert: {
+          allowed_booking_types?: string[]
           amenities?: string[]
           available?: boolean
           created_at?: string
@@ -1062,14 +1066,17 @@ export type Database = {
           id?: string
           image_url?: string
           is_no_hotel?: boolean
+          max_passengers?: number | null
           name: string
           price_addition?: number
           price_label?: string
           rating?: number
           stars?: number
+          trip_ids?: string[]
           updated_at?: string
         }
         Update: {
+          allowed_booking_types?: string[]
           amenities?: string[]
           available?: boolean
           created_at?: string
@@ -1080,11 +1087,13 @@ export type Database = {
           id?: string
           image_url?: string
           is_no_hotel?: boolean
+          max_passengers?: number | null
           name?: string
           price_addition?: number
           price_label?: string
           rating?: number
           stars?: number
+          trip_ids?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -1239,6 +1248,7 @@ export type Database = {
       packages: {
         Row: {
           active: boolean
+          allowed_booking_types: string[]
           base_price: number
           created_at: string | null
           description: string | null
@@ -1247,14 +1257,17 @@ export type Database = {
           id: string
           image_url: string | null
           includes: Json | null
+          max_passengers: number | null
           name: string
           slug: string
           stars: number | null
           tier: string
+          trip_ids: string[]
           updated_at: string | null
         }
         Insert: {
           active?: boolean
+          allowed_booking_types?: string[]
           base_price?: number
           created_at?: string | null
           description?: string | null
@@ -1263,14 +1276,17 @@ export type Database = {
           id?: string
           image_url?: string | null
           includes?: Json | null
+          max_passengers?: number | null
           name: string
           slug: string
           stars?: number | null
           tier?: string
+          trip_ids?: string[]
           updated_at?: string | null
         }
         Update: {
           active?: boolean
+          allowed_booking_types?: string[]
           base_price?: number
           created_at?: string | null
           description?: string | null
@@ -1279,10 +1295,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           includes?: Json | null
+          max_passengers?: number | null
           name?: string
           slug?: string
           stars?: number | null
           tier?: string
+          trip_ids?: string[]
           updated_at?: string | null
         }
         Relationships: []

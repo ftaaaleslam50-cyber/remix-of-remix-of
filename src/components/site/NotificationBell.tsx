@@ -31,7 +31,7 @@ const DEFAULT_SOUND =
   "https://nsivywimeztraqnselou.supabase.co/storage/v1/object/public/assets//1785397157778-hi5k1r-avast.mpeg";
 
 import { resolveDisplayUrl } from "@/lib/asset-url";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 
 /* ============================ types ============================ */
 
@@ -444,7 +444,7 @@ export function NotificationBell() {
                           <button onClick={() => openNotif(n)} className="min-w-0 flex-1 text-right">
                             <p className="text-sm font-bold">{n.title}</p>
                             {n.body && <p className="text-xs text-muted-foreground line-clamp-2">{n.body}</p>}
-                            <p className="text-[10px] text-muted-foreground mt-1">{formatDate(n.created_at)}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">{formatDateTime(n.created_at)}</p>
                           </button>
                           <div className="flex gap-1 shrink-0">
                             {!n.read && !n.archived && (

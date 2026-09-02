@@ -56,6 +56,8 @@ import { NotificationBell } from "@/components/site/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { formatTripDateCompact } from "@/lib/trip-dates";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -68,7 +70,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { removeCurrentPushSubscription } from "@/lib/push-notifications";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
-import { sar, formatDate } from "@/lib/format";
+import { sar, formatDate, formatDateTime } from "@/lib/format";
 import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
 
@@ -262,7 +264,7 @@ function Dashboard() {
       الكود: b.coupon_code ?? "",
       السعر: Number(b.total_price),
       الحالة: b.status,
-      التاريخ: formatDate(b.created_at),
+      التاريخ: formatDateTime(b.created_at),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -1593,7 +1595,7 @@ function UnifiedBookingsTab(props: {
                     <Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{formatDate(b.created_at)}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{formatDateTime(b.created_at)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1 flex-wrap">
                     <Link to="/ticket/$code" params={{ code: b.booking_code }} title="عرض">
@@ -1722,6 +1724,9 @@ interface PackageRow {
   display_order: number;
   stars: number | null;
   extension_price?: number;
+  allowed_booking_types?: string[] | null;
+  max_passengers?: number | null;
+  trip_ids?: string[] | null;
 }
 function PackagesTab() {
   const qc = useQueryClient();
@@ -1747,6 +1752,10 @@ function PackagesTab() {
         active: p.active,
         display_order: p.display_order,
         stars: p.stars,
+        allowed_booking_types:
+          p.allowed_booking_types && p.allowed_booking_types.length > 0 ? p.allowed_booking_types : ["individual", "family"],
+        max_passengers: p.max_passengers && p.max_passengers > 0 ? p.max_passengers : null,
+        trip_ids: p.trip_ids ?? [],
       } as never)
       .eq("id", p.id);
     if (error) return toast.error(error.message);
@@ -1849,6 +1858,52 @@ function PackageEditor({
         <Label className="text-xs">الوصف</Label>
         <Input value={local.description} onChange={(e) => setLocal({ ...local, description: e.target.value })} />
       </div>
+
+      {/* Availability rules */}
+      <div className="md:col-span-6 grid md:grid-cols-3 gap-3 rounded-xl bg-muted/50 p-3">
+        <div>
+          <Label className="text-xs">نوع الحجز المتاح</Label>
+          <div className="flex gap-3 mt-2">
+            {(["individual", "family"] as const).map((t) => {
+              const cur = local.allowed_booking_types && local.allowed_booking_types.length > 0 ? local.allowed_booking_types : ["individual", "family"];
+              const on = cur.includes(t);
+              return (
+                <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={on}
+                    onCheckedChange={(v) => {
+                      const next = v ? Array.from(new Set([...cur, t])) : cur.filter((x) => x !== t);
+                      setLocal({ ...local, allowed_booking_types: next });
+                    }}
+                  />
+                  {t === "individual" ? "أفراد" : "عوائل"}
+                </label>
+              );
+            })}
+          </div>
+          {local.allowed_booking_types && local.allowed_booking_types.length === 0 && (
+            <p className="text-[10px] text-destructive mt-1">اختر نوعًا واحدًا على الأقل (سيُحفظ كـ الاثنين).</p>
+          )}
+        </div>
+        <div>
+          <Label className="text-xs">أقصى عدد أفراد (فارغ = بلا حد)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={5}
+            value={local.max_passengers ?? ""}
+            onChange={(e) => setLocal({ ...local, max_passengers: e.target.value === "" ? null : Number(e.target.value) })}
+            placeholder="مثال: 4"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">الرحلات المتاح فيها (لا شيء = كل الرحلات)</Label>
+          <HotelTripsPicker
+            value={local.trip_ids ?? []}
+            onChange={(ids) => setLocal({ ...local, trip_ids: ids })}
+          />
+        </div>
+      </div>
       <div className="flex items-center gap-2 md:col-span-6">
         <div className="flex items-center gap-2">
           <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
@@ -1866,6 +1921,40 @@ function PackageEditor({
       <p className="md:col-span-6 text-xs text-muted-foreground">
         💡 الصور تُدار من مكتبة الوسائط المركزية. الأسعار من تبويب <strong>الأسعار</strong>.
       </p>
+    </div>
+  );
+}
+
+function HotelTripsPicker({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
+  const { data: trips = [] } = useQuery({
+    queryKey: ["hotel-trips-picker"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("trips")
+        .select("id,name,departure_date,active")
+        .eq("active", true)
+        .order("display_order");
+      return (data ?? []) as { id: string; name: string; departure_date: string | null; active: boolean }[];
+    },
+  });
+  if (trips.length === 0) return <p className="text-xs text-muted-foreground mt-2">لا توجد رحلات مفعّلة.</p>;
+  return (
+    <div className="mt-2 max-h-32 overflow-y-auto space-y-1 rounded-lg border bg-white p-2">
+      {trips.map((t) => {
+        const on = value.includes(t.id);
+        return (
+          <label key={t.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+            <Checkbox
+              checked={on}
+              onCheckedChange={(v) => onChange(v ? [...value, t.id] : value.filter((x) => x !== t.id))}
+            />
+            <span className="truncate">
+              {t.name}
+              {t.departure_date ? ` — ${formatTripDateCompact(t.departure_date)}` : ""}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }

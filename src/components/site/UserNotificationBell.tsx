@@ -3,7 +3,7 @@ import { Bell, Check, CheckCheck, Trash2, Inbox } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { NOTIF_TYPE_LABELS, notifTarget, useUserNotifications, type UserNotif } from "@/hooks/useUserNotifications";
 
 export function UserNotificationBell() {
@@ -62,7 +62,7 @@ export function UserNotificationBell() {
                   </div>
                   {n.body && <p className="text-xs text-muted-foreground line-clamp-2 break-words">{n.body}</p>}
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    {NOTIF_TYPE_LABELS[n.type] ?? n.type} • {formatDate(n.created_at)}
+                    {NOTIF_TYPE_LABELS[n.type] ?? n.type} • {formatDateTime(n.created_at)}
                   </p>
                 </button>
                 <div className="flex flex-col gap-1 shrink-0">

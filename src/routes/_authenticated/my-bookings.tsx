@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
-import { sar } from "@/lib/format";
+import { sar, formatDateTime } from "@/lib/format";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { bookingBlockedMessage } from "@/lib/booking-availability";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
@@ -260,7 +260,7 @@ function MyBookingsPage() {
                       </p>
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{new Date(b.created_at).toLocaleDateString("ar")}</b></span>
+                        <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{formatDateTime(b.created_at)}</b></span>
                         {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)}</b></span>}
                         {b.packages && <span className="flex items-center gap-2 text-muted-foreground"><Hotel className="h-4 w-4" /> الفندق: <b className="text-foreground">{b.packages.name}</b></span>}
                         {b.buses && <span className="flex items-center gap-2 text-muted-foreground"><Bus className="h-4 w-4" /> الحافلة: <b className="text-foreground">{b.buses.name || `حافلة ${b.buses.bus_number}`}</b></span>}
@@ -306,7 +306,7 @@ function MyBookingsPage() {
             const badge = eff === "no_show" ? "لم يحضر" : eff === "cancelled" ? "ملغي" : eff === "completed" ? "مكتمل" : "نشط";
             const rows: [string, React.ReactNode][] = [
               ["رقم الحجز", <span className="font-mono">{details.booking_code}</span>],
-              ["تاريخ الحجز", new Date(details.created_at).toLocaleDateString("ar")],
+              ["تاريخ الحجز", formatDateTime(details.created_at)],
               ["الرحلة", tripWithDate(details.trips?.name, details.departure_date ?? details.trips?.departure_date, details.trips?.departure_day)],
               ["تاريخ الذهاب", departureDisplay(details.departure_date ?? details.trips?.departure_date, details.trips?.departure_day, "—", details.trip_mode)],
               ["العودة الفعلية", returnActualDisplay(details.return_date ?? details.trips?.return_date, details.trips?.return_day, details.extension_nights, details.trip_mode, "—")],

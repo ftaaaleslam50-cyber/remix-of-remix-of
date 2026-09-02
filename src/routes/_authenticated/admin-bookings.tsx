@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { sar } from "@/lib/format";
+import { sar, formatDateTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin-bookings")({
   component: AdminBookings,
@@ -458,7 +458,7 @@ function AdminBookings() {
                         <p className="text-2xl font-extrabold text-primary">{sar(b.total_price)}</p>
 
                         <p className="text-xs text-muted-foreground">
-                          {new Date(b.created_at).toLocaleDateString("ar")}
+                          {formatDateTime(b.created_at)}
                         </p>
                       </div>
                     </div>
@@ -618,7 +618,7 @@ function AdminBookings() {
 
                 <Row k="الحالة" v={details.status} />
 
-                <Row k="تاريخ الحجز" v={new Date(details.created_at).toLocaleString("ar")} />
+                <Row k="تاريخ الحجز" v={formatDateTime(details.created_at)} />
 
                 <Row k="مصدر الحجز" v={details.booking_source} />
               </TabsContent>
