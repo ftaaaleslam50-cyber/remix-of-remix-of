@@ -1722,6 +1722,9 @@ interface PackageRow {
   display_order: number;
   stars: number | null;
   extension_price?: number;
+  allowed_booking_types?: string[] | null;
+  max_passengers?: number | null;
+  trip_ids?: string[] | null;
 }
 function PackagesTab() {
   const qc = useQueryClient();
@@ -1747,6 +1750,10 @@ function PackagesTab() {
         active: p.active,
         display_order: p.display_order,
         stars: p.stars,
+        allowed_booking_types:
+          p.allowed_booking_types && p.allowed_booking_types.length > 0 ? p.allowed_booking_types : ["individual", "family"],
+        max_passengers: p.max_passengers && p.max_passengers > 0 ? p.max_passengers : null,
+        trip_ids: p.trip_ids ?? [],
       } as never)
       .eq("id", p.id);
     if (error) return toast.error(error.message);

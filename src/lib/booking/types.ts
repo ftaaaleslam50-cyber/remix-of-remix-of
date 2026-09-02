@@ -31,6 +31,30 @@ export interface Package {
   display_order: number;
   stars?: number | null;
   extension_price?: number;
+  /** "individual" / "family" — both by default. */
+  allowed_booking_types?: string[] | null;
+  /** null = no limit */
+  max_passengers?: number | null;
+  /** Empty = available on all trips */
+  trip_ids?: string[] | null;
+}
+
+/** Why a hotel can't be picked for the current selection (null = available). */
+export function hotelUnavailableReason(
+  p: Package,
+  sel: { bookingType: BookingType | null; passengerCount: number; tripId: string | null },
+): string | null {
+  const types = p.allowed_booking_types && p.allowed_booking_types.length > 0 ? p.allowed_booking_types : ["individual", "family"];
+  if (sel.bookingType && !types.includes(sel.bookingType)) {
+    return sel.bookingType === "individual" ? "متاح للعوائل فقط" : "متاح للأفراد فقط";
+  }
+  if (p.max_passengers != null && p.max_passengers > 0 && sel.passengerCount > p.max_passengers) {
+    return `أقصى عدد أفراد لهذا الفندق ${p.max_passengers} — لا تتوفر غرفة لـ ${sel.passengerCount} أفراد`;
+  }
+  if (p.trip_ids && p.trip_ids.length > 0 && sel.tripId && !p.trip_ids.includes(sel.tripId)) {
+    return "غير متاح في الرحلة التي اخترتها";
+  }
+  return null;
 }
 
 
