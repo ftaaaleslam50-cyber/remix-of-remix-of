@@ -1925,6 +1925,40 @@ function PackageEditor({
   );
 }
 
+function HotelTripsPicker({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
+  const { data: trips = [] } = useQuery({
+    queryKey: ["hotel-trips-picker"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("trips")
+        .select("id,name,departure_date,active")
+        .eq("active", true)
+        .order("display_order");
+      return (data ?? []) as { id: string; name: string; departure_date: string | null; active: boolean }[];
+    },
+  });
+  if (trips.length === 0) return <p className="text-xs text-muted-foreground mt-2">لا توجد رحلات مفعّلة.</p>;
+  return (
+    <div className="mt-2 max-h-32 overflow-y-auto space-y-1 rounded-lg border bg-white p-2">
+      {trips.map((t) => {
+        const on = value.includes(t.id);
+        return (
+          <label key={t.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+            <Checkbox
+              checked={on}
+              onCheckedChange={(v) => onChange(v ? [...value, t.id] : value.filter((x) => x !== t.id))}
+            />
+            <span className="truncate">
+              {t.name}
+              {t.departure_date ? ` — ${formatTripDateCompact(t.departure_date)}` : ""}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 // ================== BOOKINGS BY BUS ==================
 interface TripOpt {
   id: string;
