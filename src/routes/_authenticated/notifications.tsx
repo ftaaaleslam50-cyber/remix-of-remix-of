@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { BRAND } from "@/lib/brand";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { NOTIF_TYPE_LABELS, notifTarget, useUserNotifications, type UserNotif } from "@/hooks/useUserNotifications";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
@@ -73,7 +73,7 @@ function NotificationsPage() {
                     {n.read && <span className="text-[10px] text-muted-foreground">مقروء</span>}
                   </div>
                   {n.body && <p className="text-sm text-muted-foreground mt-1 break-words">{n.body}</p>}
-                  <p className="text-xs text-muted-foreground mt-2">{formatDate(n.created_at)}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{formatDateTime(n.created_at)}</p>
                 </button>
                 <div className="flex flex-col gap-2 shrink-0">
                   {!n.read && (

@@ -68,7 +68,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { removeCurrentPushSubscription } from "@/lib/push-notifications";
 import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
-import { sar, formatDate } from "@/lib/format";
+import { sar, formatDate, formatDateTime } from "@/lib/format";
 import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
 
@@ -262,7 +262,7 @@ function Dashboard() {
       الكود: b.coupon_code ?? "",
       السعر: Number(b.total_price),
       الحالة: b.status,
-      التاريخ: formatDate(b.created_at),
+      التاريخ: formatDateTime(b.created_at),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -1593,7 +1593,7 @@ function UnifiedBookingsTab(props: {
                     <Badge>{b.status === "confirmed" ? "مؤكَّد" : b.status}</Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{formatDate(b.created_at)}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{formatDateTime(b.created_at)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1 flex-wrap">
                     <Link to="/ticket/$code" params={{ code: b.booking_code }} title="عرض">
