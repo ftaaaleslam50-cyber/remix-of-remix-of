@@ -856,6 +856,8 @@ function BookingPage() {
                   extensionPricePerNight={extensionPricePerNight}
                   passengerCount={passengerCount}
                   roomType={roomType}
+                  bookingType={bookingType}
+                  tripId={tripId}
                 />
               )}
               {stepName === "المقاعد" && (
