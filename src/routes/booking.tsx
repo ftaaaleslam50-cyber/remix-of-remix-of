@@ -291,6 +291,12 @@ function BookingPage() {
   useEffect(() => {
     if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
   }, [passengerCount]);
+  // Drop a trip that stopped accepting bookings.
+  useEffect(() => {
+    if (!tripId) return;
+    const t = trips.find((x) => x.id === tripId) as (Trip & { bookings_closed?: boolean }) | undefined;
+    if (t?.bookings_closed) setTripId(null);
+  }, [tripId, trips]);
   // Drop the selected hotel automatically when it no longer fits the selection.
   useEffect(() => {
     if (!packageId) return;
