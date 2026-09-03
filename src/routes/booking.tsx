@@ -1281,16 +1281,29 @@ function StepPackage({
         {packages.map((p) => {
           const active = value === p.id;
           const price = getPackagePrice(p, roomType, passengerCount, pricing);
+          const reason = hotelUnavailableReason(p, { bookingType, passengerCount, tripId });
+          const disabled = !!reason;
           return (
             <div
               key={p.id}
-              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)] cursor-pointer"}`}
+              aria-disabled={disabled || undefined}
+              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all ${disabled ? "border-border opacity-60 grayscale-[0.4] cursor-not-allowed" : active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)] cursor-pointer"}`}
             >
               <div
-                onClick={() => onChange(p.id)}
-                className="cursor-pointer"
+                onClick={() => {
+                  if (disabled) return toast.error(`هذا الفندق غير متاح: ${reason}`);
+                  onChange(p.id);
+                }}
+                className={disabled ? "cursor-not-allowed" : "cursor-pointer"}
               >
                 <div className="relative h-40 overflow-hidden" style={{ background: "var(--gradient-navy)" }}>
+                  {disabled && (
+                    <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center p-4 text-center">
+                      <div className="bg-white/95 rounded-xl px-3 py-2 text-xs font-bold text-destructive leading-relaxed">
+                        غير متاح — {reason}
+                      </div>
+                    </div>
+                  )}
                   {p.image_url ? (
                     <img
                       src={p.image_url}
