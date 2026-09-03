@@ -291,6 +291,15 @@ function BookingPage() {
   useEffect(() => {
     if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
   }, [passengerCount]);
+  // Drop the selected hotel automatically when it no longer fits the selection.
+  useEffect(() => {
+    if (!packageId) return;
+    const p = packages.find((x) => x.id === packageId);
+    if (p && hotelUnavailableReason(p, { bookingType, passengerCount, tripId })) {
+      setPackageId(null);
+      setExtensionNights(0);
+    }
+  }, [packageId, packages, bookingType, passengerCount, tripId]);
 
   // Keep the gender split consistent with the total headcount.
   useEffect(() => {
