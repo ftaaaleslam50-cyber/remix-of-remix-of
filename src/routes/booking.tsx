@@ -1553,16 +1553,25 @@ function StepTripBus({
       <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
 
         {trips.map((t) => {
-          const active = !noBus && tripId === t.id;
+          const closed = !!(t as unknown as { bookings_closed?: boolean }).bookings_closed;
+          const active = !noBus && !closed && tripId === t.id;
           const tripBuses = active ? buses : [];
           return (
             <div
               key={t.id}
+              aria-disabled={closed || undefined}
               className={`overflow-hidden rounded-2xl sm:rounded-3xl border-2 bg-white transition-all ${
-                active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+                closed ? "border-border opacity-60" : active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
               }`}
             >
-              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-4 sm:p-6">
+              <button
+                type="button"
+                onClick={() => {
+                  if (closed) return toast.error("تم التوقف عن استقبال الحجوزات لهذه الرحلة");
+                  onSelectTrip(t.id);
+                }}
+                className={`w-full text-right p-4 sm:p-6 ${closed ? "cursor-not-allowed" : ""}`}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
@@ -1571,6 +1580,11 @@ function StepTripBus({
                       <Calendar className="h-4 w-4 shrink-0 mt-0.5" />
                       <span className="break-words">الذهاب: {departureDisplay((t as unknown as { departure_date?: string | null }).departure_date, t.departure_day, "-")} • العودة: {returnActualDisplay((t as unknown as { return_date?: string | null }).return_date, t.return_day, 0, undefined, "-")}</span>
                     </div>
+                    {closed && (
+                      <span className="mt-2 inline-block rounded-full bg-destructive/10 text-destructive text-xs font-bold px-3 py-1">
+                        تم التوقف عن استقبال الحجوزات لهذه الرحلة
+                      </span>
+                    )}
                   </div>
                   {active && (
                     <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-full btn-primary-glow text-white flex items-center justify-center">
