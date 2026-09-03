@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_trip_open() FROM PUBLIC, anon, authenticated;

@@ -27,6 +27,7 @@ interface TripRow {
   return_date: string | null;
   auto_advance: boolean;
   clone_buses_on_advance: boolean;
+  bookings_closed?: boolean;
   recurrence_weeks: number;
   departure_time: string | null;
   return_time: string | null;
@@ -136,6 +137,7 @@ function AdminTrips() {
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
       departure_date: t.departure_date || null, return_date: t.return_date || null,
       auto_advance: t.auto_advance, clone_buses_on_advance: !!t.clone_buses_on_advance, recurrence_weeks: Math.max(1, Number(t.recurrence_weeks) || 1),
+      bookings_closed: !!t.bookings_closed,
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
       return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
@@ -269,6 +271,18 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
             />
             <span className="text-xs">إنشاء حافلة جديدة مع الرحلة الجديدة</span>
           </div>
+        </div>
+        <div className="flex items-end gap-2 md:col-span-2">
+          <div className={`flex items-center gap-2 rounded-lg px-2 py-1 ${local.bookings_closed ? "bg-destructive/10" : ""}`}>
+            <Switch
+              checked={!!local.bookings_closed}
+              onCheckedChange={(v) => setLocal({ ...local, bookings_closed: v })}
+            />
+            <span className={`text-xs font-semibold ${local.bookings_closed ? "text-destructive" : ""}`}>
+              تم التوقف عن استقبال الحجوزات لهذه الرحلة
+            </span>
+          </div>
+          <span className="text-[11px] text-muted-foreground pb-1">يُلغى تلقائيًا عند تجديد الرحلة</span>
         </div>
         <div><Label className="text-xs">يوم المغادرة</Label><Input placeholder="الخميس 15/8" value={local.departure_day} onChange={(e) => setLocal({ ...local, departure_day: e.target.value })} /></div>
         <div><Label className="text-xs">وقت المغادرة</Label><Input type="time" value={local.departure_time ?? ""} onChange={(e) => setLocal({ ...local, departure_time: e.target.value })} /></div>

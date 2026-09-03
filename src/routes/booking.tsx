@@ -49,6 +49,7 @@ import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
+import { hotelUnavailableReason } from "@/lib/booking/types";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -290,6 +291,21 @@ function BookingPage() {
   useEffect(() => {
     if (seats.length > passengerCount) setSeats(seats.slice(0, passengerCount));
   }, [passengerCount]);
+  // Drop a trip that stopped accepting bookings.
+  useEffect(() => {
+    if (!tripId) return;
+    const t = trips.find((x) => x.id === tripId) as (Trip & { bookings_closed?: boolean }) | undefined;
+    if (t?.bookings_closed) setTripId(null);
+  }, [tripId, trips]);
+  // Drop the selected hotel automatically when it no longer fits the selection.
+  useEffect(() => {
+    if (!packageId) return;
+    const p = packages.find((x) => x.id === packageId);
+    if (p && hotelUnavailableReason(p, { bookingType, passengerCount, tripId })) {
+      setPackageId(null);
+      setExtensionNights(0);
+    }
+  }, [packageId, packages, bookingType, passengerCount, tripId]);
 
   // Keep the gender split consistent with the total headcount.
   useEffect(() => {
@@ -846,6 +862,8 @@ function BookingPage() {
                   extensionPricePerNight={extensionPricePerNight}
                   passengerCount={passengerCount}
                   roomType={roomType}
+                  bookingType={bookingType}
+                  tripId={tripId}
                 />
               )}
               {stepName === "المقاعد" && (
@@ -1230,6 +1248,8 @@ function StepPackage({
   extensionNights,
   onExtensionChange,
   extensionPricePerNight,
+  bookingType,
+  tripId,
 }: {
   packages: Package[];
   pricing: PricingCell[];
@@ -1242,6 +1262,8 @@ function StepPackage({
   extensionNights: number;
   onExtensionChange: (n: number) => void;
   extensionPricePerNight: number;
+  bookingType: BookingType | null;
+  tripId: string | null;
 }) {
   const [openPkg, setOpenPkg] = useState<Package | null>(null);
   return (
@@ -1269,16 +1291,29 @@ function StepPackage({
         {packages.map((p) => {
           const active = value === p.id;
           const price = getPackagePrice(p, roomType, passengerCount, pricing);
+          const reason = hotelUnavailableReason(p, { bookingType, passengerCount, tripId });
+          const disabled = !!reason;
           return (
             <div
               key={p.id}
-              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all ${active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)] cursor-pointer"}`}
+              aria-disabled={disabled || undefined}
+              className={`group rounded-[20px] overflow-hidden bg-white border-2 transition-all ${disabled ? "border-border opacity-60 grayscale-[0.4] cursor-not-allowed" : active ? "border-primary shadow-[var(--shadow-red)] scale-[1.01]" : "border-border hover:border-primary/40 hover:shadow-[var(--shadow-elegant)] cursor-pointer"}`}
             >
               <div
-                onClick={() => onChange(p.id)}
-                className="cursor-pointer"
+                onClick={() => {
+                  if (disabled) return toast.error(`هذا الفندق غير متاح: ${reason}`);
+                  onChange(p.id);
+                }}
+                className={disabled ? "cursor-not-allowed" : "cursor-pointer"}
               >
                 <div className="relative h-40 overflow-hidden" style={{ background: "var(--gradient-navy)" }}>
+                  {disabled && (
+                    <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center p-4 text-center">
+                      <div className="bg-white/95 rounded-xl px-3 py-2 text-xs font-bold text-destructive leading-relaxed">
+                        غير متاح — {reason}
+                      </div>
+                    </div>
+                  )}
                   {p.image_url ? (
                     <img
                       src={p.image_url}
@@ -1524,16 +1559,25 @@ function StepTripBus({
       <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
 
         {trips.map((t) => {
-          const active = !noBus && tripId === t.id;
+          const closed = !!(t as unknown as { bookings_closed?: boolean }).bookings_closed;
+          const active = !noBus && !closed && tripId === t.id;
           const tripBuses = active ? buses : [];
           return (
             <div
               key={t.id}
+              aria-disabled={closed || undefined}
               className={`overflow-hidden rounded-2xl sm:rounded-3xl border-2 bg-white transition-all ${
-                active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
+                closed ? "border-border opacity-60" : active ? "border-primary shadow-[var(--shadow-red)]" : "border-border hover:border-primary/40"
               }`}
             >
-              <button type="button" onClick={() => onSelectTrip(t.id)} className="w-full text-right p-4 sm:p-6">
+              <button
+                type="button"
+                onClick={() => {
+                  if (closed) return toast.error("تم التوقف عن استقبال الحجوزات لهذه الرحلة");
+                  onSelectTrip(t.id);
+                }}
+                className={`w-full text-right p-4 sm:p-6 ${closed ? "cursor-not-allowed" : ""}`}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[11px] sm:text-xs font-bold text-primary uppercase tracking-wider">رحلة عمرة</p>
@@ -1542,6 +1586,11 @@ function StepTripBus({
                       <Calendar className="h-4 w-4 shrink-0 mt-0.5" />
                       <span className="break-words">الذهاب: {departureDisplay((t as unknown as { departure_date?: string | null }).departure_date, t.departure_day, "-")} • العودة: {returnActualDisplay((t as unknown as { return_date?: string | null }).return_date, t.return_day, 0, undefined, "-")}</span>
                     </div>
+                    {closed && (
+                      <span className="mt-2 inline-block rounded-full bg-destructive/10 text-destructive text-xs font-bold px-3 py-1">
+                        تم التوقف عن استقبال الحجوزات لهذه الرحلة
+                      </span>
+                    )}
                   </div>
                   {active && (
                     <div className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-full btn-primary-glow text-white flex items-center justify-center">
