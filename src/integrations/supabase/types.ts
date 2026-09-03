@@ -1658,6 +1658,7 @@ export type Database = {
         Row: {
           active: boolean
           auto_advance: boolean
+          bookings_closed: boolean
           capacity: number
           clone_buses_on_advance: boolean
           created_at: string
@@ -1678,6 +1679,7 @@ export type Database = {
         Insert: {
           active?: boolean
           auto_advance?: boolean
+          bookings_closed?: boolean
           capacity?: number
           clone_buses_on_advance?: boolean
           created_at?: string
@@ -1698,6 +1700,7 @@ export type Database = {
         Update: {
           active?: boolean
           auto_advance?: boolean
+          bookings_closed?: boolean
           capacity?: number
           clone_buses_on_advance?: boolean
           created_at?: string
