@@ -49,6 +49,7 @@ import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
+import { hotelUnavailableReason } from "@/lib/booking/types";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
