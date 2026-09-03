@@ -136,6 +136,7 @@ function AdminTrips() {
       name: t.name, departure_day: t.departure_day, return_day: t.return_day,
       departure_date: t.departure_date || null, return_date: t.return_date || null,
       auto_advance: t.auto_advance, clone_buses_on_advance: !!t.clone_buses_on_advance, recurrence_weeks: Math.max(1, Number(t.recurrence_weeks) || 1),
+      bookings_closed: !!t.bookings_closed,
       departure_time: t.departure_time || null, return_time: t.return_time || null,
       departure_period: t.departure_period, return_period: t.return_period,
       return_options: (t.return_options ?? []).filter((x) => x && x.trim().length > 0),
