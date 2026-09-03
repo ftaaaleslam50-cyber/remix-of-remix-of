@@ -27,6 +27,7 @@ interface TripRow {
   return_date: string | null;
   auto_advance: boolean;
   clone_buses_on_advance: boolean;
+  bookings_closed?: boolean;
   recurrence_weeks: number;
   departure_time: string | null;
   return_time: string | null;
