@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/my-bookings")({
 
 interface MyBooking {
   id: string; booking_code: string; status: string; created_at: string; no_show?: boolean | null;
-  customer_name: string | null; passenger_count: number; total_price: number;
+  customer_name: string | null; passenger_count: number; total_price: number; room_type?: string | null;
   trip_id: string | null; bus_id: string | null; no_hotel: boolean; no_bus: boolean;
   seat_numbers: string[] | null;
   contact_phone: string | null; whatsapp_phone: string | null;
