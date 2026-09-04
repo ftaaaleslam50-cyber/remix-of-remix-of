@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/my-bookings")({
 
 interface MyBooking {
   id: string; booking_code: string; status: string; created_at: string; no_show?: boolean | null;
-  customer_name: string | null; passenger_count: number; total_price: number;
+  customer_name: string | null; passenger_count: number; total_price: number; room_type?: string | null;
   trip_id: string | null; bus_id: string | null; no_hotel: boolean; no_bus: boolean;
   seat_numbers: string[] | null;
   contact_phone: string | null; whatsapp_phone: string | null;
@@ -80,7 +80,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
         .eq("created_by", uid)
         .or("deleted_at.is.null,no_show.is.true")
         .order("created_at", { ascending: false });
@@ -150,6 +150,29 @@ function MyBookingsPage() {
     return out;
   }, [filtered]);
 
+  /** Mini dashboard: bookings / passengers / rooms per trip (active bookings only). */
+  const tripStats = useMemo(() => {
+    const active = bookings.filter((b) => effectiveStatus(b) === "active");
+    const map = new Map<string, { label: string; bookings: number; passengers: number; rooms: number; time: number }>();
+    for (const b of active) {
+      const key = `${b.trip_id ?? "none"}-${b.departure_date ?? b.trips?.departure_date ?? ""}`;
+      const label = b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
+      const cur = map.get(key) ?? { label, bookings: 0, passengers: 0, rooms: 0, time: new Date((b.departure_date ?? b.trips?.departure_date ?? b.created_at) as string).getTime() || 0 };
+      cur.bookings += 1;
+      cur.passengers += b.passenger_count || 0;
+      if (!b.no_hotel) {
+        const cap = Number(b.room_type) || 0;
+        cur.rooms += cap > 0 ? Math.ceil((b.passenger_count || 0) / cap) : 0;
+      }
+      map.set(key, cur);
+    }
+    const rows = [...map.values()].sort((a, b) => b.time - a.time);
+    const totals = rows.reduce((t, r) => ({ bookings: t.bookings + r.bookings, passengers: t.passengers + r.passengers, rooms: t.rooms + r.rooms }), { bookings: 0, passengers: 0, rooms: 0 });
+    return { rows, totals };
+  }, [bookings]);
+
+
+
 
   async function deleteBooking(b: MyBooking) {
     const blocked = await bookingBlockedMessage();
@@ -200,6 +223,36 @@ function MyBookingsPage() {
               />
             </tbody></table>
           </div>
+        )}
+
+        {!isLoading && tripStats.rows.length > 0 && (
+          <section className="surface-card p-4 mb-5" aria-label="ملخص الحجوزات">
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {[
+                { label: "الحجوزات", value: tripStats.totals.bookings, icon: Ticket },
+                { label: "الأفراد", value: tripStats.totals.passengers, icon: Users },
+                { label: "الغرف", value: tripStats.totals.rooms, icon: Hotel },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl bg-primary/5 border border-primary/15 p-3 text-center">
+                  <s.icon className="h-4 w-4 mx-auto text-primary" />
+                  <p className="text-xl font-extrabold text-primary mt-1">{s.value}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="divide-y divide-border/60 text-sm">
+              {tripStats.rows.map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-3 py-2">
+                  <span className="font-semibold truncate flex items-center gap-1.5 min-w-0"><MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span></span>
+                  <span className="flex items-center gap-1.5 shrink-0 text-xs">
+                    <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.bookings}</Badge>
+                    <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
+                    <Badge variant="secondary" className="rounded-full gap-1"><Hotel className="h-3 w-3" />{r.rooms}</Badge>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         <div className="relative mb-5">
