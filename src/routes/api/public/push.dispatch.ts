@@ -20,8 +20,31 @@ export const Route = createFileRoute('/api/public/push/dispatch')({
         if (!payload.notification_id || !/^[0-9a-f-]{36}$/i.test(payload.notification_id)) return json({ error: 'Invalid notification id' }, 400);
 
         const { data: notification, error: notificationError } = await supabaseAdmin.from('notifications').select('id, title, body, action_url, link, booking_id, type, category, recipient_user_id').eq('id', payload.notification_id).maybeSingle();
-        if (notificationError || !notification || !notification.recipient_user_id) return json({ ok: true, sent: 0 });
-        const { data: subscriptions } = await supabaseAdmin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', notification.recipient_user_id).eq('is_active', true);
+        if (notificationError || !notification) return json({ ok: true, sent: 0 });
+
+        // Targeted notification → that user's devices. Broadcast (no recipient) → staff devices (admin / manager / user_manager).
+        let userIds: string[] = [];
+        if (notification.recipient_user_id) userIds = [notification.recipient_user_id];
+        else {
+          const { data: staff } = await supabaseAdmin.from('user_roles').select('user_id').in('role', ['admin', 'manager', 'user_manager']);
+          userIds = [...new Set((staff ?? []).map((r) => r.user_id))];
+          // Respect the admin notification-category switches for broadcasts.
+          const { data: prefs } = await supabaseAdmin.from('notification_settings').select('cat_bookings, cat_coupons, cat_buses, cat_hotels, cat_system, cat_users, dnd_enabled, dnd_start, dnd_end').eq('id', 1).maybeSingle();
+          if (prefs) {
+            const catKey = (`cat_${notification.category}`) as keyof typeof prefs;
+            if (catKey in prefs && prefs[catKey] === false) return json({ ok: true, sent: 0, skipped: 'category-disabled' });
+            if (prefs.dnd_enabled && prefs.dnd_start && prefs.dnd_end) {
+              const riyadh = new Date(Date.now() + 3 * 3600 * 1000);
+              const now = riyadh.getUTCHours() * 60 + riyadh.getUTCMinutes();
+              const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+              const s = toMin(prefs.dnd_start), e = toMin(prefs.dnd_end);
+              const inDnd = s <= e ? now >= s && now < e : now >= s || now < e;
+              if (inDnd) return json({ ok: true, sent: 0, skipped: 'dnd' });
+            }
+          }
+        }
+        if (!userIds.length) return json({ ok: true, sent: 0 });
+        const { data: subscriptions } = await supabaseAdmin.from('push_subscriptions').select('id, endpoint, p256dh, auth').in('user_id', userIds).eq('is_active', true);
         if (!subscriptions?.length) return json({ ok: true, sent: 0 });
 
         const vapidPublic = process.env['VAPID_PUBLIC_KEY'];
