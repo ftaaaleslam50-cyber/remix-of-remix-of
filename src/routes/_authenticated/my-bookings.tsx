@@ -150,6 +150,29 @@ function MyBookingsPage() {
     return out;
   }, [filtered]);
 
+  /** Mini dashboard: bookings / passengers / rooms per trip (active bookings only). */
+  const tripStats = useMemo(() => {
+    const active = bookings.filter((b) => effectiveStatus(b) === "active");
+    const map = new Map<string, { label: string; bookings: number; passengers: number; rooms: number; time: number }>();
+    for (const b of active) {
+      const key = `${b.trip_id ?? "none"}-${b.departure_date ?? b.trips?.departure_date ?? ""}`;
+      const label = b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
+      const cur = map.get(key) ?? { label, bookings: 0, passengers: 0, rooms: 0, time: new Date((b.departure_date ?? b.trips?.departure_date ?? b.created_at) as string).getTime() || 0 };
+      cur.bookings += 1;
+      cur.passengers += b.passenger_count || 0;
+      if (!b.no_hotel) {
+        const cap = Number(b.room_type) || 0;
+        cur.rooms += cap > 0 ? Math.ceil((b.passenger_count || 0) / cap) : 0;
+      }
+      map.set(key, cur);
+    }
+    const rows = [...map.values()].sort((a, b) => b.time - a.time);
+    const totals = rows.reduce((t, r) => ({ bookings: t.bookings + r.bookings, passengers: t.passengers + r.passengers, rooms: t.rooms + r.rooms }), { bookings: 0, passengers: 0, rooms: 0 });
+    return { rows, totals };
+  }, [bookings]);
+
+
+
 
   async function deleteBooking(b: MyBooking) {
     const blocked = await bookingBlockedMessage();
