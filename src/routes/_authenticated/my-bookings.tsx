@@ -225,6 +225,36 @@ function MyBookingsPage() {
           </div>
         )}
 
+        {!isLoading && tripStats.rows.length > 0 && (
+          <section className="surface-card p-4 mb-5" aria-label="ملخص الحجوزات">
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {[
+                { label: "الحجوزات", value: tripStats.totals.bookings, icon: Ticket },
+                { label: "الأفراد", value: tripStats.totals.passengers, icon: Users },
+                { label: "الغرف", value: tripStats.totals.rooms, icon: Hotel },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl bg-primary/5 border border-primary/15 p-3 text-center">
+                  <s.icon className="h-4 w-4 mx-auto text-primary" />
+                  <p className="text-xl font-extrabold text-primary mt-1">{s.value}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="divide-y divide-border/60 text-sm">
+              {tripStats.rows.map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-3 py-2">
+                  <span className="font-semibold truncate flex items-center gap-1.5 min-w-0"><MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span></span>
+                  <span className="flex items-center gap-1.5 shrink-0 text-xs">
+                    <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.bookings}</Badge>
+                    <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
+                    <Badge variant="secondary" className="rounded-full gap-1"><Hotel className="h-3 w-3" />{r.rooms}</Badge>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div className="relative mb-5">
           <Search className="h-4 w-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
           <Input
