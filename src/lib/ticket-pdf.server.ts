@@ -77,9 +77,20 @@ export interface TicketBooking {
   hotels?: { name: string } | null;
   departure_date?: string | null;
   return_date?: string | null;
+  actual_return_date?: string | null;
+  return_seat_numbers?: string[] | null;
   trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
+  return_buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
   layout_json?: LayoutJson | null;
+}
+
+/** "632 (اسم)" — or the name alone when the real bus number is 0/unknown. */
+function busLabel(bus?: { bus_number: number; name?: string | null } | null): string {
+  if (!bus) return "-";
+  const n = Number(bus.bus_number || 0);
+  if (n > 0) return bus.name ? `${n} (${bus.name})` : String(n);
+  return bus.name || "-";
 }
 
 interface LayoutCell {
@@ -103,7 +114,7 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
   const { data } = await supabaseAdmin
     .from("bookings")
     .select(
-      "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id)",
+      "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate)",
     )
     .eq("booking_code", code)
     .is("deleted_at", null)
@@ -210,22 +221,24 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   rows.push(["نوع الحجز", b.booking_type === "individual" ? "أفراد" : "عوائل"]);
   rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type as "individual" | "family", hasHotel)]);
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
-  rows.push([
-    "رقم الباص",
-    `${b.buses?.bus_number ?? "-"}${b.buses?.name ? ` (${b.buses.name})` : ""}`,
-  ]);
+  rows.push(["رقم الباص", busLabel(b.buses)]);
   if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
   rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
+  if (b.return_buses) {
+    rows.push(["حافلة العودة", busLabel(b.return_buses)]);
+    if ((b.return_seat_numbers ?? []).length > 0) rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
+  }
   rows.push([
     "الذهاب",
     departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode),
   ]);
+  // Same rule as the web ticket: stored actual date wins, then return_date + nights.
   rows.push([
     "العودة الفعلية",
     returnActualDisplay(
-      b.return_date ?? b.trips?.return_date,
+      b.actual_return_date ?? b.return_date ?? b.trips?.return_date,
       b.actual_return_day ?? b.trips?.return_day,
-      b.extension_nights,
+      b.actual_return_date ? 0 : b.extension_nights,
       b.trip_mode,
       "-",
     ),

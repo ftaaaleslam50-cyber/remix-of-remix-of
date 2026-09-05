@@ -44,8 +44,28 @@ interface Booking {
   hotels?: { name: string } | null;
   departure_date?: string | null;
   return_date?: string | null;
+  actual_return_date?: string | null;
+  return_seat_numbers?: string[] | null;
   trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
+  return_buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
+}
+
+function busLabel(bus?: { bus_number: number; name?: string | null } | null): string {
+  if (!bus) return "-";
+  const n = Number(bus.bus_number || 0);
+  if (n > 0) return bus.name ? `${n} (${bus.name})` : String(n);
+  return bus.name || "-";
+}
+
+function returnValue(b: Booking) {
+  return returnActualDisplay(
+    b.actual_return_date ?? b.return_date ?? b.trips?.return_date,
+    b.actual_return_day ?? b.trips?.return_day,
+    b.actual_return_date ? 0 : b.extension_nights,
+    b.trip_mode,
+    "-",
+  );
 }
 
 /** Direct server-generated PDF download link (no browser print dialog). */
@@ -79,7 +99,7 @@ function TicketPage() {
         const { data } = await supabase
           .from("bookings")
           .select(
-            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id)",
+            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate)",
           )
           .eq("booking_code", code)
           .maybeSingle();
@@ -181,14 +201,14 @@ function TicketPage() {
     lines.push(`نوع الحجز: ${b.booking_type === "individual" ? "أفراد" : "عوائل"}`);
     lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`);
     lines.push(`عدد الأفراد: ${b.passenger_count}`);
-    lines.push(
-      `رقم الباص: ${b.buses?.bus_number ?? 1}${b.buses?.name ? ` (${b.buses.name})` : ""}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`,
-    );
+    lines.push(`رقم الباص: ${busLabel(b.buses)}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`);
     lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
+    if (b.return_buses) {
+      lines.push(`حافلة العودة: ${busLabel(b.return_buses)}`);
+      if ((b.return_seat_numbers ?? []).length) lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
+    }
     lines.push(`الذهاب: ${departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode)}`);
-    lines.push(
-      `العودة الفعلية: ${returnActualDisplay(b.return_date ?? b.trips?.return_date, b.actual_return_day ?? b.trips?.return_day, b.extension_nights, b.trip_mode, "-")}`,
-    );
+    lines.push(`العودة الفعلية: ${returnValue(b)}`);
     lines.push(`تاريخ الحجز: ${formatDate(b.created_at)}`);
     if (b.notes) lines.push(`ملاحظات: ${b.notes}`);
     lines.push("——————————————");
@@ -300,21 +320,15 @@ function TicketPage() {
             <TicketRow label="نوع الحجز" value={booking.booking_type === "individual" ? "أفراد" : "عوائل"} />
             <TicketRow label="نوع الغرفة" value={roomDisplayLabel(booking.room_type as RoomType, booking.booking_type, !!(booking.packages?.name ?? booking.hotels?.name))} />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
-            <TicketRow label="رقم الباص" value={String(booking.buses?.bus_number ?? 1)} />
-            {booking.buses?.name && <TicketRow label="اسم الباص" value={booking.buses.name} />}
+            <TicketRow label="رقم الباص" value={busLabel(booking.buses)} />
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
+            {booking.return_buses && <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />}
+            {booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 && (
+              <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />
+            )}
             <TicketRow label="الذهاب" value={departureDisplay(booking.departure_date ?? booking.trips?.departure_date, booking.trips?.departure_day, "-", booking.trip_mode)} />
-            <TicketRow
-              label="العودة الفعلية"
-              value={returnActualDisplay(
-                booking.return_date ?? booking.trips?.return_date,
-                booking.actual_return_day ?? booking.trips?.return_day,
-                booking.extension_nights,
-                booking.trip_mode,
-                "-",
-              )}
-            />
+            <TicketRow label="العودة الفعلية" value={returnValue(booking)} />
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
 
