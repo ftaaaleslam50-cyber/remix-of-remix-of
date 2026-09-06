@@ -405,7 +405,7 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
       return_bus_id: busId,
       return_seat_numbers: seats,
     } as never).eq("id", b.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   }
 
