@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
+import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
 
 export interface ReturnTripRow {
   id: string;
@@ -34,7 +35,7 @@ export interface ReturnTripRow {
 }
 
 interface ReturnBusRow { id: string; return_trip_id: string; trip_date: string; bus_id: string }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; direction: string | null; status: string }
+interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; direction: string | null; status: string; layout_id?: string | null }
 
 export interface ReturnBookingRow {
   id: string;
@@ -96,7 +97,7 @@ export function useReturnData(date: string) {
   const buses = useQuery({
     queryKey: ["return-fleet"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status").order("bus_number");
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status,layout_id").order("bus_number");
       if (error) throw error;
       return (data as unknown as BusRow[]) ?? [];
     },
@@ -146,7 +147,7 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
   const buses = useQuery({
     queryKey: ["return-fleet-all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status").order("bus_number");
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status,layout_id").order("bus_number");
       if (error) throw error;
       return ((data as unknown as BusRow[]) ?? []).filter((b) => (b.direction ?? "outbound") === "return");
     },
@@ -404,7 +405,7 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
       return_bus_id: busId,
       return_seat_numbers: seats,
     } as never).eq("id", b.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   }
 
@@ -500,17 +501,14 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
         </div>
       </div>
 
-      {undistributed.length > 0 && (
-        <div className="rounded-xl border border-warning/50 bg-warning/10 p-4">
-          <div className="text-sm font-bold flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</div>
-          <p className="text-xs text-muted-foreground mt-1">هؤلاء الركاب مرتبطون بهذه العودة ولكن لم يتم تخصيص حافلة/مقعد لهم بعد.</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {undistributed.map((b) => (
-              <Badge key={b.id} variant="outline">{b.customer_name || b.booking_code} — غير موزع</Badge>
-            ))}
-          </div>
+      {/* لوحة التوزيع بالسحب والإفلات على مخطط حافلات العودة */}
+      <div className={`rounded-xl border p-4 ${undistributed.length > 0 ? "border-warning/50 bg-warning/5" : ""}`}>
+        <div className="text-sm font-bold flex items-center gap-2 mb-3">
+          <AlertTriangle className="h-4 w-4" /> توزيع الركاب على حافلات العودة
+          {undistributed.length > 0 && <Badge className="bg-warning text-white">غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</Badge>}
         </div>
-      )}
+        <ReturnSeatBoard buses={tripBuses} bookings={bookings} onAssign={assign} />
+      </div>
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
         <DialogContent>

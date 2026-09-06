@@ -44,7 +44,7 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
       const { data, error } = await supabase.from("bus_layouts").select("id,layout_json").in("id", layoutIds);
       if (error) throw error;
       const m: Record<string, LayoutJson> = {};
-      for (const r of (data ?? []) as { id: string; layout_json: LayoutJson }[]) m[r.id] = r.layout_json;
+      for (const r of (data ?? []) as unknown as { id: string; layout_json: LayoutJson }[]) m[r.id] = r.layout_json;
       return m;
     },
   });
