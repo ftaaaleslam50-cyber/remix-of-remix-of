@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
+import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
 
 export interface ReturnTripRow {
   id: string;
@@ -34,7 +35,7 @@ export interface ReturnTripRow {
 }
 
 interface ReturnBusRow { id: string; return_trip_id: string; trip_date: string; bus_id: string }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; direction: string | null; status: string }
+interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; direction: string | null; status: string; layout_id?: string | null }
 
 export interface ReturnBookingRow {
   id: string;
@@ -96,7 +97,7 @@ export function useReturnData(date: string) {
   const buses = useQuery({
     queryKey: ["return-fleet"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status").order("bus_number");
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status,layout_id").order("bus_number");
       if (error) throw error;
       return (data as unknown as BusRow[]) ?? [];
     },
@@ -146,7 +147,7 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
   const buses = useQuery({
     queryKey: ["return-fleet-all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status").order("bus_number");
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status,layout_id").order("bus_number");
       if (error) throw error;
       return ((data as unknown as BusRow[]) ?? []).filter((b) => (b.direction ?? "outbound") === "return");
     },
