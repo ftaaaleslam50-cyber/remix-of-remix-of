@@ -501,17 +501,14 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
         </div>
       </div>
 
-      {undistributed.length > 0 && (
-        <div className="rounded-xl border border-warning/50 bg-warning/10 p-4">
-          <div className="text-sm font-bold flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</div>
-          <p className="text-xs text-muted-foreground mt-1">هؤلاء الركاب مرتبطون بهذه العودة ولكن لم يتم تخصيص حافلة/مقعد لهم بعد.</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {undistributed.map((b) => (
-              <Badge key={b.id} variant="outline">{b.customer_name || b.booking_code} — غير موزع</Badge>
-            ))}
-          </div>
+      {/* لوحة التوزيع بالسحب والإفلات على مخطط حافلات العودة */}
+      <div className={`rounded-xl border p-4 ${undistributed.length > 0 ? "border-warning/50 bg-warning/5" : ""}`}>
+        <div className="text-sm font-bold flex items-center gap-2 mb-3">
+          <AlertTriangle className="h-4 w-4" /> توزيع الركاب على حافلات العودة
+          {undistributed.length > 0 && <Badge className="bg-warning text-white">غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</Badge>}
         </div>
-      )}
+        <ReturnSeatBoard buses={tripBuses} bookings={bookings} onAssign={assign} />
+      </div>
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
         <DialogContent>
