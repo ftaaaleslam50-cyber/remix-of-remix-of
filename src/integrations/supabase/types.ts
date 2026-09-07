@@ -1397,6 +1397,72 @@ export type Database = {
         }
         Relationships: []
       }
+      push_deliveries: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          next_retry_at: string | null
+          notification_id: string
+          queued_at: string
+          sent_at: string | null
+          status: string
+          subscription_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          next_retry_at?: string | null
+          notification_id: string
+          queued_at?: string
+          sent_at?: string | null
+          status?: string
+          subscription_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          next_retry_at?: string | null
+          notification_id?: string
+          queued_at?: string
+          sent_at?: string | null
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_deliveries_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "push_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_hook_config: {
         Row: {
           enabled: boolean
@@ -1854,6 +1920,7 @@ export type Database = {
     }
     Functions: {
       advance_due_trips: { Args: never; Returns: number }
+      arm_push_retry: { Args: never; Returns: boolean }
       bind_coupon_to_ip: {
         Args: {
           _code: string
@@ -1865,6 +1932,10 @@ export type Database = {
         Returns: Json
       }
       booking_availability: { Args: never; Returns: Json }
+      deactivate_push_subscription: {
+        Args: { _endpoint: string }
+        Returns: boolean
+      }
       generate_booking_code: { Args: never; Returns: string }
       get_bus_occupancy: {
         Args: { _bus_id?: string; _exclude_code?: string; _trip_id?: string }
@@ -1916,9 +1987,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      push_retry_kick: { Args: never; Returns: boolean }
       redeem_coupon: {
         Args: { _booking_code: string; _code: string }
         Returns: boolean
+      }
+      sync_push_subscription: {
+        Args: {
+          _auth: string
+          _endpoint: string
+          _p256dh: string
+          _user_agent?: string
+        }
+        Returns: string
       }
       validate_coupon: {
         Args: { _code: string }
