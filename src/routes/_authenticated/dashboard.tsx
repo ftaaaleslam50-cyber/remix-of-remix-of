@@ -280,6 +280,17 @@ function Dashboard() {
             <span className="hidden md:inline text-sm text-white/70">{email}</span>
             {perms.isStaff && <NotificationBell />}
             {perms.isAdmin && (
+              <Link to="/admin-notifications">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                >
+                  تشخيص الإشعارات
+                </Button>
+              </Link>
+            )}
+            {perms.isAdmin && (
               <Link to="/audit">
                 <Button
                   size="sm"
