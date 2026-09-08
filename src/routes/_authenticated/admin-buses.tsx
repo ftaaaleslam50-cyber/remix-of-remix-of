@@ -576,6 +576,70 @@ function AdminBuses() {
   );
 }
 
+/**
+ * يستخرج بيانات السائق والمركبة من نص إشعار الرحلة — تحليل محلي بالكامل
+ * داخل المتصفح، بدون أي AI أو API أو خدمة خارجية.
+ * يعتمد على عناوين الحقول (عربي/إنجليزي) وليس على مواقع الأسطر.
+ */
+type NotificationField = "driver_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate";
+
+const NOTIF_FIELD_LABELS: Record<NotificationField, string> = {
+  driver_name: "اسم السائق",
+  driver_id_number: "هوية السائق",
+  driver_phone: "جوال السائق",
+  bus_number: "رقم الحافلة",
+  plate: "رقم اللوحة",
+};
+
+/** تنظيف السطر: إزالة * و _ والإيموجي والمسافات الزائدة وتوحيد حالة الأحرف للمطابقة. */
+function cleanNotifLine(line: string): string {
+  return line
+    .replace(/[*_]/g, " ")
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/** يصنّف السطر: هل هو عنوان حقل معروف؟ يرجع اسم الحقل أو null. */
+function matchNotifHeader(cleaned: string): NotificationField | "other" | null {
+  if (!cleaned) return null;
+  // الأكثر تحديدًا أولًا: «رقم السائق» يحتوي «السائق» لذا يُفحص قبلها.
+  if (cleaned.includes("رقم السائق") || cleaned.includes("mobile")) return "driver_phone";
+  if (cleaned.includes("رقم المركبة") || cleaned.includes("vehicle")) return "bus_number";
+  if (cleaned.includes("رقم اللوحة") || cleaned.includes("plate")) return "plate";
+  if (cleaned.includes("الهوية") || cleaned.includes("identity")) return "driver_id_number";
+  if (cleaned.includes("السائق") || cleaned.includes("driver")) return "driver_name";
+  // عناوين أخرى في الإشعار تعمل كحدّ فاصل (نهاية قيمة الحقل السابق)
+  if (
+    cleaned.includes("الرحلة") || cleaned.includes("trip") ||
+    cleaned.includes("التاريخ") || cleaned.includes("date") ||
+    cleaned.includes("الوقت") || cleaned.includes("time") ||
+    cleaned.includes("عدد الركاب") || cleaned.includes("passenger")
+  ) return "other";
+  return null;
+}
+
+export function parseTripNotification(text: string): Partial<Record<NotificationField, string>> {
+  const found: Partial<Record<NotificationField, string>> = {};
+  let current: NotificationField | null = null;
+
+  for (const raw of text.split(/\r?\n/)) {
+    const cleaned = cleanNotifLine(raw);
+    if (!cleaned) continue;
+    const header = matchNotifHeader(cleaned);
+    if (header) {
+      current = header === "other" ? null : header;
+      continue;
+    }
+    // سطر قيمة: يُلحق بالحقل الحالي (أول قيمة فقط لكل حقل)
+    if (current && !found[current]) {
+      found[current] = raw.replace(/[*_]/g, " ").replace(/\s+/g, " ").trim();
+    }
+  }
+  return found;
+}
+
 function BusEditRow({
   bus,
   used,
@@ -596,10 +660,41 @@ function BusEditRow({
   onTransfer: () => void;
 }) {
   const [local, setLocal] = useState(bus);
+  const [notifText, setNotifText] = useState("");
 
   useEffect(() => {
     setLocal(bus);
   }, [bus]);
+
+  /** استخراج فوري محلي — يحدّث local فقط، والحفظ النهائي من زر حفظ الحالي. */
+  function extractFromNotification() {
+    if (!notifText.trim()) {
+      toast.error("يرجى لصق إشعار الرحلة أولًا");
+      return;
+    }
+    const parsed = parseTripNotification(notifText);
+    const next = { ...local };
+    let count = 0;
+    const missing: string[] = [];
+
+    if (parsed.driver_name) { next.driver_name = parsed.driver_name; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_name);
+    if (parsed.driver_id_number) { next.driver_id_number = parsed.driver_id_number; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_id_number);
+    if (parsed.driver_phone) { next.driver_phone = parsed.driver_phone; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_phone);
+    if (parsed.bus_number) {
+      const n = Number(parsed.bus_number.replace(/\D/g, ""));
+      if (n) { next.bus_number = n; count++; } else missing.push(NOTIF_FIELD_LABELS.bus_number);
+    } else missing.push(NOTIF_FIELD_LABELS.bus_number);
+    if (parsed.plate) { next.plate = parsed.plate; count++; } else missing.push(NOTIF_FIELD_LABELS.plate);
+
+    setLocal(next);
+    if (count === 5) {
+      toast.success("تم استخراج جميع البيانات بنجاح ✓");
+    } else if (count > 0) {
+      toast.warning(`تم استخراج ${count} من 5 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
+    } else {
+      toast.error("لم يتم العثور على أي بيانات — تأكد من صيغة الإشعار");
+    }
+  }
 
   const free = local.capacity - used;
 
