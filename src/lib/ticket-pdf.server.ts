@@ -12,7 +12,7 @@ import { roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 
 const ARABIC_RE = /[\u0600-\u06FF\uFB50-\uFEFF]/;
-const LTR_RUN_RE = /[A-Za-z0-9][A-Za-z0-9\-_.:/+٫,()]*/g;
+
 
 /** Reshape Arabic to presentation forms; digits and Latin stay in logical order. */
 function shape(input: string): string {
