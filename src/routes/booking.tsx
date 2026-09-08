@@ -273,9 +273,40 @@ function BookingPage() {
 
   const bookedSeats = activeBus ? (busReserved[activeBus.id] ?? []) : [];
   const bookedSeatGenders = activeBus ? (busReservedGenders[activeBus.id] ?? {}) : {};
-  const remainingSeats = activeBus
-    ? (activeBus.capacity ?? 49) - (activeBus.blocked_seats ?? ["A2"]).length - bookedSeats.length
-    : 0;
+
+  // All seat-map templates, used to count real seats per bus. Blocked/booked
+  // labels that don't exist on the bus layout must never reduce availability.
+  const { data: allLayouts = [] } = useQuery({
+    queryKey: ["bus_layouts_all"],
+    queryFn: async () => {
+      const { data } = await supabase.from("bus_layouts").select("id,layout_json,seat_count");
+      return (data ?? []) as unknown as { id: string; layout_json: LayoutJson; seat_count: number }[];
+    },
+  });
+  const seatLabelsByLayout = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const l of allLayouts) {
+      const cells = (l.layout_json as unknown as { cells?: { kind: string; label?: string; row: number; col: number }[] })?.cells ?? [];
+      map.set(
+        l.id,
+        new Set(cells.filter((c) => c.kind === "seat").map((c) => (c.label && c.label.trim() ? c.label : `${c.row}-${c.col}`))),
+      );
+    }
+    return map;
+  }, [allLayouts]);
+
+  /** Free seats on a bus, counting only seats that exist on its layout. */
+  const availableSeatsOf = (b: (Bus & { layout_id?: string | null }) | null | undefined) => {
+    if (!b) return 0;
+    const labels = b.layout_id ? seatLabelsByLayout.get(b.layout_id) : undefined;
+    const total = labels && labels.size > 0 ? labels.size : (b.capacity ?? 49);
+    const exists = (s: string) => !labels || labels.size === 0 || labels.has(s);
+    const blocked = (b.blocked_seats ?? []).filter(exists).length;
+    const used = (busReserved[b.id] ?? []).filter(exists).length;
+    return Math.max(0, total - blocked - used);
+  };
+
+  const remainingSeats = availableSeatsOf(activeBus as (Bus & { layout_id?: string | null }) | null);
 
   // Room type follows booking type + passenger count automatically:
   // - individual bookings always price against the shared 5-person room column.
