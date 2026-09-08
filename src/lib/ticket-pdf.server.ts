@@ -12,19 +12,16 @@ import { roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 
 const ARABIC_RE = /[\u0600-\u06FF\uFB50-\uFEFF]/;
-const LTR_RUN_RE = /[A-Za-z0-9][A-Za-z0-9\-_.:/+٫,()]*/g;
 
-/** Reshape Arabic to presentation forms and keep Latin/digit runs readable. */
+
+/** Reshape Arabic to presentation forms; digits and Latin stay in logical order. */
 function shape(input: string): string {
   const text = String(input ?? "");
   if (!text) return "";
   if (!ARABIC_RE.test(text)) return text;
-  const reshaped = ArabicReshaper.convertArabic(text);
-  // pdf-lib reverses the full string when drawing RTL text; reversing each
-  // Latin/digit run beforehand keeps "180" and "ZT-2026-1234" in order.
-  const withRuns = reshaped.replace(LTR_RUN_RE, (run: string) => Array.from(run).reverse().join(""));
-  // Brackets are mirrored by the RTL reversal, so pre-swap them.
-  return withRuns.replace(/[()[\]]/g, (c: string) => (c === "(" ? ")" : c === ")" ? "(" : c === "[" ? "]" : "["));
+  // pdf-lib draws the glyphs exactly as given, so numbers and Latin runs must
+  // NOT be pre-reversed — doing so turned "2026" into "6202" on the ticket.
+  return ArabicReshaper.convertArabic(text);
 }
 
 
