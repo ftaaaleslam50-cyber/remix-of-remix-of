@@ -165,7 +165,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     ].join("\n");
 
     return { text: body, missing: Array.from(new Set(gaps)) };
-  }, [busDetail.data, selected, bookings.data, hotels.data, hotelIds, date, tripName]);
+  }, [busDetail.data, selected, bookings.data, hotels.data, hotelIds, trips.data, tripIds, date, tripName]);
 
   async function copy() {
     try {
