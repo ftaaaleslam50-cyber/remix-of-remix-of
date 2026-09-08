@@ -1652,6 +1652,42 @@ export type Database = {
         }
         Relationships: []
       }
+      settlement_reference: {
+        Row: {
+          bus_expenses: Json
+          commissions: Json
+          created_at: string
+          extension: Json
+          hotel_costs: Json
+          hotel_night_prices: Json
+          id: number
+          transfer: Json
+          updated_at: string
+        }
+        Insert: {
+          bus_expenses?: Json
+          commissions?: Json
+          created_at?: string
+          extension?: Json
+          hotel_costs?: Json
+          hotel_night_prices?: Json
+          id?: number
+          transfer?: Json
+          updated_at?: string
+        }
+        Update: {
+          bus_expenses?: Json
+          commissions?: Json
+          created_at?: string
+          extension?: Json
+          hotel_costs?: Json
+          hotel_night_prices?: Json
+          id?: number
+          transfer?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trip_buses: {
         Row: {
           bus_id: string
