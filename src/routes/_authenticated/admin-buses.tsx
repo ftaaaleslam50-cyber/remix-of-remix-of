@@ -903,6 +903,21 @@ function BusEditRow({
       </TableCell>
 
       <TableCell>
+        <div className="w-52 space-y-1">
+          <textarea
+            className="w-full h-16 rounded-md border border-input bg-background px-2 py-1 text-xs resize-y"
+            placeholder="الصق إشعار الرحلة هنا…"
+            value={notifText}
+            onChange={(e) => setNotifText(e.target.value)}
+          />
+          <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={extractFromNotification}>
+            <Wand2 className="h-3 w-3 ml-1" />
+            استخراج البيانات
+          </Button>
+        </div>
+      </TableCell>
+
+      <TableCell>
         <Input
           className="h-9 w-36"
           value={local.driver_name ?? ""}
