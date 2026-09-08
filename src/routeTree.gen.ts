@@ -26,6 +26,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin-users'
 import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
 import { Route as AuthenticatedAdminPackagesRouteImport } from './routes/_authenticated/admin-packages'
+import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin-notifications'
 import { Route as AuthenticatedAdminHotelsRouteImport } from './routes/_authenticated/admin-hotels'
 import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
 import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
@@ -124,6 +125,12 @@ const AuthenticatedAdminPackagesRoute =
     path: '/admin-packages',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminNotificationsRoute =
+  AuthenticatedAdminNotificationsRouteImport.update({
+    id: '/admin-notifications',
+    path: '/admin-notifications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminHotelsRoute =
   AuthenticatedAdminHotelsRouteImport.update({
     id: '/admin-hotels',
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/admin-hotels': typeof AuthenticatedAdminHotelsRoute
+  '/admin-notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin-packages': typeof AuthenticatedAdminPackagesRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
@@ -231,6 +239,7 @@ export interface FileRoutesByTo {
   '/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/admin-hotels': typeof AuthenticatedAdminHotelsRoute
+  '/admin-notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin-packages': typeof AuthenticatedAdminPackagesRoute
   '/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/admin-users': typeof AuthenticatedAdminUsersRoute
@@ -262,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/admin-gallery': typeof AuthenticatedAdminGalleryRoute
   '/_authenticated/admin-homepage': typeof AuthenticatedAdminHomepageRoute
   '/_authenticated/admin-hotels': typeof AuthenticatedAdminHotelsRoute
+  '/_authenticated/admin-notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin-packages': typeof AuthenticatedAdminPackagesRoute
   '/_authenticated/admin-trips': typeof AuthenticatedAdminTripsRoute
   '/_authenticated/admin-users': typeof AuthenticatedAdminUsersRoute
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin-gallery'
     | '/admin-homepage'
     | '/admin-hotels'
+    | '/admin-notifications'
     | '/admin-packages'
     | '/admin-trips'
     | '/admin-users'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/admin-gallery'
     | '/admin-homepage'
     | '/admin-hotels'
+    | '/admin-notifications'
     | '/admin-packages'
     | '/admin-trips'
     | '/admin-users'
@@ -352,6 +364,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin-gallery'
     | '/_authenticated/admin-homepage'
     | '/_authenticated/admin-hotels'
+    | '/_authenticated/admin-notifications'
     | '/_authenticated/admin-packages'
     | '/_authenticated/admin-trips'
     | '/_authenticated/admin-users'
@@ -504,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPackagesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-notifications': {
+      id: '/_authenticated/admin-notifications'
+      path: '/admin-notifications'
+      fullPath: '/admin-notifications'
+      preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin-hotels': {
       id: '/_authenticated/admin-hotels'
       path: '/admin-hotels'
@@ -592,6 +612,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminGalleryRoute: typeof AuthenticatedAdminGalleryRoute
   AuthenticatedAdminHomepageRoute: typeof AuthenticatedAdminHomepageRoute
   AuthenticatedAdminHotelsRoute: typeof AuthenticatedAdminHotelsRoute
+  AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPackagesRoute: typeof AuthenticatedAdminPackagesRoute
   AuthenticatedAdminTripsRoute: typeof AuthenticatedAdminTripsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
@@ -610,6 +631,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminGalleryRoute: AuthenticatedAdminGalleryRoute,
   AuthenticatedAdminHomepageRoute: AuthenticatedAdminHomepageRoute,
   AuthenticatedAdminHotelsRoute: AuthenticatedAdminHotelsRoute,
+  AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPackagesRoute: AuthenticatedAdminPackagesRoute,
   AuthenticatedAdminTripsRoute: AuthenticatedAdminTripsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,

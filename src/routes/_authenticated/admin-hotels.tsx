@@ -40,7 +40,7 @@ function AdminHotels() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate({ to: "/auth" }); return; }
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["admin", "manager"]).limit(1).maybeSingle();
       setOk(!!data);
     })();
   }, [navigate]);

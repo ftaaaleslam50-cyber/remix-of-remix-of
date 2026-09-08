@@ -90,8 +90,7 @@ function AdminBookings() {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+        .in("role", ["admin", "manager", "supervisor"]).limit(1).maybeSingle();
 
       setOk(!!data);
     })();

@@ -1,0 +1,2 @@
+CREATE POLICY "Admins read push subscriptions" ON public.push_subscriptions FOR SELECT TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "mgr read push subscriptions" ON public.push_subscriptions FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));

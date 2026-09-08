@@ -73,6 +73,8 @@ import { BRAND } from "@/lib/brand";
 import { sar, formatDate, formatDateTime } from "@/lib/format";
 import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
+import { useStaffRole } from "@/hooks/useStaffRole";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -126,26 +128,21 @@ interface BookingRow {
 function Dashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const perms = useStaffRole();
+  // Any staff member may open the dashboard; what they see depends on their role.
+  const isAdmin = perms.loading ? null : perms.isStaff;
+  const canManageContent = perms.canManageContent;
   const [showArchived, setShowArchived] = useState(false);
   const [email, setEmail] = useState<string>("");
 
   useEffect(() => {
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setEmail(user.email ?? "");
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      setIsAdmin(!!data);
     })();
   }, []);
+
 
   // Realtime: refresh bookings list & stats when anything changes server-side
   useEffect(() => {
@@ -281,8 +278,19 @@ function Dashboard() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="hidden md:inline text-sm text-white/70">{email}</span>
-            {isAdmin && <NotificationBell />}
-            {isAdmin && (
+            {perms.isStaff && <NotificationBell />}
+            {perms.isAdmin && (
+              <Link to="/admin-notifications">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                >
+                  تشخيص الإشعارات
+                </Button>
+              </Link>
+            )}
+            {perms.isAdmin && (
               <Link to="/audit">
                 <Button
                   size="sm"
@@ -293,7 +301,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-buses">
                 <Button
                   size="sm"
@@ -305,7 +313,7 @@ function Dashboard() {
               </Link>
             )}
 
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-trips">
                 <Button
                   size="sm"
@@ -316,7 +324,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-gallery">
                 <Button
                   size="sm"
@@ -327,7 +335,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-packages">
                 <Button
                   size="sm"
@@ -338,7 +346,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {perms.isAdmin && (
               <Link to="/admin-users">
                 <Button
                   size="sm"
@@ -349,7 +357,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-assets">
                 <Button
                   size="sm"
@@ -385,7 +393,7 @@ function Dashboard() {
 
         {isAdmin === false && (
           <div className="surface-card p-6 mb-6 border-r-4 border-r-warning">
-            <h3 className="font-bold">حسابك ليس لديه صلاحية مسؤول</h3>
+            <h3 className="font-bold">حسابك ليس لديه صلاحية للدخول إلى لوحة التحكم</h3>
           </div>
         )}
 
@@ -396,6 +404,7 @@ function Dashboard() {
             <TabsTrigger value="bookings" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات
             </TabsTrigger>
+            {canManageContent && (<>
             <TabsTrigger value="tripsheet" className="rounded-xl">
               <FileText className="h-4 w-4 ml-1" /> كشف الرحلة
             </TabsTrigger>
@@ -420,6 +429,7 @@ function Dashboard() {
             <TabsTrigger value="site" className="rounded-xl">
               <Layout className="h-4 w-4 ml-1" /> إعدادات الموقع
             </TabsTrigger>
+            </>)}
           </TabsList>
 
           <TabsContent value="bookings" className="mt-4">

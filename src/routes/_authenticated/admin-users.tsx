@@ -39,7 +39,7 @@ function AdminUsers() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate({ to: "/auth" }); return; }
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["admin","user_manager"]);
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).in("role", ["admin"]);
       setIsAdmin(!!data && data.length > 0);
       setIsFullAdmin(!!data?.some((r) => r.role === "admin"));
     })();
@@ -243,9 +243,9 @@ function PasswordDialog({ profile, onClose }: { profile: ProfileRow | null; onCl
 
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "مسؤول", manager: "مدير", user_manager: "مسؤول مستخدمين", representative: "مندوب", user: "مستخدم",
+  admin: "مسؤول", manager: "مدير", supervisor: "مشرف", representative: "مندوب", user: "مستخدم",
 };
-const ASSIGNABLE_ROLES = ["admin", "manager", "user_manager", "representative"];
+const ASSIGNABLE_ROLES = ["admin", "manager", "supervisor", "representative"];
 
 function UserRowEditor({ profile, userRoles, onToggleRole, onSave, onDelete, onToggle, showPassword, onResetPassword }: {
   profile: ProfileRow; userRoles: string[]; onToggleRole: (r: string, on: boolean) => void;

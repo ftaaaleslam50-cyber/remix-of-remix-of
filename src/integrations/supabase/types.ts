@@ -1932,6 +1932,7 @@ export type Database = {
         Returns: Json
       }
       booking_availability: { Args: never; Returns: Json }
+      can_manage_bookings: { Args: { _user_id: string }; Returns: boolean }
       deactivate_push_subscription: {
         Args: { _endpoint: string }
         Returns: boolean
@@ -1970,7 +1971,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
       mobile_exists: { Args: { _mobile: string }; Returns: boolean }
+      my_staff_role: { Args: never; Returns: string }
       perform_spin: {
         Args: {
           _device_id: string
@@ -2021,7 +2024,13 @@ export type Database = {
     }
     Enums: {
       account_type: "customer" | "representative"
-      app_role: "admin" | "user" | "manager" | "user_manager" | "representative"
+      app_role:
+        | "admin"
+        | "user"
+        | "manager"
+        | "user_manager"
+        | "representative"
+        | "supervisor"
       bus_status: "active" | "disabled" | "maintenance" | "stopped"
     }
     CompositeTypes: {
@@ -2151,7 +2160,14 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["customer", "representative"],
-      app_role: ["admin", "user", "manager", "user_manager", "representative"],
+      app_role: [
+        "admin",
+        "user",
+        "manager",
+        "user_manager",
+        "representative",
+        "supervisor",
+      ],
       bus_status: ["active", "disabled", "maintenance", "stopped"],
     },
   },
