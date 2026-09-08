@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
-import { NewReturnTripDialog } from "@/components/admin/NewReturnTripDialog";
+import { ReturnTripActions } from "@/components/admin/NewReturnTripDialog";
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
 
 export interface ReturnTripRow {
@@ -183,10 +183,6 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 justify-end">
-        <NewReturnTripDialog trips={templates.data ?? []} todayIso={todayIso()} />
-      </div>
-
       {(templates.data ?? []).length === 0 && (
         <div className="surface-card p-10 text-center text-muted-foreground space-y-2">
           <CalendarDays className="h-10 w-10 mx-auto opacity-40" />
