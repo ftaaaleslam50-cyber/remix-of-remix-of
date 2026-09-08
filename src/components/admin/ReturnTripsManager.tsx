@@ -194,6 +194,7 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
         <ReturnTripEditor
           key={t.id}
           trip={t}
+          tripsCount={(templates.data ?? []).length}
           buses={buses.data ?? []}
           assigned={new Set((links.data ?? []).filter((l) => l.return_trip_id === t.id && l.trip_date === (t.return_date ?? "")).map((l) => l.bus_id))}
           occupancy={occupancy.data ?? {}}
@@ -204,8 +205,9 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 }
 
 /** بطاقة تحرير رحلة عودة واحدة — مطابقة في الأسلوب لبطاقة رحلة الذهاب. */
-function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
+function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
   trip: ReturnTripRow;
+  tripsCount: number;
   buses: BusRow[];
   assigned: Set<string>;
   occupancy: Record<string, number>;
