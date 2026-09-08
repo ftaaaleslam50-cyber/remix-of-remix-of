@@ -407,7 +407,7 @@ function Dashboard() {
             </TabsTrigger>
             {canManageContent && (<>
             <TabsTrigger value="tripsheet" className="rounded-xl">
-              <FileText className="h-4 w-4 ml-1" /> كشف الرحلة
+              <FileText className="h-4 w-4 ml-1" /> الحسابات والتصفية
             </TabsTrigger>
             <TabsTrigger value="packages" className="rounded-xl">
               <HotelIcon className="h-4 w-4 ml-1" /> الفنادق
