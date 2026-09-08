@@ -84,7 +84,23 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     queryKey: ["slogan-hotels", hotelIds.join(",")],
     enabled: open && hotelIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase.from("hotels").select("id,name").in("id", hotelIds);
+      const { data, error } = await supabase.from("hotels").select("id,name,is_no_hotel").in("id", hotelIds);
+      if (error) throw error;
+      return (data as { id: string; name: string; is_no_hotel: boolean }[]) ?? [];
+    },
+  });
+
+  // رحلات الذهاب التي جاء منها هؤلاء العملاء
+  const tripIds = useMemo(
+    () => Array.from(new Set((bookings.data ?? []).map((b) => b.trip_id).filter(Boolean) as string[])),
+    [bookings.data],
+  );
+
+  const trips = useQuery({
+    queryKey: ["slogan-trips", tripIds.join(",")],
+    enabled: open && tripIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("id,name").in("id", tripIds);
       if (error) throw error;
       return (data as { id: string; name: string }[]) ?? [];
     },
@@ -95,10 +111,15 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     const rows = bookings.data ?? [];
     const gaps: string[] = [];
 
+    // الفنادق: نتجاهل من لا فندق له، ونعرض أسماء الفنادق الفعلية فقط
     const hotelNames = hotelIds
-      .map((id) => (hotels.data ?? []).find((h) => h.id === id)?.name)
+      .map((id) => (hotels.data ?? []).find((h) => h.id === id))
+      .filter((h): h is { id: string; name: string; is_no_hotel: boolean } => !!h && !h.is_no_hotel)
+      .map((h) => h.name);
+
+    const tripNames = tripIds
+      .map((id) => (trips.data ?? []).find((t) => t.id === id)?.name)
       .filter((n): n is string => !!n);
-    if (rows.some((r) => !r.hotel_id)) gaps.push("بعض الحجوزات بدون فندق مسجّل");
     if (!bus?.name) gaps.push("اسم الباص غير مسجّل");
     if (!bus?.bus_number) gaps.push("رقم الباص غير مسجّل");
     if (!bus?.plate) gaps.push("رقم اللوحة غير مسجّل لهذه الحافلة");
