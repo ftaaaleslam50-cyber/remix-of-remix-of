@@ -136,9 +136,9 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     const body = [
       "▪️بيانات العـوده",
       "",
-      `العودات من فندق: ${hotelNames.length ? hotelNames.join(" - ") : "—"}`,
+      `العودات من فندق: ${hotelNames.length ? hotelNames.join("، ") : "—"}`,
       "",
-      `عودات من رحلة: ${tripName?.trim() || arabicDay(date)}`,
+      `عودات من رحلة: ${tripNames.length ? tripNames.join("، ") : tripName?.trim() || arabicDay(date)}`,
       "",
       `* اليوم : ${arabicDay(date)}`,
       "",
