@@ -21,6 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
+import { NewReturnTripDialog } from "@/components/admin/NewReturnTripDialog";
+import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
 
 export interface ReturnTripRow {
   id: string;
@@ -179,23 +181,10 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
     },
   });
 
-  async function addTrip() {
-    const name = prompt("اسم رحلة العودة (مثال: عودة السبت):");
-    if (!name) return;
-    const d = todayIso();
-    const { error } = await supabase.from("return_trips" as never).insert({
-      name, weekday: weekdayOf(d), return_date: d, display_order: (templates.data ?? []).length,
-    } as never);
-    if (error) return toast.error(error.message);
-    qc.invalidateQueries({ queryKey: ["return-trips"] });
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 justify-end">
-        <Button size="sm" className="rounded-full" onClick={addTrip}>
-          <Plus className="h-4 w-4 ml-1" /> إضافة رحلة عودة
-        </Button>
+        <NewReturnTripDialog trips={templates.data ?? []} todayIso={todayIso()} />
       </div>
 
       {(templates.data ?? []).length === 0 && (
