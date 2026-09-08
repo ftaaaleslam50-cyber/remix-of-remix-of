@@ -73,6 +73,8 @@ import { BRAND } from "@/lib/brand";
 import { sar, formatDate, formatDateTime } from "@/lib/format";
 import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
+import { useStaffRole } from "@/hooks/useStaffRole";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
