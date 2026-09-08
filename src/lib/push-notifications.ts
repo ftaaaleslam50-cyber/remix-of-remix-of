@@ -11,7 +11,8 @@ async function getPublicKey(): Promise<string> {
         const result = await response.json() as { publicKey?: string };
         if (!result.publicKey) throw new Error('Push key unavailable');
         return result.publicKey;
-      });
+      })
+      .catch((error) => { vapidKeyPromise = null; throw error; });
   }
   return vapidKeyPromise;
 }
@@ -30,6 +31,33 @@ export function getPushPermission(): PushPermissionState {
   return Notification.permission;
 }
 
+async function ensureRegistration(): Promise<ServiceWorkerRegistration> {
+  const registration = await navigator.serviceWorker.register(SW_PATH, { scope: '/' });
+  // Pull the newest worker so deployed fixes actually reach returning users.
+  await registration.update().catch(() => undefined);
+  await navigator.serviceWorker.ready;
+  return registration;
+}
+
+type SubscriptionJSON = { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+
+async function saveSubscription(json: SubscriptionJSON): Promise<{ ok: boolean; reason?: string }> {
+  const endpoint = json.endpoint;
+  const p256dh = json.keys?.p256dh;
+  const auth = json.keys?.auth;
+  if (!endpoint || !p256dh || !auth) return { ok: false, reason: 'invalid-subscription' };
+
+  // Server-side upsert: keeps one row per device endpoint and re-activates it,
+  // even when the endpoint previously belonged to another account on this device.
+  const { error } = await supabase.rpc('sync_push_subscription', {
+    _endpoint: endpoint,
+    _p256dh: p256dh,
+    _auth: auth,
+    _user_agent: navigator.userAgent,
+  });
+  return error ? { ok: false, reason: error.message } : { ok: true };
+}
+
 export async function registerPushSubscription(userId: string): Promise<{ ok: boolean; reason?: string }> {
   if (!userId) return { ok: false, reason: 'signed-out' };
   if (getPushPermission() === 'unsupported') return { ok: false, reason: 'unsupported' };
@@ -39,31 +67,42 @@ export async function registerPushSubscription(userId: string): Promise<{ ok: bo
     const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if (permission !== 'granted') return { ok: false, reason: permission };
 
-    const registration = await navigator.serviceWorker.register(SW_PATH, { scope: '/' });
-    await navigator.serviceWorker.ready;
+    const registration = await ensureRegistration();
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(publicKey) as unknown as BufferSource });
 
-    const json = subscription.toJSON();
-    const endpoint = json.endpoint;
-    const p256dh = json.keys?.p256dh;
-    const auth = json.keys?.auth;
-    if (!endpoint || !p256dh || !auth) return { ok: false, reason: 'invalid-subscription' };
-
-    const { error } = await supabase.from('push_subscriptions' as never).upsert({
-      user_id: userId,
-      endpoint,
-      p256dh,
-      auth,
-      user_agent: navigator.userAgent,
-      is_active: true,
-      last_error: null,
-      updated_at: new Date().toISOString(),
-    } as never, { onConflict: 'endpoint' });
-    return error ? { ok: false, reason: error.message } : { ok: true };
+    return await saveSubscription(subscription.toJSON());
   } catch (error) {
     return { ok: false, reason: error instanceof Error ? error.message : 'unknown' };
   }
+}
+
+/**
+ * Called on every app load for a signed-in user: refreshes the worker and
+ * re-syncs an existing subscription so a rotated or previously disabled
+ * endpoint starts receiving notifications again. Never prompts for permission
+ * and never touches this user's other devices.
+ */
+export async function syncPushSubscriptionOnLoad(userId: string): Promise<void> {
+  if (!userId) return;
+  if (getPushPermission() !== 'granted') return;
+  try {
+    const registration = await ensureRegistration();
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) await saveSubscription(subscription.toJSON());
+  } catch {
+    // Non-fatal: in-site notifications still work.
+  }
+}
+
+export function listenForSubscriptionChanges(userId: string): () => void {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !userId) return () => undefined;
+  const handler = (event: MessageEvent) => {
+    const data = event.data as { type?: string; subscription?: SubscriptionJSON } | undefined;
+    if (data?.type === 'push-subscription-changed' && data.subscription) void saveSubscription(data.subscription);
+  };
+  navigator.serviceWorker.addEventListener('message', handler);
+  return () => navigator.serviceWorker.removeEventListener('message', handler);
 }
 
 export async function removeCurrentPushSubscription(userId: string | null): Promise<void> {
@@ -71,10 +110,10 @@ export async function removeCurrentPushSubscription(userId: string | null): Prom
   const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
   const subscription = await registration?.pushManager.getSubscription();
   if (subscription) {
-    await supabase.from('push_subscriptions' as never).delete().eq('endpoint', subscription.endpoint);
+    await supabase.rpc('deactivate_push_subscription', { _endpoint: subscription.endpoint });
     await subscription.unsubscribe().catch(() => false);
   }
-  if (userId) await supabase.from('push_subscriptions' as never).delete().eq('user_id', userId).eq('is_active', false);
+  void userId;
 }
 
 export async function hasCurrentPushSubscription(userId: string): Promise<boolean> {
@@ -82,6 +121,6 @@ export async function hasCurrentPushSubscription(userId: string): Promise<boolea
   const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
   const subscription = await registration?.pushManager.getSubscription();
   if (!subscription) return false;
-  const { data } = await supabase.from('push_subscriptions' as never).select('id').eq('user_id', userId).eq('endpoint', subscription.endpoint).eq('is_active', true).maybeSingle();
+  const { data } = await supabase.from('push_subscriptions').select('id').eq('user_id', userId).eq('endpoint', subscription.endpoint).eq('is_active', true).maybeSingle();
   return Boolean(data);
 }
