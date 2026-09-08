@@ -1607,6 +1607,8 @@ export type Database = {
       return_trips: {
         Row: {
           active: boolean
+          auto_advance: boolean
+          clone_buses_on_advance: boolean
           created_at: string
           display_order: number
           from_city: string
@@ -1620,6 +1622,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          auto_advance?: boolean
+          clone_buses_on_advance?: boolean
           created_at?: string
           display_order?: number
           from_city?: string
@@ -1633,6 +1637,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          auto_advance?: boolean
+          clone_buses_on_advance?: boolean
           created_at?: string
           display_order?: number
           from_city?: string
@@ -1919,6 +1925,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_due_return_trips: { Args: never; Returns: number }
       advance_due_trips: { Args: never; Returns: number }
       arm_push_retry: { Args: never; Returns: boolean }
       bind_coupon_to_ip: {

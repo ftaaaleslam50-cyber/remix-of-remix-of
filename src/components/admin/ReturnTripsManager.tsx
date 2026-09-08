@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
-import { ReturnTripActions } from "@/components/admin/NewReturnTripDialog";
+
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
 
 export interface ReturnTripRow {
@@ -34,6 +34,8 @@ export interface ReturnTripRow {
   return_time: string | null;
   active: boolean;
   display_order: number;
+  auto_advance: boolean;
+  clone_buses_on_advance: boolean;
 }
 
 interface ReturnBusRow { id: string; return_trip_id: string; trip_date: string; bus_id: string }
@@ -139,7 +141,10 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 
   const templates = useQuery({
     queryKey: ["return-trips"],
+    refetchInterval: 60_000,
     queryFn: async () => {
+      // تدوير رحلات العودة المنتهية إلى الأسبوع التالي (مثل رحلات الذهاب تمامًا)
+      await supabase.rpc("advance_due_return_trips" as never);
       const { data, error } = await supabase.from("return_trips" as never).select("*").order("display_order");
       if (error) throw error;
       return (data as unknown as ReturnTripRow[]) ?? [];
@@ -194,7 +199,6 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
         <ReturnTripEditor
           key={t.id}
           trip={t}
-          tripsCount={(templates.data ?? []).length}
           buses={buses.data ?? []}
           assigned={new Set((links.data ?? []).filter((l) => l.return_trip_id === t.id && l.trip_date === (t.return_date ?? "")).map((l) => l.bus_id))}
           occupancy={occupancy.data ?? {}}
@@ -205,9 +209,8 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 }
 
 /** بطاقة تحرير رحلة عودة واحدة — مطابقة في الأسلوب لبطاقة رحلة الذهاب. */
-function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
+function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
   trip: ReturnTripRow;
-  tripsCount: number;
   buses: BusRow[];
   assigned: Set<string>;
   occupancy: Record<string, number>;
@@ -227,6 +230,7 @@ function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
       name: local.name, from_city: local.from_city, to_city: local.to_city,
       return_date: date, weekday: date ? weekdayOf(date) : local.weekday,
       return_time: local.return_time || null, active: local.active, display_order: local.display_order,
+      auto_advance: !!local.auto_advance, clone_buses_on_advance: !!local.clone_buses_on_advance,
     } as never).eq("id", trip.id);
     if (error) return toast.error(error.message);
     // نقل ارتباطات الحافلات إلى التاريخ الجديد عند تغييره
@@ -286,6 +290,24 @@ function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
         <div><Label className="text-xs">إلى</Label><Input value={local.to_city} onChange={(e) => setLocal({ ...local, to_city: e.target.value })} /></div>
         <div><Label className="text-xs">الترتيب</Label><Input type="number" value={local.display_order} onChange={(e) => setLocal({ ...local, display_order: Number(e.target.value) })} /></div>
         <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Switch checked={!!local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} />
+            <span className="text-xs">تقدّم تلقائي أسبوعي</span>
+            <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-bold text-[color:var(--color-navy)]">
+              {local.return_time ? `عند ${formatTripTime(local.return_time)}` : "بدون وقت عودة"}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={!!local.clone_buses_on_advance}
+              onCheckedChange={(v) => setLocal({ ...local, clone_buses_on_advance: v })}
+            />
+            <span className="text-xs">إنشاء حافلة جديدة مع الرحلة الجديدة</span>
+          </div>
+        </div>
+        <div className="flex items-end gap-2">
           <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّلة</span></div>
         </div>
       </div>
@@ -318,7 +340,6 @@ function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
-        <ReturnTripActions trip={trip} tripsCount={tripsCount} todayIso={todayIso()} />
         <Button size="sm" variant="outline" onClick={del} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
       </div>
