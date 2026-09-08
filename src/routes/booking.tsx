@@ -1536,6 +1536,7 @@ function StepTripBus({
   onSelectTrip,
   buses,
   busReserved,
+  availableOf,
   busId,
   onSelectBus,
   noBus,
@@ -1551,6 +1552,7 @@ function StepTripBus({
   onSelectTrip: (id: string) => void;
   buses: (Bus & { name?: string | null })[];
   busReserved: Record<string, string[]>;
+  availableOf: (b: Bus & { name?: string | null }) => number;
   busId: string | null;
   onSelectBus: (id: string) => void;
   noBus: boolean;
