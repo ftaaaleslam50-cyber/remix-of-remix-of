@@ -39,7 +39,7 @@ export function Navbar() {
       if (!uid) { setDisplayName(""); setAvatarUrl(""); setIsAdmin(false); return; }
       const [{ data: prof }, { data: role }] = await Promise.all([
         supabase.from("profiles").select("full_name,avatar_url,mobile_phone").eq("id", uid).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", uid).in("role", ["admin", "manager", "user_manager"]).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", uid).in("role", ["admin", "manager", "supervisor"]).maybeSingle(),
       ]);
       setDisplayName(prof?.full_name || prof?.mobile_phone || "حسابي");
       setIsAdmin(!!role);
