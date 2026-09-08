@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
-import { NewReturnTripDialog } from "@/components/admin/NewReturnTripDialog";
+import { ReturnTripActions } from "@/components/admin/NewReturnTripDialog";
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
 
 export interface ReturnTripRow {
@@ -183,10 +183,6 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 justify-end">
-        <NewReturnTripDialog trips={templates.data ?? []} todayIso={todayIso()} />
-      </div>
-
       {(templates.data ?? []).length === 0 && (
         <div className="surface-card p-10 text-center text-muted-foreground space-y-2">
           <CalendarDays className="h-10 w-10 mx-auto opacity-40" />
@@ -198,6 +194,7 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
         <ReturnTripEditor
           key={t.id}
           trip={t}
+          tripsCount={(templates.data ?? []).length}
           buses={buses.data ?? []}
           assigned={new Set((links.data ?? []).filter((l) => l.return_trip_id === t.id && l.trip_date === (t.return_date ?? "")).map((l) => l.bus_id))}
           occupancy={occupancy.data ?? {}}
@@ -208,8 +205,9 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 }
 
 /** بطاقة تحرير رحلة عودة واحدة — مطابقة في الأسلوب لبطاقة رحلة الذهاب. */
-function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
+function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
   trip: ReturnTripRow;
+  tripsCount: number;
   buses: BusRow[];
   assigned: Set<string>;
   occupancy: Record<string, number>;
@@ -319,7 +317,8 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <ReturnTripActions trip={trip} tripsCount={tripsCount} todayIso={todayIso()} />
         <Button size="sm" variant="outline" onClick={del} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
       </div>
