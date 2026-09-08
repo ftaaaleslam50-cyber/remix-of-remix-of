@@ -1,4 +1,14 @@
 const FALLBACK_ICON = '/brand-logo.png';
+const SW_VERSION = 'v2';
+
+self.addEventListener('install', () => {
+  // New worker takes over immediately so users move off the old version after deploy.
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
 
 self.addEventListener('push', (event) => {
   let data = {};
@@ -14,6 +24,7 @@ self.addEventListener('push', (event) => {
       notification_id: data.notification_id || null,
       booking_id: data.booking_id || null,
       type: data.type || 'system',
+      sw: SW_VERSION,
     },
     dir: 'rtl',
     lang: 'ar',
@@ -41,3 +52,25 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('notificationclose', () => {});
+
+// The browser can rotate a subscription; tell any open tab so it re-syncs with the server.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const oldSub = event.oldSubscription || (await self.registration.pushManager.getSubscription());
+      const applicationServerKey = event.newSubscription?.options?.applicationServerKey
+        || oldSub?.options?.applicationServerKey;
+      const fresh = event.newSubscription
+        || (applicationServerKey
+          ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })
+          : null);
+      if (!fresh) return;
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clients) {
+        client.postMessage({ type: 'push-subscription-changed', subscription: fresh.toJSON() });
+      }
+    } catch (error) {
+      // Nothing else we can do from the worker; the next page load re-syncs.
+    }
+  })());
+});
