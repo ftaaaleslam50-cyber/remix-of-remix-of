@@ -261,8 +261,15 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
         <div><Label className="text-xs">تاريخ العودة الفعلي</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
         <div><Label className="text-xs">تكرار كل (أسابيع)</Label><Input type="number" min={1} value={local.recurrence_weeks ?? 1} onChange={(e) => setLocal({ ...local, recurrence_weeks: Number(e.target.value) })} /></div>
         <div className="flex items-end gap-2">
-          <div className="flex items-center gap-2"><Switch checked={local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} /><span className="text-xs">تقدّم تلقائي أسبوعي</span></div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Switch checked={local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} />
+            <span className="text-xs">تقدّم تلقائي أسبوعي</span>
+            <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-bold text-[color:var(--color-navy)]">
+              {local.departure_time ? `عند ${formatTripTime(local.departure_time)}` : "بدون وقت مغادرة"}
+            </span>
+          </div>
         </div>
+
         <div className="flex items-end gap-2">
           <div className="flex items-center gap-2">
             <Switch
