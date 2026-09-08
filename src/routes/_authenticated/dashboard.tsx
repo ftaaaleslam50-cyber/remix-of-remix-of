@@ -126,26 +126,21 @@ interface BookingRow {
 function Dashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const perms = useStaffRole();
+  // Any staff member may open the dashboard; what they see depends on their role.
+  const isAdmin = perms.loading ? null : perms.isStaff;
+  const canManageContent = perms.canManageContent;
   const [showArchived, setShowArchived] = useState(false);
   const [email, setEmail] = useState<string>("");
 
   useEffect(() => {
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setEmail(user.email ?? "");
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      setIsAdmin(!!data);
     })();
   }, []);
+
 
   // Realtime: refresh bookings list & stats when anything changes server-side
   useEffect(() => {
