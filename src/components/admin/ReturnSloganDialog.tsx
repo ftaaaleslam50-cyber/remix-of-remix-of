@@ -105,7 +105,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
 
     const lines = rows.map((r) => {
       const name = (r.customer_name || r.booking_code || "").trim();
-      const source = (r.rep_name || r.booking_source || "").trim();
+      const source = (r.booking_source || r.rep_name || "").trim();
       if (!name) gaps.push("حجز بدون اسم صاحب الحجز");
       if (!source) gaps.push("حجز بدون مصدر رحلة");
       return [name, String(r.passenger_count || 1), source].filter(Boolean).join(" ");
