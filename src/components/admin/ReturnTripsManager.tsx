@@ -317,7 +317,8 @@ function ReturnTripEditor({ trip, tripsCount, buses, assigned, occupancy }: {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <ReturnTripActions trip={trip} tripsCount={tripsCount} todayIso={todayIso()} />
         <Button size="sm" variant="outline" onClick={del} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
         <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
       </div>
