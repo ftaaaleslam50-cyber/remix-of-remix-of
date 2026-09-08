@@ -181,7 +181,7 @@ function AdminTrips() {
         <div className="container-luxe py-4 flex items-center justify-between">
           <h1 className="text-lg font-extrabold flex items-center gap-2"><CalendarClock className="h-5 w-5" /> إدارة الرحلات</h1>
           <div className="flex gap-2">
-            <Button size="sm" onClick={addTrip} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة رحلة</Button>
+            <Button size="sm" onClick={addTrip} className="rounded-full"><Plus className="h-4 w-4 ml-1" /> إضافة رحلة ذهاب</Button>
             <Link to="/dashboard"><Button size="sm" variant="outline" className="rounded-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"><ArrowLeft className="h-4 w-4 ml-1" /> لوحة التحكم</Button></Link>
           </div>
         </div>
