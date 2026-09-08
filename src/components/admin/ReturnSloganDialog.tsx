@@ -108,7 +108,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
       const source = (r.booking_source || r.rep_name || "").trim();
       if (!name) gaps.push("حجز بدون اسم صاحب الحجز");
       if (!source) gaps.push("حجز بدون مصدر رحلة");
-      return [name, String(r.passenger_count || 1), source].filter(Boolean).join(" ");
+      return [name, `/${r.passenger_count || 1}`, source ? `/${source}` : ""].filter(Boolean).join(" ");
     });
 
     const body = [

@@ -186,8 +186,31 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
     },
   });
 
+  async function addReturnTrip() {
+    const name = prompt("اسم رحلة العودة:");
+    if (!name) return;
+    const { error } = await supabase.from("return_trips" as never).insert({
+      name,
+      from_city: "مكة",
+      to_city: "",
+      weekday: new Date().getDay(),
+      return_date: todayIso(),
+      active: true,
+      display_order: (templates.data ?? []).length,
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success("تمت إضافة رحلة العودة");
+    qc.invalidateQueries({ queryKey: ["return-trips"] });
+  }
+
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" className="rounded-full" onClick={addReturnTrip}>
+          <Plus className="h-4 w-4 ml-1" /> إضافة رحلة عودة
+        </Button>
+      </div>
+
       {(templates.data ?? []).length === 0 && (
         <div className="surface-card p-10 text-center text-muted-foreground space-y-2">
           <CalendarDays className="h-10 w-10 mx-auto opacity-40" />
