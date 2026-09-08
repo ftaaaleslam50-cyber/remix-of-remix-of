@@ -1645,9 +1645,7 @@ function StepTripBus({
                   ) : (
                     tripBuses.map((b) => {
                       const cap = b.capacity ?? 49;
-                      const blocked = (b.blocked_seats ?? ["A2"]).length;
-                      const used = (busReserved[b.id] ?? []).length;
-                      const available = Math.max(0, cap - blocked - used);
+                      const available = availableOf(b);
                       const full = available <= 0;
                       const selected = busId === b.id;
                       return (
