@@ -276,8 +276,8 @@ function Dashboard() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="hidden md:inline text-sm text-white/70">{email}</span>
-            {isAdmin && <NotificationBell />}
-            {isAdmin && (
+            {perms.isStaff && <NotificationBell />}
+            {perms.isAdmin && (
               <Link to="/audit">
                 <Button
                   size="sm"
@@ -288,7 +288,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-buses">
                 <Button
                   size="sm"
@@ -300,7 +300,7 @@ function Dashboard() {
               </Link>
             )}
 
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-trips">
                 <Button
                   size="sm"
@@ -311,7 +311,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-gallery">
                 <Button
                   size="sm"
@@ -322,7 +322,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-packages">
                 <Button
                   size="sm"
@@ -333,7 +333,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {perms.isAdmin && (
               <Link to="/admin-users">
                 <Button
                   size="sm"
@@ -344,7 +344,7 @@ function Dashboard() {
                 </Button>
               </Link>
             )}
-            {isAdmin && (
+            {canManageContent && (
               <Link to="/admin-assets">
                 <Button
                   size="sm"
@@ -380,7 +380,7 @@ function Dashboard() {
 
         {isAdmin === false && (
           <div className="surface-card p-6 mb-6 border-r-4 border-r-warning">
-            <h3 className="font-bold">حسابك ليس لديه صلاحية مسؤول</h3>
+            <h3 className="font-bold">حسابك ليس لديه صلاحية للدخول إلى لوحة التحكم</h3>
           </div>
         )}
 
@@ -391,6 +391,7 @@ function Dashboard() {
             <TabsTrigger value="bookings" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات
             </TabsTrigger>
+            {canManageContent && (<>
             <TabsTrigger value="tripsheet" className="rounded-xl">
               <FileText className="h-4 w-4 ml-1" /> كشف الرحلة
             </TabsTrigger>
@@ -415,6 +416,7 @@ function Dashboard() {
             <TabsTrigger value="site" className="rounded-xl">
               <Layout className="h-4 w-4 ml-1" /> إعدادات الموقع
             </TabsTrigger>
+            </>)}
           </TabsList>
 
           <TabsContent value="bookings" className="mt-4">
