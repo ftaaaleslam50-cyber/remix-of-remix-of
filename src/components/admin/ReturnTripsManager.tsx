@@ -648,6 +648,11 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   );
 
   const rows = bookings.data ?? [];
+  // حافلات رحلات العودة المرتبطة بهذا التاريخ (مصدر قائمة الحافلات في شعار الرحلة)
+  const dateBuses = useMemo(() => {
+    const ids = new Set((assignedBuses.data ?? []).map((a) => a.bus_id));
+    return (buses.data ?? []).filter((b) => ids.has(b.id));
+  }, [assignedBuses.data, buses.data]);
   const totalPax = rows.reduce((s, b) => s + (b.passenger_count || 1), 0);
   const donePax = rows.reduce((s, b) => s + (b.return_bus_id ? b.return_seat_numbers?.length ?? 0 : 0), 0);
   const tripFor = (d: string) => allTrips.find((t) => t.return_date === d);
@@ -697,10 +702,13 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 
       <ReturnDateBar date={date} onChange={setDate} />
 
-      <div className="surface-card p-4 flex flex-wrap gap-2 text-xs">
+      <div className="surface-card p-4 flex flex-wrap items-center gap-2 text-xs">
         <Badge variant="secondary">حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)</Badge>
         <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
+        <div className="ms-auto">
+          <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
+        </div>
       </div>
 
       {bookings.isError && (
