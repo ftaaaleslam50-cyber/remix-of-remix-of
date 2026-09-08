@@ -126,17 +126,6 @@ export function TripSheetTab() {
         []) as Array<{ id: string; name: string; active: boolean; extension_price: number | null }>,
   });
 
-  const { data: pricing = [] } = useQuery({
-    queryKey: ["ts-pricing"],
-    queryFn: async () =>
-      ((await supabase.from("pricing_matrix").select("package_id,room_type,price,active")).data ?? []) as Array<{
-        package_id: string;
-        room_type: string;
-        price: number;
-        active: boolean;
-      }>,
-  });
-
   const { data: repProfiles = [] } = useQuery({
     queryKey: ["ts-reps"],
     queryFn: async () =>
@@ -320,20 +309,18 @@ export function TripSheetTab() {
         const nights = n(b.extension_nights);
         const rep = b.booking_source || "الموقع";
 
-        const saleCell = pricing.find(
-          (p) => p.package_id === b.package_id && p.active && String(p.room_type) === String(b.room_type ?? ""),
-        );
-        const salePerPerson = n(saleCell?.price);
-        const packageTotal = salePerPerson * count || n(b.total_price);
+        // اجمالي الباقة = المبلغ المدفوع فعليًا الظاهر في الحجز
+        const packageTotal = n(b.total_price);
         const extSale = n(ref.ext[hotel]?.sale ?? hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
-        const extensionTotal = extSale * nights * count;
+        // اجمالي التمديد = عدد الليالي × سعر الغرفة في الفندق (بدون ضرب في عدد الأفراد)
+        const extensionTotal = extSale * nights;
         const grandTotal = packageTotal + extensionTotal;
 
         const bedCost = hotel === NO_HOTEL ? 0 : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
         const costPerPerson = bedCost + seatCost + emptyBedShare;
         const groupCost = costPerPerson * count;
         const extNightCost = n(ref.ext[hotel]?.cost);
-        const extensionCost = nights * extNightCost * count;
+        const extensionCost = nights * extNightCost;
         const extensionProfit = extensionTotal - extensionCost;
         const grossProfit = grandTotal + extensionProfit - (groupCost + extensionCost);
         const rate = repRate(rep);
