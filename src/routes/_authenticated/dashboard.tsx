@@ -39,6 +39,7 @@ import { LayoutSeatMap, mirrorLayout, type LayoutJson } from "@/components/booki
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
+import { DepartureSloganDialog } from "@/components/admin/DepartureSloganDialog";
 import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import {
@@ -1018,6 +1019,13 @@ function UnifiedBookingsTab(props: {
           >
             <ImageIcon className="h-4 w-4 ml-1" /> مخطط المقاعد PNG
           </Button>
+          <DepartureSloganDialog
+            bookings={filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && !b.no_show)}
+            tripName={trips.find((t) => t.id === tripId)?.name}
+            bus={bus ? { name: bus.name, bus_number: bus.bus_number, plate: bus.plate } : null}
+            disabled={!busId}
+            disabledReason="اختر الحافلة أولاً"
+          />
           <Button
             variant="outline"
             onClick={exportSeatChartPdf}
