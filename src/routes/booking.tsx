@@ -849,6 +849,7 @@ function BookingPage() {
                   }}
                   buses={buses}
                   busReserved={busReserved}
+                  availableOf={(b) => availableSeatsOf(b as Bus & { layout_id?: string | null })}
                   busId={busId}
                   onSelectBus={(id) => {
                     setNoBus(false);
