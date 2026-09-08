@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bus, ArrowLeft, Plus, Save, Trash2, Copy, ArrowRightLeft, Layout } from "lucide-react";
+import { Bus, ArrowLeft, Plus, Save, Trash2, Copy, ArrowRightLeft, Layout, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -518,6 +518,7 @@ function AdminBuses() {
                         <TableHead>عودة فقط</TableHead>
                         <TableHead>ذهاب وعودة في رحلة أخرى</TableHead>
                         <TableHead>صورة</TableHead>
+                        <TableHead>إشعار الرحلة</TableHead>
                         <TableHead>اسم السائق</TableHead>
                         <TableHead>جوال السائق</TableHead>
                         <TableHead>هوية السائق</TableHead>
