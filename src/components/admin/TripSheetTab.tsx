@@ -347,7 +347,7 @@ export function TripSheetTab() {
         };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filtered, pricing, hotelRows, ref, seatCost, emptyBedShare],
+    [filtered, hotelRows, ref, seatCost, emptyBedShare],
   );
 
   const repNames = useMemo(() => {
