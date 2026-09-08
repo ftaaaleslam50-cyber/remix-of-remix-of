@@ -141,7 +141,10 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 
   const templates = useQuery({
     queryKey: ["return-trips"],
+    refetchInterval: 60_000,
     queryFn: async () => {
+      // تدوير رحلات العودة المنتهية إلى الأسبوع التالي (مثل رحلات الذهاب تمامًا)
+      await supabase.rpc("advance_due_return_trips" as never);
       const { data, error } = await supabase.from("return_trips" as never).select("*").order("display_order");
       if (error) throw error;
       return (data as unknown as ReturnTripRow[]) ?? [];
