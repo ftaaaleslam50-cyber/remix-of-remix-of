@@ -21,6 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
+import { NewReturnTripDialog } from "@/components/admin/NewReturnTripDialog";
+import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
 
 export interface ReturnTripRow {
   id: string;
@@ -179,23 +181,10 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
     },
   });
 
-  async function addTrip() {
-    const name = prompt("اسم رحلة العودة (مثال: عودة السبت):");
-    if (!name) return;
-    const d = todayIso();
-    const { error } = await supabase.from("return_trips" as never).insert({
-      name, weekday: weekdayOf(d), return_date: d, display_order: (templates.data ?? []).length,
-    } as never);
-    if (error) return toast.error(error.message);
-    qc.invalidateQueries({ queryKey: ["return-trips"] });
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 justify-end">
-        <Button size="sm" className="rounded-full" onClick={addTrip}>
-          <Plus className="h-4 w-4 ml-1" /> إضافة رحلة عودة
-        </Button>
+        <NewReturnTripDialog trips={templates.data ?? []} todayIso={todayIso()} />
       </div>
 
       {(templates.data ?? []).length === 0 && (
@@ -659,6 +648,11 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   );
 
   const rows = bookings.data ?? [];
+  // حافلات رحلات العودة المرتبطة بهذا التاريخ (مصدر قائمة الحافلات في شعار الرحلة)
+  const dateBuses = useMemo(() => {
+    const ids = new Set((assignedBuses.data ?? []).map((a) => a.bus_id));
+    return (buses.data ?? []).filter((b) => ids.has(b.id));
+  }, [assignedBuses.data, buses.data]);
   const totalPax = rows.reduce((s, b) => s + (b.passenger_count || 1), 0);
   const donePax = rows.reduce((s, b) => s + (b.return_bus_id ? b.return_seat_numbers?.length ?? 0 : 0), 0);
   const tripFor = (d: string) => allTrips.find((t) => t.return_date === d);
@@ -708,10 +702,13 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 
       <ReturnDateBar date={date} onChange={setDate} />
 
-      <div className="surface-card p-4 flex flex-wrap gap-2 text-xs">
+      <div className="surface-card p-4 flex flex-wrap items-center gap-2 text-xs">
         <Badge variant="secondary">حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)</Badge>
         <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
+        <div className="ms-auto">
+          <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
+        </div>
       </div>
 
       {bookings.isError && (
