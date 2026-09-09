@@ -245,7 +245,8 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   rows.push(["نوع الحجز", b.booking_type === "individual" ? "أفراد" : "عوائل"]);
   rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type as "individual" | "family", hasHotel)]);
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
-  rows.push(["رقم الباص", busLabel(b.buses)]);
+  rows.push(["رقم الباص", Number(b.buses?.bus_number || 0) > 0 ? String(b.buses?.bus_number) : "-"]);
+  if (b.buses?.name) rows.push(["اسم الباص", b.buses.name]);
   if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
   const hideSeats = b.booking_type === "individual" && (await hideSeatsForIndividual());
   if (!hideSeats) rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
