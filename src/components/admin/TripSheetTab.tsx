@@ -47,6 +47,7 @@ interface SheetBooking {
   extension_nights?: number | null;
   trip_mode?: string | null;
   trip_id: string | null;
+  departure_date?: string | null;
   bus_id: string | null;
   package_id: string | null;
   rep_profile_id?: string | null;
@@ -167,11 +168,20 @@ export function TripSheetTab() {
   const [occDate, setOccDate] = useState("");
   const occ = occurrences.find((o) => o.departure_date === occDate) ?? null;
 
+  /** التواريخ المتاحة للاختيار: تواريخ الاعتمادات السابقة + تواريخ حجوزات الرحلة. */
+  const occDateOptions = useMemo(() => {
+    const s = new Set<string>(occurrences.map((o) => o.departure_date));
+    rows.forEach((b) => {
+      if (tripId && b.trip_id === tripId && b.departure_date) s.add(b.departure_date);
+    });
+    return [...s].sort().reverse();
+  }, [occurrences, rows, tripId]);
+
   /** تكلفة السرير للرحلة/التاريخ المحدد (تُحفظ عند الاعتماد). */
   const [bedCosts, setBedCosts] = useState<Record<string, Record<string, number>>>({});
   useEffect(() => {
     setBedCosts((occ?.bed_costs as Record<string, Record<string, number>>) ?? {});
-  }, [occ?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [occ?.id, occDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -215,7 +225,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,rep_profile_id,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,rep_profile_id,departure_date,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
