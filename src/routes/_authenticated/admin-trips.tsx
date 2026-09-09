@@ -38,7 +38,7 @@ interface TripRow {
   active: boolean;
   display_order: number;
 }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; status: string }
+interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; status: string; assigned_date?: string | null }
 interface OccurrenceRow {
   id: string;
   trip_id: string;
@@ -96,7 +96,7 @@ function AdminTrips() {
     queryKey: ["admin-trips-buses"],
     enabled: isAdmin === true,
     queryFn: async () => {
-      const { data } = await supabase.from("buses").select("id,name,bus_number,capacity,status,direction").order("bus_number");
+      const { data } = await supabase.from("buses").select("id,name,bus_number,capacity,status,direction,assigned_date").order("bus_number");
       // حافلات الذهاب فقط تُخصَّص لرحلات الذهاب
       return ((data as unknown as (BusRow & { direction?: string })[]) ?? []).filter((b) => (b.direction ?? "outbound") === "outbound");
     },
