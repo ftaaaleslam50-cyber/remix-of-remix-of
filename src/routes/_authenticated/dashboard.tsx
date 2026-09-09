@@ -562,7 +562,10 @@ function UnifiedBookingsTab(props: {
 
   } = props;
   const [tripId, setTripId] = useState<string>("");
-  const [busId, setBusId] = useState<string>("");
+  const [busIds, setBusIds] = useState<string[]>([]);
+  // الحافلة "النشطة" للعمليات المفردة (المخطط، المصاريف، الحجز اليدوي) = عند اختيار حافلة واحدة فقط
+  const busId = busIds.length === 1 ? busIds[0]! : "";
+  const setBusId = (id: string) => setBusIds(id ? [id] : []);
   const [manualOpen, setManualOpen] = useState<boolean>(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState<boolean>(false);
