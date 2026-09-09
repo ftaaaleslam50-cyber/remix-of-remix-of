@@ -411,7 +411,14 @@ export function TripSheetTab() {
         // اجمالي الباقة = المبلغ المدفوع فعليًا الظاهر في الحجز
         const packageTotal = n(b.total_price);
         const extSale = n(ref.ext[hotel]?.sale ?? hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
-        const bedCost = hotel === NO_HOTEL ? 0 : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
+        // تكلفة السرير: من تكاليف الرحلة/التاريخ المحدد مباشرة (بدون قسمة)،
+        // وإلا الطريقة القديمة (سعر الغرفة ÷ سعة الغرفة).
+        const bedCost =
+          hotel === NO_HOTEL
+            ? 0
+            : occ
+              ? n(bedCosts[hotel]?.[roomLabel])
+              : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
         // النسبة الجديدة من ملف المندوب إن وُجدت، وإلا النظام القديم بالاسم.
         const profileRate = b.rep_profile_id ? Number(repRates[b.rep_profile_id] ?? 0) || 0 : 0;
         const rate = profileRate || repRate(rep);
