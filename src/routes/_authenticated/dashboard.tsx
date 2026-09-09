@@ -629,8 +629,8 @@ function UnifiedBookingsTab(props: {
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
     if (source && ((b.booking_source ?? "").trim() || "الموقع") !== source) return false;
-    if (busId) {
-      if (b.bus_id !== busId) return false;
+    if (busIds.length > 0) {
+      if (!b.bus_id || !busIds.includes(b.bus_id)) return false;
     } else if (tripId) {
       if (b.trip_id !== tripId) return false;
     }
