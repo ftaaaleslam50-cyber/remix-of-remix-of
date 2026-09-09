@@ -683,6 +683,23 @@ export function TripSheetTab() {
           <Label className="text-xs mb-1 block">بحث</Label>
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="الاسم، الهوية، رقم الحجز..." />
         </div>
+        <div>
+          <Label className="text-xs mb-1 block">تاريخ الرحلة (للتكاليف والاعتماد)</Label>
+          <select
+            value={occDate}
+            onChange={(e) => setOccDate(e.target.value)}
+            disabled={!tripId}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white disabled:opacity-60"
+          >
+            <option value="">— اختر التاريخ —</option>
+            {occurrences.map((o) => (
+              <option key={o.id} value={o.departure_date}>
+                {o.departure_date}
+                {o.settled_at ? " — معتمدة" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3 text-sm">
