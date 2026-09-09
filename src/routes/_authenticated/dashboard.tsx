@@ -75,6 +75,7 @@ import { sar, formatDate, formatDateTime } from "@/lib/format";
 import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
 import { useStaffRole } from "@/hooks/useStaffRole";
+import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
