@@ -927,11 +927,11 @@ export function TripSheetTab() {
 
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-xs text-muted-foreground">
-            {occ
-              ? `تكلفة السرير للرحلة بتاريخ ${occ.departure_date}${occ.settled_at ? " — معتمدة" : " — غير معتمدة"}`
+            {occDate
+              ? `تكلفة السرير للرحلة بتاريخ ${occDate}${occ?.settled_at ? " — معتمدة" : " — غير معتمدة"}`
               : "الإعداد العام — اختر رحلة وتاريخًا في الفلتر لتعديل تكلفة الأسرّة الخاصة بها"}
           </p>
-          {occ ? (
+          {occDate ? (
             <Button className="rounded-full" disabled={approving} onClick={() => void approveOccurrence()}>
               اعتماد تكلفة الفنادق
             </Button>
@@ -947,7 +947,7 @@ export function TripSheetTab() {
                   <th key={r} className="border px-2 py-0.5 whitespace-nowrap">
                     تكلفة {r}
                     <span className="block text-[10px] font-normal text-muted-foreground">
-                      {occ ? "سرير واحد" : `÷ ${ROOM_CAPACITY[r]}`}
+                      {occDate ? "سرير واحد" : `÷ ${ROOM_CAPACITY[r]}`}
                     </span>
                   </th>
                 ))}
@@ -964,10 +964,10 @@ export function TripSheetTab() {
                       <Input
                         type="number"
                         className="h-8 text-xs"
-                        value={String((occ ? bedCosts[hotel]?.[r] : ref.costs[hotel]?.[r]) ?? 0)}
+                        value={String((occDate ? bedCosts[hotel]?.[r] : ref.costs[hotel]?.[r]) ?? 0)}
                         onChange={(e) => {
                           const v = Number(e.target.value) || 0;
-                          if (occ) {
+                          if (occDate) {
                             setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
                           } else {
                             setRef((s) => ({
