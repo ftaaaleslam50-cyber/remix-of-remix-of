@@ -38,7 +38,7 @@ interface TripRow {
   active: boolean;
   display_order: number;
 }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; status: string }
+interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; status: string; assigned_date?: string | null }
 interface OccurrenceRow {
   id: string;
   trip_id: string;
@@ -46,6 +46,20 @@ interface OccurrenceRow {
   departure_time: string | null;
   return_date: string | null;
   bus_ids: string[] | null;
+}
+
+/** هل التاريخ ضمن الأسبوع الحالي (الأحد → السبت)؟ */
+export function isCurrentWeek(iso?: string | null) {
+  if (!iso) return false;
+  const dt = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(dt.getTime())) return false;
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(now.getDate() - now.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return dt >= start && dt < end;
 }
 
 const PERIODS = [
@@ -96,7 +110,7 @@ function AdminTrips() {
     queryKey: ["admin-trips-buses"],
     enabled: isAdmin === true,
     queryFn: async () => {
-      const { data } = await supabase.from("buses").select("id,name,bus_number,capacity,status,direction").order("bus_number");
+      const { data } = await supabase.from("buses").select("id,name,bus_number,capacity,status,direction,assigned_date").order("bus_number");
       // حافلات الذهاب فقط تُخصَّص لرحلات الذهاب
       return ((data as unknown as (BusRow & { direction?: string })[]) ?? []).filter((b) => (b.direction ?? "outbound") === "outbound");
     },
@@ -227,6 +241,10 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
   onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
 }) {
   const [local, setLocal] = useState(trip);
+  const [busFilter, setBusFilter] = useState<"all" | "week" | "old">("all");
+  const visibleBuses = buses.filter((b) =>
+    busFilter === "all" ? true : busFilter === "week" ? isCurrentWeek(b.assigned_date) : !isCurrentWeek(b.assigned_date),
+  );
   useEffect(() => setLocal(trip), [trip]);
   const finished = isTripFinished(trip.departure_date, trip.departure_time);
   const upcoming = trip.departure_date ? nextOccurrence(trip.departure_date, trip.recurrence_weeks || 1) : null;
@@ -367,10 +385,29 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
 
 
       <div>
-        <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> الحافلات المتاحة والإشغال</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div className="text-sm font-bold flex items-center gap-2"><BusIcon className="h-4 w-4" /> الحافلات المتاحة والإشغال</div>
+          <div className="flex items-center gap-1">
+            {([
+              { v: "all", l: "الكل" },
+              { v: "week", l: "حافلات هذا الأسبوع" },
+              { v: "old", l: "حافلات قديمة" },
+            ] as const).map((f) => (
+              <Button
+                key={f.v}
+                size="sm"
+                variant={busFilter === f.v ? "default" : "outline"}
+                className="rounded-full h-7 text-[11px]"
+                onClick={() => setBusFilter(f.v)}
+              >
+                {f.l}
+              </Button>
+            ))}
+          </div>
+        </div>
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {buses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات مسجلة.</div>}
-          {buses.map((b) => {
+          {visibleBuses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات مطابقة.</div>}
+          {visibleBuses.map((b) => {
             const used = occupancy[b.id] ?? 0;
             const pct = b.capacity > 0 ? Math.round((used / b.capacity) * 100) : 0;
             const isFull = used >= b.capacity;
@@ -382,6 +419,10 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
                   <div>
                     <div className="text-sm font-bold">{b.name || `حافلة ${b.bus_number}`}</div>
                     <div className="text-[11px] text-muted-foreground">{b.status}</div>
+                    <div className="text-[11px] font-bold text-[color:var(--color-navy)]">
+                      {b.assigned_date ? formatTripDate(b.assigned_date) : "بدون تاريخ"}
+                      {isCurrentWeek(b.assigned_date) ? " • هذا الأسبوع" : ""}
+                    </div>
                   </div>
                 </label>
                 <div className="text-left">
