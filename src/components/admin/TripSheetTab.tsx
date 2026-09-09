@@ -347,42 +347,27 @@ export function TripSheetTab() {
         // اجمالي الباقة = المبلغ المدفوع فعليًا الظاهر في الحجز
         const packageTotal = n(b.total_price);
         const extSale = n(ref.ext[hotel]?.sale ?? hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
-        // اجمالي التمديد = عدد الليالي × سعر الغرفة في الفندق (بدون ضرب في عدد الأفراد)
-        const extensionTotal = extSale * nights;
-        const grandTotal = packageTotal + extensionTotal;
-
         const bedCost = hotel === NO_HOTEL ? 0 : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
-        const costPerPerson = bedCost + seatCost + emptyBedShare;
-        const groupCost = costPerPerson * count;
-        const extNightCost = n(ref.ext[hotel]?.cost);
-        const extensionCost = nights * extNightCost;
-        const extensionProfit = extensionTotal - extensionCost;
-        const grossProfit = grandTotal + extensionProfit - (groupCost + extensionCost);
-        const rate = repRate(rep);
-        const repShare = grossProfit * rate;
+        // النسبة الجديدة من ملف المندوب إن وُجدت، وإلا النظام القديم بالاسم.
+        const profileRate = b.rep_profile_id ? Number(repRates[b.rep_profile_id] ?? 0) || 0 : 0;
+        const rate = profileRate || repRate(rep);
 
-        return {
-          b,
-          rep,
-          hotel,
-          roomLabel,
-          count,
-          nights,
+        const r = computeBookingProfit({
           packageTotal,
-          extensionTotal,
-          grandTotal,
-          costPerPerson,
-          groupCost,
-          extensionCost,
-          extensionProfit,
-          grossProfit,
+          nights,
+          extSale,
+          extNightCost: n(ref.ext[hotel]?.cost),
+          bedCost,
+          seatCost,
+          emptyBedShare,
+          count,
           rate,
-          repShare,
-          companyShare: grossProfit - repShare,
-        };
+        });
+
+        return { b, rep, hotel, roomLabel, count, nights, packageTotal, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filtered, hotelRows, ref, seatCost, emptyBedShare],
+    [filtered, hotelRows, ref, seatCost, emptyBedShare, repRates],
   );
 
   const repNames = useMemo(() => {
