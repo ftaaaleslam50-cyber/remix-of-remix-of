@@ -168,15 +168,6 @@ export function TripSheetTab() {
   const [occDate, setOccDate] = useState("");
   const occ = occurrences.find((o) => o.departure_date === occDate) ?? null;
 
-  /** التواريخ المتاحة للاختيار: تواريخ الاعتمادات السابقة + تواريخ حجوزات الرحلة. */
-  const occDateOptions = useMemo(() => {
-    const s = new Set<string>(occurrences.map((o) => o.departure_date));
-    rows.forEach((b) => {
-      if (tripId && b.trip_id === tripId && b.departure_date) s.add(b.departure_date);
-    });
-    return [...s].sort().reverse();
-  }, [occurrences, rows, tripId]);
-
   /** تكلفة السرير للرحلة/التاريخ المحدد (تُحفظ عند الاعتماد). */
   const [bedCosts, setBedCosts] = useState<Record<string, Record<string, number>>>({});
   useEffect(() => {
@@ -304,6 +295,15 @@ export function TripSheetTab() {
   );
 
   const bus = buses.find((b) => b.id === busId) ?? null;
+
+  /** التواريخ المتاحة للاختيار: تواريخ الاعتمادات السابقة + تواريخ حجوزات الرحلة. */
+  const occDateOptions = useMemo(() => {
+    const s = new Set<string>(occurrences.map((o) => o.departure_date));
+    rows.forEach((b) => {
+      if (tripId && b.trip_id === tripId && b.departure_date) s.add(b.departure_date);
+    });
+    return [...s].sort().reverse();
+  }, [occurrences, rows, tripId]);
 
   /** مصاريف الحافلة المحددة (تُحفظ عند الاعتماد) — الإعداد العام يبقى كما هو. */
   const [busExp, setBusExp] = useState<BusExpenses>(EMPTY_REF.busExpenses);
