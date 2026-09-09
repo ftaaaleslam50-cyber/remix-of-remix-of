@@ -269,7 +269,7 @@ function MyBookingsPage() {
           />
         </div>
 
-        {isLoading ? (
+        {isLoading || !uid ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
         ) : sorted.length === 0 ? (
           <div className="surface-card p-10 text-center">
