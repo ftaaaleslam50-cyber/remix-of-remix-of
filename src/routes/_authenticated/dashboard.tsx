@@ -3256,6 +3256,57 @@ function SiteTab() {
   );
 }
 
+// ================== TICKET OPTIONS ==================
+function TicketOptionsTab() {
+  const qc = useQueryClient();
+  const { data: hide = false } = useQuery({
+    queryKey: ["hide-seats-individual"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
+      return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
+    },
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function toggle(next: boolean) {
+    setSaving(true);
+    const { error } = await supabase.from("app_settings").update({ hide_seats_individual: next } as never).eq("id", 1);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success(next ? "تم إخفاء أرقام المقاعد لحجوزات الأفراد" : "تم إظهار أرقام المقاعد");
+    qc.invalidateQueries({ queryKey: ["hide-seats-individual"] });
+  }
+
+  return (
+    <div className="surface-card p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-extrabold">إعدادات التذكرة</h2>
+        <p className="text-xs text-muted-foreground">خيارات مستقلة تخص ملخص الحجز وتذكرة الحجز وملف التذكرة PDF.</p>
+      </div>
+      <label className="flex items-start gap-3 rounded-xl border p-4 cursor-pointer">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4"
+          checked={hide}
+          disabled={saving}
+          onChange={(e) => toggle(e.target.checked)}
+        />
+        <span>
+          <span className="block text-sm font-bold">
+            إخفاء أرقام المقاعد في حجوزات الأفراد —{" "}
+            <span className={hide ? "text-green-600" : "text-muted-foreground"}>{hide ? "مفعّل" : "متوقف"}</span>
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            عند تفعيله لا تظهر خانة أرقام المقاعد في ملخص الحجز ولا في تذكرة الحجز ولا في ملف PDF لمن اختار نوع الحجز
+            «أفراد». حجوزات العوائل لا تتأثر.
+          </span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
+
 // ================== BOOKING AVAILABILITY CONTROL ==================
 interface BookingCtlRow {
   booking_enabled: boolean;
