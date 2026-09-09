@@ -438,8 +438,61 @@ export function TripSheetTab() {
         return { b, rep, hotel, roomLabel, count, nights, packageTotal, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filtered, hotelRows, ref, seatCost, emptyBedShare, repRates],
+    [filtered, hotelRows, ref, seatCost, emptyBedShare, repRates, occ, bedCosts],
   );
+
+  /* ------------------------ settlement approvals ------------------------- */
+  const [approving, setApproving] = useState(false);
+
+  async function approveBus() {
+    if (!bus) return;
+    setApproving(true);
+    try {
+      const { error } = await supabase
+        .from("buses")
+        .update({
+          expense_bus_cost: busExp.busCost,
+          expense_driver_tip: busExp.driverTip,
+          expense_taxi: busExp.taxi,
+          expense_supervisor: busExp.supervisor,
+          expense_extra: busExp.extra,
+          settled_at: new Date().toISOString(),
+        } as never)
+        .eq("id", bus.id);
+      if (error) throw error;
+      const { error: rpcErr } = await supabase.rpc("recalc_settled_profits" as never, { _bus_id: bus.id } as never);
+      if (rpcErr) throw rpcErr;
+      await refetchBuses();
+      toast.success("تم اعتماد مصاريف الحافلة وإعادة حساب الأرباح");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر الاعتماد");
+    } finally {
+      setApproving(false);
+    }
+  }
+
+  async function approveOccurrence() {
+    if (!occ) return;
+    setApproving(true);
+    try {
+      const { error } = await supabase
+        .from("trip_occurrences")
+        .update({ bed_costs: bedCosts, settled_at: new Date().toISOString() } as never)
+        .eq("id", occ.id);
+      if (error) throw error;
+      const { error: rpcErr } = await supabase.rpc("recalc_settled_profits" as never, {
+        _trip_id: occ.trip_id,
+        _departure_date: occ.departure_date,
+      } as never);
+      if (rpcErr) throw rpcErr;
+      await refetchOcc();
+      toast.success("تم اعتماد تكلفة الفنادق وإعادة حساب الأرباح");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر الاعتماد");
+    } finally {
+      setApproving(false);
+    }
+  }
 
   const repNames = useMemo(() => {
     const names = new Set<string>();
