@@ -837,42 +837,52 @@ export function TripSheetTab() {
           <p className="text-xs text-muted-foreground">تكلفة الأسرّة الفارغة: {sar(round(emptyBedsCost))}</p>
         </div>
 
-        {/* Bus expenses */}
+        {/* Bus expenses — per selected bus, else the old global setting */}
         <div className="rounded-xl border p-4 space-y-3">
-          <h3 className="font-extrabold">مصاريف الباص</h3>
+          <h3 className="font-extrabold">
+            مصاريف الباص
+            {bus ? <span className="text-sm font-normal"> — {bus.name || `حافلة ${bus.bus_number}`}</span> : null}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {bus
+              ? bus.settled_at
+                ? `معتمدة بتاريخ ${new Date(bus.settled_at).toLocaleString("ar-SA")}`
+                : "غير معتمدة بعد"
+              : "الإعداد العام — اختر حافلة واحدة في الفلتر لتعديل مصاريفها الخاصة"}
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <MoneyNum
-              label="تكلفة الباص"
-              value={be.busCost}
-              onChange={(v) => setRef((s) => ({ ...s, busExpenses: { ...s.busExpenses, busCost: v } }))}
-            />
-            <MoneyNum
-              label="إكرامية السائق"
-              value={be.driverTip}
-              onChange={(v) => setRef((s) => ({ ...s, busExpenses: { ...s.busExpenses, driverTip: v } }))}
-            />
-            <MoneyNum
-              label="تاكسي"
-              value={be.taxi}
-              onChange={(v) => setRef((s) => ({ ...s, busExpenses: { ...s.busExpenses, taxi: v } }))}
-            />
-            <MoneyNum
-              label="المشرف"
-              value={be.supervisor}
-              onChange={(v) => setRef((s) => ({ ...s, busExpenses: { ...s.busExpenses, supervisor: v } }))}
-            />
-            <MoneyNum
-              label="مصاريف إضافية"
-              value={be.extra}
-              onChange={(v) => setRef((s) => ({ ...s, busExpenses: { ...s.busExpenses, extra: v } }))}
-            />
+            {(
+              [
+                ["تكلفة الباص", "busCost"],
+                ["إكرامية السائق", "driverTip"],
+                ["تاكسي", "taxi"],
+                ["المشرف", "supervisor"],
+                ["مصاريف إضافية", "extra"],
+              ] as Array<[string, keyof BusExpenses]>
+            ).map(([label, key]) => (
+              <MoneyNum
+                key={key}
+                label={label}
+                value={be[key]}
+                onChange={(v) =>
+                  busId
+                    ? setBusExp((s) => ({ ...s, [key]: v }))
+                    : setRef((s) => ({ ...s, busExpenses: { ...s.busExpenses, [key]: v } }))
+                }
+              />
+            ))}
             <div>
               <Label className="text-xs mb-1 block">تكلفة المقعد (تلقائي)</Label>
               <Input readOnly className="bg-muted" value={round(seatCost)} />
             </div>
           </div>
           <p className="font-bold">إجمالي مصاريف الباص: {sar(round(busTotal))}</p>
-          <p className="text-xs text-muted-foreground">المقاعد المشغولة: {passengers}</p>
+          <p className="text-xs text-muted-foreground">المقاعد المشغولة: {busPassengers}</p>
+          {busId ? (
+            <Button className="rounded-full" disabled={approving} onClick={() => void approveBus()}>
+              اعتماد مصاريف الحافلة
+            </Button>
+          ) : null}
         </div>
       </div>
 
