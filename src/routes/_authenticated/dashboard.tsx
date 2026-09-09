@@ -427,6 +427,10 @@ function Dashboard() {
             <TabsTrigger value="bookingctl" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> التحكم في الحجز
             </TabsTrigger>
+            <TabsTrigger value="ticketopts" className="rounded-xl">
+              <Ticket className="h-4 w-4 ml-1" /> إعدادات التذكرة
+            </TabsTrigger>
+
             <TabsTrigger value="site" className="rounded-xl">
               <Layout className="h-4 w-4 ml-1" /> إعدادات الموقع
             </TabsTrigger>
