@@ -15,6 +15,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { bookingBlockedMessage } from "@/lib/booking-availability";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
+import { startOfWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/_authenticated/my-bookings")({
   head: () => ({ meta: [{ title: `حجوزاتي | ${BRAND.name}` }, { name: "robots", content: "noindex" }] }),
@@ -113,11 +114,6 @@ function MyBookingsPage() {
   }, [sorted, search]);
 
   const groups = useMemo(() => {
-    const startOfWeek = (d: Date) => {
-      const x = new Date(d); x.setHours(0, 0, 0, 0);
-      x.setDate(x.getDate() - x.getDay()); // الأحد
-      return x;
-    };
     const thisWeekStart = startOfWeek(new Date()).getTime();
     const lastWeekStart = thisWeekStart - 7 * 86400000;
 
