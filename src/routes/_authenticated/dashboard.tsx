@@ -516,6 +516,7 @@ interface UBBusOpt {
   plate?: string | null;
   driver_phone?: string | null;
   driver_id_number?: string | null;
+  assigned_date?: string | null;
 }
 
 interface ImportBookingDraft {
@@ -591,7 +592,7 @@ function UnifiedBookingsTab(props: {
       // the admin can filter/report on any bus independently.
       // Only buses flagged active-for-booking are shown/counted.
       const COLS =
-        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number";
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number,assigned_date";
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
