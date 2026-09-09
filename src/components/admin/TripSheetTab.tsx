@@ -426,7 +426,7 @@ export function TripSheetTab() {
         const bedCost =
           hotel === NO_HOTEL
             ? 0
-            : occ
+            : occDate
               ? n(bedCosts[hotel]?.[roomLabel])
               : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
         // النسبة الجديدة من ملف المندوب إن وُجدت، وإلا النظام القديم بالاسم.
