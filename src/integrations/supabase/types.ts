@@ -692,6 +692,11 @@ export type Database = {
           driver_id_number: string | null
           driver_name: string | null
           driver_phone: string | null
+          expense_bus_cost: number | null
+          expense_driver_tip: number | null
+          expense_extra: number | null
+          expense_supervisor: number | null
+          expense_taxi: number | null
           expenses: number
           id: string
           image_url: string | null
@@ -707,6 +712,7 @@ export type Database = {
           priority: number
           return_price: number
           round_trip_price: number
+          settled_at: string | null
           status: Database["public"]["Enums"]["bus_status"]
           trip_id: string | null
           updated_at: string
@@ -724,6 +730,11 @@ export type Database = {
           driver_id_number?: string | null
           driver_name?: string | null
           driver_phone?: string | null
+          expense_bus_cost?: number | null
+          expense_driver_tip?: number | null
+          expense_extra?: number | null
+          expense_supervisor?: number | null
+          expense_taxi?: number | null
           expenses?: number
           id?: string
           image_url?: string | null
@@ -739,6 +750,7 @@ export type Database = {
           priority?: number
           return_price?: number
           round_trip_price?: number
+          settled_at?: string | null
           status?: Database["public"]["Enums"]["bus_status"]
           trip_id?: string | null
           updated_at?: string
@@ -756,6 +768,11 @@ export type Database = {
           driver_id_number?: string | null
           driver_name?: string | null
           driver_phone?: string | null
+          expense_bus_cost?: number | null
+          expense_driver_tip?: number | null
+          expense_extra?: number | null
+          expense_supervisor?: number | null
+          expense_taxi?: number | null
           expenses?: number
           id?: string
           image_url?: string | null
@@ -771,6 +788,7 @@ export type Database = {
           priority?: number
           return_price?: number
           round_trip_price?: number
+          settled_at?: string | null
           status?: Database["public"]["Enums"]["bus_status"]
           trip_id?: string | null
           updated_at?: string
@@ -1751,32 +1769,38 @@ export type Database = {
       }
       trip_occurrences: {
         Row: {
+          bed_costs: Json
           bus_ids: string[]
           created_at: string
           departure_date: string
           departure_time: string | null
           id: string
           return_date: string | null
+          settled_at: string | null
           trip_id: string
           updated_at: string
         }
         Insert: {
+          bed_costs?: Json
           bus_ids?: string[]
           created_at?: string
           departure_date: string
           departure_time?: string | null
           id?: string
           return_date?: string | null
+          settled_at?: string | null
           trip_id: string
           updated_at?: string
         }
         Update: {
+          bed_costs?: Json
           bus_ids?: string[]
           created_at?: string
           departure_date?: string
           departure_time?: string | null
           id?: string
           return_date?: string | null
+          settled_at?: string | null
           trip_id?: string
           updated_at?: string
         }
@@ -2062,6 +2086,10 @@ export type Database = {
         Returns: boolean
       }
       push_retry_kick: { Args: never; Returns: boolean }
+      recalc_settled_profits: {
+        Args: { _bus_id?: string; _departure_date?: string; _trip_id?: string }
+        Returns: number
+      }
       redeem_coupon: {
         Args: { _booking_code: string; _code: string }
         Returns: boolean
