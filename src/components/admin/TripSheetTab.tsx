@@ -47,6 +47,7 @@ interface SheetBooking {
   extension_nights?: number | null;
   trip_mode?: string | null;
   trip_id: string | null;
+  departure_date?: string | null;
   bus_id: string | null;
   package_id: string | null;
   rep_profile_id?: string | null;
@@ -171,7 +172,7 @@ export function TripSheetTab() {
   const [bedCosts, setBedCosts] = useState<Record<string, Record<string, number>>>({});
   useEffect(() => {
     setBedCosts((occ?.bed_costs as Record<string, Record<string, number>>) ?? {});
-  }, [occ?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [occ?.id, occDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -215,7 +216,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,rep_profile_id,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,rep_profile_id,departure_date,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -294,6 +295,15 @@ export function TripSheetTab() {
   );
 
   const bus = buses.find((b) => b.id === busId) ?? null;
+
+  /** التواريخ المتاحة للاختيار: تواريخ الاعتمادات السابقة + تواريخ حجوزات الرحلة. */
+  const occDateOptions = useMemo(() => {
+    const s = new Set<string>(occurrences.map((o) => o.departure_date));
+    rows.forEach((b) => {
+      if (tripId && b.trip_id === tripId && b.departure_date) s.add(b.departure_date);
+    });
+    return [...s].sort().reverse();
+  }, [occurrences, rows, tripId]);
 
   /** مصاريف الحافلة المحددة (تُحفظ عند الاعتماد) — الإعداد العام يبقى كما هو. */
   const [busExp, setBusExp] = useState<BusExpenses>(EMPTY_REF.busExpenses);
@@ -416,7 +426,7 @@ export function TripSheetTab() {
         const bedCost =
           hotel === NO_HOTEL
             ? 0
-            : occ
+            : occDate
               ? n(bedCosts[hotel]?.[roomLabel])
               : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
         // النسبة الجديدة من ملف المندوب إن وُجدت، وإلا النظام القديم بالاسم.
@@ -472,17 +482,19 @@ export function TripSheetTab() {
   }
 
   async function approveOccurrence() {
-    if (!occ) return;
+    if (!occDate || !tripId) return;
     setApproving(true);
     try {
-      const { error } = await supabase
-        .from("trip_occurrences")
-        .update({ bed_costs: bedCosts, settled_at: new Date().toISOString() } as never)
-        .eq("id", occ.id);
+      const payload = { bed_costs: bedCosts, settled_at: new Date().toISOString() } as never;
+      const { error } = occ
+        ? await supabase.from("trip_occurrences").update(payload).eq("id", occ.id)
+        : await supabase
+            .from("trip_occurrences")
+            .insert({ trip_id: tripId, departure_date: occDate, ...(payload as object) } as never);
       if (error) throw error;
       const { error: rpcErr } = await supabase.rpc("recalc_settled_profits" as never, {
-        _trip_id: occ.trip_id,
-        _departure_date: occ.departure_date,
+        _trip_id: tripId,
+        _departure_date: occDate,
       } as never);
       if (rpcErr) throw rpcErr;
       await refetchOcc();
@@ -692,10 +704,10 @@ export function TripSheetTab() {
             className="h-10 w-full rounded-md border px-3 text-sm bg-white disabled:opacity-60"
           >
             <option value="">— اختر التاريخ —</option>
-            {occurrences.map((o) => (
-              <option key={o.id} value={o.departure_date}>
-                {o.departure_date}
-                {o.settled_at ? " — معتمدة" : ""}
+            {occDateOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+                {occurrences.find((o) => o.departure_date === d)?.settled_at ? " — معتمدة" : ""}
               </option>
             ))}
           </select>
@@ -915,11 +927,11 @@ export function TripSheetTab() {
 
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-xs text-muted-foreground">
-            {occ
-              ? `تكلفة السرير للرحلة بتاريخ ${occ.departure_date}${occ.settled_at ? " — معتمدة" : " — غير معتمدة"}`
+            {occDate
+              ? `تكلفة السرير للرحلة بتاريخ ${occDate}${occ?.settled_at ? " — معتمدة" : " — غير معتمدة"}`
               : "الإعداد العام — اختر رحلة وتاريخًا في الفلتر لتعديل تكلفة الأسرّة الخاصة بها"}
           </p>
-          {occ ? (
+          {occDate ? (
             <Button className="rounded-full" disabled={approving} onClick={() => void approveOccurrence()}>
               اعتماد تكلفة الفنادق
             </Button>
@@ -935,7 +947,7 @@ export function TripSheetTab() {
                   <th key={r} className="border px-2 py-0.5 whitespace-nowrap">
                     تكلفة {r}
                     <span className="block text-[10px] font-normal text-muted-foreground">
-                      {occ ? "سرير واحد" : `÷ ${ROOM_CAPACITY[r]}`}
+                      {occDate ? "سرير واحد" : `÷ ${ROOM_CAPACITY[r]}`}
                     </span>
                   </th>
                 ))}
@@ -952,10 +964,10 @@ export function TripSheetTab() {
                       <Input
                         type="number"
                         className="h-8 text-xs"
-                        value={String((occ ? bedCosts[hotel]?.[r] : ref.costs[hotel]?.[r]) ?? 0)}
+                        value={String((occDate ? bedCosts[hotel]?.[r] : ref.costs[hotel]?.[r]) ?? 0)}
                         onChange={(e) => {
                           const v = Number(e.target.value) || 0;
-                          if (occ) {
+                          if (occDate) {
                             setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
                           } else {
                             setRef((s) => ({
