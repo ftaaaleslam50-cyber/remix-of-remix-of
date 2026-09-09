@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReturnTripsManager } from "@/components/admin/ReturnTripsManager";
-import { isCurrentWeek } from "@/lib/week";
+import { isCurrentWeek, isNextWeek } from "@/lib/week";
 import { formatTripDate, formatTripTime, isTripFinished, nextOccurrence } from "@/lib/trip-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-trips")({
@@ -228,10 +228,13 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
   onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
 }) {
   const [local, setLocal] = useState(trip);
-  const [busFilter, setBusFilter] = useState<"all" | "week" | "old">("all");
-  const visibleBuses = buses.filter((b) =>
-    busFilter === "all" ? true : busFilter === "week" ? isCurrentWeek(b.assigned_date) : !isCurrentWeek(b.assigned_date),
-  );
+  const [busFilter, setBusFilter] = useState<"all" | "week" | "next" | "old">("all");
+  const visibleBuses = buses.filter((b) => {
+    if (busFilter === "all") return true;
+    if (busFilter === "week") return isCurrentWeek(b.assigned_date);
+    if (busFilter === "next") return isNextWeek(b.assigned_date);
+    return !isCurrentWeek(b.assigned_date) && !isNextWeek(b.assigned_date);
+  });
   useEffect(() => setLocal(trip), [trip]);
   const finished = isTripFinished(trip.departure_date, trip.departure_time);
   const upcoming = trip.departure_date ? nextOccurrence(trip.departure_date, trip.recurrence_weeks || 1) : null;
@@ -378,6 +381,7 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
             {([
               { v: "all", l: "الكل" },
               { v: "week", l: "حافلات هذا الأسبوع" },
+              { v: "next", l: "حافلات الأسبوع القادم" },
               { v: "old", l: "حافلات قديمة" },
             ] as const).map((f) => (
               <Button
@@ -408,7 +412,7 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
                     <div className="text-[11px] text-muted-foreground">{b.status}</div>
                     <div className="text-[11px] font-bold text-[color:var(--color-navy)]">
                       {b.assigned_date ? formatTripDate(b.assigned_date) : "بدون تاريخ"}
-                      {isCurrentWeek(b.assigned_date) ? " • هذا الأسبوع" : ""}
+                      {isCurrentWeek(b.assigned_date) ? " • هذا الأسبوع" : isNextWeek(b.assigned_date) ? " • الأسبوع القادم" : ""}
                     </div>
                   </div>
                 </label>
