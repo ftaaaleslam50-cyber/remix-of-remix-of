@@ -169,6 +169,23 @@ async function hideSeatsForIndividual(): Promise<boolean> {
   return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
 }
 
+/** Fallback bus layout when the bus has no saved template. */
+function defaultLayout(): LayoutJson {
+  const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
+  const cells: LayoutCell[] = [];
+  rows.forEach((r, i) => {
+    const row = i + 1;
+    cells.push({ row, col: 1, kind: "seat", label: `${r}1` });
+    cells.push({ row, col: 2, kind: "seat", label: `${r}2` });
+    cells.push({ row, col: 4, kind: "seat", label: `${r}3` });
+    cells.push({ row, col: 5, kind: "seat", label: `${r}4` });
+  });
+  const mRow = rows.length + 1;
+  for (let c = 1; c <= 5; c++) cells.push({ row: mRow, col: c, kind: "seat", label: `M${c}` });
+  return { rows: mRow, cols: 5, cells };
+}
+
+
 
 const A4: [number, number] = [595.28, 841.89];
 const M = 40; // page margin
