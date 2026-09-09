@@ -85,6 +85,15 @@ function TicketPage() {
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<LayoutJson | null>(null);
+  // Admin option: hide seat numbers for individual bookings.
+  const [hideSeatsOpt, setHideSeatsOpt] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
+      setHideSeatsOpt(Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual));
+    })();
+  }, []);
+
 
   useEffect(() => {
     (async () => {
