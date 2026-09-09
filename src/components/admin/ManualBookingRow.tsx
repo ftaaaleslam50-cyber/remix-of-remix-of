@@ -19,6 +19,7 @@ import type { Package, PricingCell, RoomType } from "@/lib/booking/types";
 import { sar } from "@/lib/format";
 import { formatReturnOption } from "@/lib/trip-dates";
 import { writeAudit } from "@/lib/audit";
+import { storeBookingProfit } from "@/lib/profit";
 
 export type TripMode = "round" | "outbound" | "return" | "round_open";
 
@@ -56,6 +57,7 @@ export interface ManualBookingDraft {
   rep_name: string;
   rep_phone: string;
   rep_whatsapp: string;
+  rep_profile_id: string | null;
   notes: string;
   status: string;
   total_price: number | null;
@@ -86,6 +88,7 @@ const EMPTY: ManualBookingDraft = {
   rep_name: "",
   rep_phone: "",
   rep_whatsapp: "",
+  rep_profile_id: null,
   notes: "",
   status: "confirmed",
   total_price: null,
@@ -201,16 +204,28 @@ export function ManualBookingRow({
         .data as unknown as Package[]) ?? [],
   });
 
-  // دليل المناديب — للتعبئة التلقائية لرقم الجوال والواتساب
+  // دليل المناديب — من حسابات المستخدمين (نوع الحساب: مندوب)
   const { data: reps = [] } = useQuery({
-    queryKey: ["representatives", "active"],
+    queryKey: ["rep-profiles", "active"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("representatives")
-        .select("id,user_id,name,phone,whatsapp")
+        .from("profiles")
+        .select("id,full_name,mobile_phone,whatsapp_phone")
+        .eq("account_type", "representative")
         .eq("active", true)
-        .order("name");
-      return (data as { id: string; user_id: string | null; name: string; phone: string; whatsapp: string }[]) ?? [];
+        .order("full_name");
+      return ((data ?? []) as {
+        id: string;
+        full_name: string | null;
+        mobile_phone: string | null;
+        whatsapp_phone: string | null;
+      }[]).map((p) => ({
+        id: p.id,
+        user_id: p.id,
+        name: p.full_name ?? "",
+        phone: p.mobile_phone ?? "",
+        whatsapp: p.whatsapp_phone ?? "",
+      })).filter((r) => r.name);
     },
     staleTime: 60_000,
   });
@@ -373,6 +388,7 @@ export function ManualBookingRow({
       rep_name: d.rep_name.trim() || null,
       rep_phone: d.rep_phone.trim() || null,
       rep_whatsapp: d.rep_whatsapp.trim() || null,
+      rep_profile_id: ownerId ?? d.rep_profile_id ?? null,
       price_per_person: Math.round(total / Math.max(1, d.passenger_count)),
       total_price: total,
       coupon_code: d.coupon_code.trim().toUpperCase() || null,
@@ -395,6 +411,7 @@ export function ManualBookingRow({
           .insert((trustedOwnerId ? { ...payload, created_by: trustedOwnerId } : payload) as never);
     setSaving(false);
     if (error) return toast.error(error.message);
+    void storeBookingProfit(code);
     void writeAudit(d.id ? "booking.manual_update" : "booking.manual_create", "bookings", d.id ?? code, { code });
     toast.success(d.id ? "تم تحديث الحجز" : `تم إنشاء الحجز ${code}`);
     onSaved();
@@ -660,6 +677,7 @@ export function ManualBookingRow({
                       rep_phone: match.phone || p.rep_phone,
                       rep_whatsapp: match.whatsapp || match.phone || p.rep_whatsapp,
                       booking_source: match.name,
+                      rep_profile_id: match.id,
                     }));
                   } else {
                     set("rep_name", name);
