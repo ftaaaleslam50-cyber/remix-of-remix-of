@@ -75,6 +75,7 @@ import { sar, formatDate, formatDateTime } from "@/lib/format";
 import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability";
 import { toast } from "sonner";
 import { useStaffRole } from "@/hooks/useStaffRole";
+import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -516,6 +517,7 @@ interface UBBusOpt {
   plate?: string | null;
   driver_phone?: string | null;
   driver_id_number?: string | null;
+  assigned_date?: string | null;
 }
 
 interface ImportBookingDraft {
@@ -562,7 +564,10 @@ function UnifiedBookingsTab(props: {
 
   } = props;
   const [tripId, setTripId] = useState<string>("");
-  const [busId, setBusId] = useState<string>("");
+  const [busIds, setBusIds] = useState<string[]>([]);
+  // الحافلة "النشطة" للعمليات المفردة (المخطط، المصاريف، الحجز اليدوي) = عند اختيار حافلة واحدة فقط
+  const busId = busIds.length === 1 ? busIds[0]! : "";
+  const setBusId = (id: string) => setBusIds(id ? [id] : []);
   const [manualOpen, setManualOpen] = useState<boolean>(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState<boolean>(false);
@@ -588,7 +593,7 @@ function UnifiedBookingsTab(props: {
       // the admin can filter/report on any bus independently.
       // Only buses flagged active-for-booking are shown/counted.
       const COLS =
-        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number";
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number,assigned_date";
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
@@ -626,8 +631,8 @@ function UnifiedBookingsTab(props: {
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
     if (source && ((b.booking_source ?? "").trim() || "الموقع") !== source) return false;
-    if (busId) {
-      if (b.bus_id !== busId) return false;
+    if (busIds.length > 0) {
+      if (!b.bus_id || !busIds.includes(b.bus_id)) return false;
     } else if (tripId) {
       if (b.trip_id !== tripId) return false;
     }
@@ -1067,19 +1072,8 @@ function UnifiedBookingsTab(props: {
           </select>
         </div>
         <div>
-          <Label className="text-xs mb-1 block">الحافلة</Label>
-          <select
-            value={busId}
-            onChange={(e) => setBusId(e.target.value)}
-            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
-          >
-            <option value="">— كل الحافلات —</option>
-            {buses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}
-              </option>
-            ))}
-          </select>
+          <Label className="text-xs mb-1 block">الحافلة (اختيار متعدد)</Label>
+          <BusMultiSelect buses={buses} value={busIds} onChange={setBusIds} />
         </div>
         <div>
           <Label className="text-xs mb-1 block">الحالة</Label>

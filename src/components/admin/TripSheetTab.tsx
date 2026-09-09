@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { ROOM_ROWS, ROOM_CAPACITY } from "@/lib/export/rooming";
+import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
 
 /**
  * "الحسابات والتصفية" — accounting / settlement workspace.
@@ -93,7 +94,9 @@ const round = (v: number) => Math.round(v);
 
 export function TripSheetTab() {
   const [tripId, setTripId] = useState("");
-  const [busId, setBusId] = useState("");
+  const [busIds, setBusIds] = useState<string[]>([]);
+  const busId = busIds.length === 1 ? busIds[0]! : "";
+  const setBusId = (id: string) => setBusIds(id ? [id] : []);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [roomNumbers, setRoomNumbers] = useState<Record<string, string>>({});
@@ -111,11 +114,12 @@ export function TripSheetTab() {
   const { data: buses = [] } = useQuery({
     queryKey: ["ts-buses"],
     queryFn: async () =>
-      ((await supabase.from("buses").select("id,name,bus_number,capacity").order("bus_number")).data ?? []) as Array<{
+      ((await supabase.from("buses").select("id,name,bus_number,capacity,assigned_date").order("bus_number")).data ?? []) as Array<{
         id: string;
         name: string | null;
         bus_number: number;
         capacity: number;
+        assigned_date: string | null;
       }>,
   });
 
@@ -205,8 +209,8 @@ export function TripSheetTab() {
     () =>
       rows.filter((b) => {
         if (b.status === "cancelled") return false;
-        if (busId && b.bus_id !== busId) return false;
-        if (!busId && tripId && b.trip_id !== tripId) return false;
+        if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
+        if (busIds.length === 0 && tripId && b.trip_id !== tripId) return false;
         if (search) {
           const q = search.trim().toLowerCase();
           const hay = `${b.booking_code} ${b.customer_name ?? ""} ${b.id_number ?? ""} ${b.contact_phone ?? ""}`;
@@ -214,7 +218,7 @@ export function TripSheetTab() {
         }
         return true;
       }),
-    [rows, tripId, busId, search],
+    [rows, tripId, busIds, search],
   );
 
   const bus = buses.find((b) => b.id === busId) ?? null;
@@ -222,8 +226,10 @@ export function TripSheetTab() {
   const tripInfo = filtered.find((b) => b.trips)?.trips ?? null;
 
   const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
-  const capacity = bus?.capacity ?? 0;
+  const capacity =
+    busIds.length > 0 ? buses.filter((b) => busIds.includes(b.id)).reduce((s, b) => s + (b.capacity || 0), 0) : 0;
   const remaining = Math.max(0, capacity - passengers);
+  const selectedBuses = buses.filter((b) => busIds.includes(b.id));
   const revenue = filtered.reduce((s, b) => s + n(b.total_price), 0);
 
   function roomLabelOf(b: SheetBooking): string {
@@ -414,7 +420,7 @@ export function TripSheetTab() {
   ];
 
   const title = `كشف الحسابات والتصفية — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}${
-    bus ? ` — ${bus.name || `حافلة ${bus.bus_number}`}` : ""
+    selectedBuses.length ? ` — ${selectedBuses.map((b) => b.name || `حافلة ${b.bus_number}`).join("، ")}` : ""
   }`;
 
   function exportData(): SettlementExport {
@@ -531,19 +537,8 @@ export function TripSheetTab() {
           </select>
         </div>
         <div>
-          <Label className="text-xs mb-1 block">الحافلة</Label>
-          <select
-            value={busId}
-            onChange={(e) => setBusId(e.target.value)}
-            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
-          >
-            <option value="">— كل الحافلات —</option>
-            {buses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}
-              </option>
-            ))}
-          </select>
+          <Label className="text-xs mb-1 block">الحافلة (اختيار متعدد)</Label>
+          <BusMultiSelect buses={buses} value={busIds} onChange={setBusIds} />
         </div>
         <div>
           <Label className="text-xs mb-1 block">بحث</Label>
@@ -556,7 +551,7 @@ export function TripSheetTab() {
         <HeadCell k="العودة" v={tripInfo?.return_day ?? "—"} />
         <HeadCell k="سعة الحافلة" v={capacity ? String(capacity) : "—"} />
         <HeadCell k="عدد الركاب" v={String(passengers)} />
-        <HeadCell k="المقاعد المتبقية" v={bus ? String(remaining) : "—"} />
+        <HeadCell k="المقاعد المتبقية" v={capacity ? String(remaining) : "—"} />
         <HeadCell k="تكلفة المقعد" v={sar(round(seatCost))} />
       </div>
 
