@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { sar, formatDateTime } from "@/lib/format";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { bookingBlockedMessage } from "@/lib/booking-availability";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 
