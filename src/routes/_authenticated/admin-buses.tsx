@@ -42,6 +42,7 @@ interface BusRow {
   return_price: number;
   open_return_price: number;
   direction: "outbound" | "return";
+  assigned_date: string | null;
 }
 
 
@@ -315,6 +316,7 @@ function AdminBuses() {
       return_price: Number(b.return_price) || 0,
       open_return_price: Number(b.open_return_price) || 0,
       direction: b.direction === "return" ? "return" : "outbound",
+      assigned_date: b.assigned_date || null,
     };
 
     // مزامنة سعة الحافلة مع القالب المختار
@@ -506,6 +508,7 @@ function AdminBuses() {
                         <TableHead>رقم الحافلة</TableHead>
                         <TableHead>الاسم</TableHead>
                         <TableHead>الرحلة المرتبطة</TableHead>
+                        <TableHead>التاريخ</TableHead>
                         <TableHead>اللوحة</TableHead>
                         <TableHead>الطراز</TableHead>
                         <TableHead>النوع</TableHead>
