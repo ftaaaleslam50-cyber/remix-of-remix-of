@@ -860,6 +860,25 @@ export function TripSheetTab() {
             ))}
             {repNames.length === 0 && <p className="text-sm text-muted-foreground">لا يوجد مندوبون</p>}
           </div>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">نسب عمولة حسابات المناديب (مرتبطة بالحساب)</h4>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {repProfiles.map((p) => (
+              <div key={p.id}>
+                <Label className="text-xs mb-1 block">{p.full_name || "بدون اسم"}</Label>
+                <Input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={String(repRates[p.id] ?? 0)}
+                  onChange={(e) => setRepRates((s) => ({ ...s, [p.id]: Number(e.target.value) || 0 }))}
+                  onBlur={(e) => void saveRepRate(p.id, Number(e.target.value) || 0)}
+                />
+              </div>
+            ))}
+            {repProfiles.length === 0 && <p className="text-sm text-muted-foreground">لا توجد حسابات مناديب</p>}
+          </div>
         </div>
       </div>
     </div>
