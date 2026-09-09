@@ -231,11 +231,14 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
   rows.push(["رقم الباص", busLabel(b.buses)]);
   if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
-  rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
+  const hideSeats = b.booking_type === "individual" && (await hideSeatsForIndividual());
+  if (!hideSeats) rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
   if (b.return_buses) {
     rows.push(["حافلة العودة", busLabel(b.return_buses)]);
-    if ((b.return_seat_numbers ?? []).length > 0) rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
+    if (!hideSeats && (b.return_seat_numbers ?? []).length > 0)
+      rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
   }
+
   rows.push([
     "الذهاب",
     departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode),
