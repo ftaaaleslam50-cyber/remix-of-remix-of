@@ -25,13 +25,16 @@ function shape(input: string): string {
   if (!text) return "";
   if (!ARABIC_RE.test(text)) return text;
   const reshaped = ArabicReshaper.convertArabic(text);
-  return reshaped.replace(/[0-9A-Za-z][0-9A-Za-z.,:/\\+\-()]*/g, (run) => {
+  // Arabic-Indic digits (٠-٩) need the same treatment as Western ones.
+  const D = "0-9\\u0660-\\u0669\\u06F0-\\u06F9A-Za-z";
+  return reshaped.replace(new RegExp(`[${D}][${D}.,:/\\\\+\\-()]*`, "g"), (run) => {
     // Trailing punctuation belongs to the Arabic side, keep it out of the flip.
-    const m = run.match(/^(.*?[0-9A-Za-z])([^0-9A-Za-z]*)$/);
+    const m = run.match(new RegExp(`^(.*?[${D}])([^${D}]*)$`));
     const core = m ? m[1] : run;
     const tail = m ? m[2] : "";
     return [...core].reverse().join("") + tail;
   });
+
 }
 
 
