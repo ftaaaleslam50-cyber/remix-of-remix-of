@@ -401,6 +401,10 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
                   <div>
                     <div className="text-sm font-bold">{b.name || `حافلة ${b.bus_number}`}</div>
                     <div className="text-[11px] text-muted-foreground">{b.status}</div>
+                    <div className="text-[11px] font-bold text-[color:var(--color-navy)]">
+                      {b.assigned_date ? formatTripDate(b.assigned_date) : "بدون تاريخ"}
+                      {isCurrentWeek(b.assigned_date) ? " • هذا الأسبوع" : ""}
+                    </div>
                   </div>
                 </label>
                 <div className="text-left">
