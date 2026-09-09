@@ -663,6 +663,7 @@ export function TripSheetTab() {
             onChange={(e) => {
               setTripId(e.target.value);
               setBusId("");
+              setOccDate("");
             }}
             className="h-10 w-full rounded-md border px-3 text-sm bg-white"
           >
