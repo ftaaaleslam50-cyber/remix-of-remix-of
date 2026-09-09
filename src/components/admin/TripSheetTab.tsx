@@ -145,6 +145,36 @@ export function TripSheetTab() {
         []) as Array<{ id: string; name: string; active: boolean; extension_price: number | null }>,
   });
 
+  /* ------- per-trip occurrences (bed costs + settlement approval) -------- */
+  const { data: occurrences = [], refetch: refetchOcc } = useQuery({
+    queryKey: ["ts-occ", tripId],
+    enabled: !!tripId,
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("trip_occurrences")
+          .select("id,trip_id,departure_date,bed_costs,settled_at")
+          .eq("trip_id", tripId)
+          .order("departure_date", { ascending: false })
+      ).data ?? []) as unknown as Array<{
+        id: string;
+        trip_id: string;
+        departure_date: string;
+        bed_costs?: Record<string, Record<string, number>> | null;
+        settled_at?: string | null;
+      }>,
+  });
+  const [occDate, setOccDate] = useState("");
+  const occ = occurrences.find((o) => o.departure_date === occDate) ?? null;
+
+  /** تكلفة السرير للرحلة/التاريخ المحدد (تُحفظ عند الاعتماد). */
+  const [bedCosts, setBedCosts] = useState<Record<string, Record<string, number>>>({});
+  useEffect(() => {
+    setBedCosts((occ?.bed_costs as Record<string, Record<string, number>>) ?? {});
+  }, [occ?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
+
   const { data: repProfiles = [], refetch: refetchReps } = useQuery({
     queryKey: ["ts-reps"],
     queryFn: async () =>
