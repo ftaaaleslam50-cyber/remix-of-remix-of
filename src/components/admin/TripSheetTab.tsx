@@ -113,15 +113,28 @@ export function TripSheetTab() {
       }>,
   });
 
-  const { data: buses = [] } = useQuery({
+  const { data: buses = [], refetch: refetchBuses } = useQuery({
     queryKey: ["ts-buses"],
     queryFn: async () =>
-      ((await supabase.from("buses").select("id,name,bus_number,capacity,assigned_date").order("bus_number")).data ?? []) as Array<{
+      ((
+        await supabase
+          .from("buses")
+          .select(
+            "id,name,bus_number,capacity,assigned_date,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_extra,settled_at",
+          )
+          .order("bus_number")
+      ).data ?? []) as unknown as Array<{
         id: string;
         name: string | null;
         bus_number: number;
         capacity: number;
         assigned_date: string | null;
+        expense_bus_cost?: number | null;
+        expense_driver_tip?: number | null;
+        expense_taxi?: number | null;
+        expense_supervisor?: number | null;
+        expense_extra?: number | null;
+        settled_at?: string | null;
       }>,
   });
 
