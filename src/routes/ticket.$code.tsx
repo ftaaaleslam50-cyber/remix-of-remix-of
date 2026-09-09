@@ -214,11 +214,13 @@ function TicketPage() {
     lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`);
     lines.push(`عدد الأفراد: ${b.passenger_count}`);
     lines.push(`رقم الباص: ${busLabel(b.buses)}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`);
-    lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
+    if (!hideSeats) lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
     if (b.return_buses) {
       lines.push(`حافلة العودة: ${busLabel(b.return_buses)}`);
-      if ((b.return_seat_numbers ?? []).length) lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
+      if (!hideSeats && (b.return_seat_numbers ?? []).length)
+        lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
     }
+
     lines.push(`الذهاب: ${departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode)}`);
     lines.push(`العودة الفعلية: ${returnValue(b)}`);
     lines.push(`تاريخ الحجز: ${formatDate(b.created_at)}`);
