@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReturnTripsManager } from "@/components/admin/ReturnTripsManager";
+import { isCurrentWeek } from "@/lib/week";
 import { formatTripDate, formatTripTime, isTripFinished, nextOccurrence } from "@/lib/trip-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-trips")({
@@ -46,20 +47,6 @@ interface OccurrenceRow {
   departure_time: string | null;
   return_date: string | null;
   bus_ids: string[] | null;
-}
-
-/** هل التاريخ ضمن الأسبوع الحالي (الأحد → السبت)؟ */
-export function isCurrentWeek(iso?: string | null) {
-  if (!iso) return false;
-  const dt = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(dt.getTime())) return false;
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(now.getDate() - now.getDay());
-  const end = new Date(start);
-  end.setDate(start.getDate() + 7);
-  return dt >= start && dt < end;
 }
 
 const PERIODS = [

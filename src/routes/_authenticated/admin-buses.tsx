@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AssetField } from "@/components/admin/AssetField";
 import { trackAssetUsage, untrackAssetUsage } from "@/lib/asset-usage";
+import { startOfWeek as weekStart } from "@/lib/week";
 
 export const Route = createFileRoute("/_authenticated/admin-buses")({
   component: AdminBuses,
@@ -64,12 +65,6 @@ const STATUS_COLOR: Record<BusRow["status"], string> = {
   stopped: "bg-destructive",
 };
 
-/** بداية الأسبوع (الأحد) لتاريخ معيّن */
-function weekStart(d: Date) {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  x.setDate(x.getDate() - x.getDay());
-  return x;
-}
 
 function weekTitle(offset: number) {
   if (offset === 0) return "الأسبوع الحالي";
