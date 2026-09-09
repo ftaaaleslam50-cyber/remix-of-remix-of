@@ -310,7 +310,80 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
 
   rtl(page, "يرجى إبراز التذكرة عند الصعود للباص.", W / 2 + 90, boxY - 24, 10, GREY);
 
-  // ---- Page 2: important notices image (seat-map page removed) ----
+  // ---- Page 2: seat map (skipped when seats are hidden for individual bookings) ----
+  if (!hideSeats) {
+    const layout = b.layout_json ?? defaultLayout();
+    const seats = new Set(b.seat_numbers ?? []);
+    const p2 = pdf.addPage(A4);
+    p2.drawRectangle({ x: 0, y: A4[1] - 80, width: W, height: 80, color: NAVY });
+    rtl(p2, "مخطط الحافلة", right, A4[1] - 44, 17, rgb(1, 1, 1), true);
+    rtl(
+      p2,
+      `${b.customer_name} — مقاعد: ${(b.seat_numbers ?? []).join(", ") || "-"}`,
+      right,
+      A4[1] - 64,
+      10,
+      rgb(0.82, 0.85, 0.9),
+    );
+
+    const cols = Math.max(1, layout.cols || 1);
+    const lrows = Math.max(1, layout.rows || 1);
+    const cell = Math.min(46, (right - M) / cols - 6, (A4[1] - 200) / lrows - 6);
+    const gridW = cols * (cell + 6) - 6;
+    const startX = (W - gridW) / 2;
+    const startY = A4[1] - 120;
+    const map = new Map<string, LayoutCell>();
+    for (const c of layout.cells) map.set(`${c.row}:${c.col}`, c);
+
+    for (let r = 1; r <= lrows; r++) {
+      for (let c = 1; c <= cols; c++) {
+        const cl = map.get(`${r}:${c}`);
+        if (!cl || cl.kind === "empty") continue;
+        // RTL grid: column 1 is on the right.
+        const x = startX + (cols - c) * (cell + 6);
+        const yy = startY - r * (cell + 6);
+        const id = cl.label && cl.label.trim() ? cl.label : `${cl.row}-${cl.col}`;
+        const isSeat = cl.kind === "seat";
+        const mine = isSeat && seats.has(id);
+        p2.drawRectangle({
+          x,
+          y: yy,
+          width: cell,
+          height: cell,
+          color: mine ? NAVY : isSeat ? rgb(1, 1, 1) : LIGHT,
+          borderColor: mine ? NAVY : BORDER,
+          borderWidth: 1.2,
+        });
+        const label = isSeat
+          ? id
+          : cl.label || (cl.kind === "driver" ? "السائق" : cl.kind === "door" ? "باب" : "دورة مياه");
+        const t = shape(label);
+        const size = 8;
+        const tw = font.widthOfTextAtSize(t, size);
+        p2.drawText(t, {
+          x: x + (cell - tw) / 2,
+          y: yy + cell / 2 - (mine ? 1 : 3),
+          size,
+          font,
+          color: mine ? rgb(1, 1, 1) : GREY,
+        });
+        if (mine) {
+          const nm = shape(b.customer_name.split(" ")[0] ?? "");
+          const nw = Math.min(font.widthOfTextAtSize(nm, 6), cell - 4);
+          p2.drawText(nm, { x: x + (cell - nw) / 2, y: yy + cell / 2 - 10, size: 6, font, color: rgb(1, 1, 1) });
+        }
+      }
+    }
+
+    const legendY = startY - lrows * (cell + 6) - 30;
+    p2.drawRectangle({ x: right - 14, y: legendY, width: 12, height: 12, color: NAVY });
+    rtl(p2, `مقاعدك (${b.customer_name})`, right - 22, legendY + 2, 10, GREY);
+    p2.drawRectangle({ x: right - 190, y: legendY, width: 12, height: 12, color: rgb(1, 1, 1), borderColor: BORDER, borderWidth: 1 });
+    rtl(p2, "مقاعد أخرى", right - 198, legendY + 2, 10, GREY);
+  }
+
+  // ---- Last page: important notices image ----
+
 
   try {
     const notes = await loadNotesImage();
