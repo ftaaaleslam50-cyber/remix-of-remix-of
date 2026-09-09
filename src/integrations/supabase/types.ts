@@ -662,6 +662,7 @@ export type Database = {
       buses: {
         Row: {
           active: boolean
+          assigned_date: string | null
           blocked_seats: string[]
           bus_number: number
           bus_type: string | null
@@ -693,6 +694,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          assigned_date?: string | null
           blocked_seats?: string[]
           bus_number?: number
           bus_type?: string | null
@@ -724,6 +726,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          assigned_date?: string | null
           blocked_seats?: string[]
           bus_number?: number
           bus_type?: string | null
