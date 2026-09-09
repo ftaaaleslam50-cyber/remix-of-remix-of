@@ -227,6 +227,10 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
   onDelete: () => void; onToggleBus: (busId: string, add: boolean) => void;
 }) {
   const [local, setLocal] = useState(trip);
+  const [busFilter, setBusFilter] = useState<"all" | "week" | "old">("all");
+  const visibleBuses = buses.filter((b) =>
+    busFilter === "all" ? true : busFilter === "week" ? isCurrentWeek(b.assigned_date) : !isCurrentWeek(b.assigned_date),
+  );
   useEffect(() => setLocal(trip), [trip]);
   const finished = isTripFinished(trip.departure_date, trip.departure_time);
   const upcoming = trip.departure_date ? nextOccurrence(trip.departure_date, trip.recurrence_weeks || 1) : null;
