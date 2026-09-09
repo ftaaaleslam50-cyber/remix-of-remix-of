@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { sar, formatDateTime } from "@/lib/format";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { bookingBlockedMessage } from "@/lib/booking-availability";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 
@@ -52,7 +53,11 @@ function effectiveStatus(b: MyBooking): "no_show" | "cancelled" | "completed" | 
 function MyBookingsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [uid, setUid] = useState<string>("");
+  // Read the id from the shared auth state so the list still loads when the
+  // session hydrates a moment after the page mounts (this used to leave the
+  // page permanently empty for representatives).
+  const { user } = useAuth();
+  const uid = user?.id ?? "";
   const [isRep, setIsRep] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);
@@ -60,18 +65,17 @@ function MyBookingsPage() {
 
 
   useEffect(() => {
+    if (!uid) return;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUid(user.id);
       const [{ data: role }, { data: profile }] = await Promise.all([
         supabase
-          .from("user_roles").select("role").eq("user_id", user.id).eq("role", "representative").maybeSingle(),
-        supabase.from("profiles").select("account_type").eq("id", user.id).maybeSingle(),
+          .from("user_roles").select("role").eq("user_id", uid).eq("role", "representative").maybeSingle(),
+        supabase.from("profiles").select("account_type").eq("id", uid).maybeSingle(),
       ]);
       setIsRep(!!role || profile?.account_type === "representative");
     })();
-  }, []);
+  }, [uid]);
+
 
 
   const { data: bookings = [], isLoading } = useQuery({
@@ -265,7 +269,7 @@ function MyBookingsPage() {
           />
         </div>
 
-        {isLoading ? (
+        {isLoading || !uid ? (
           <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
         ) : sorted.length === 0 ? (
           <div className="surface-card p-10 text-center">
