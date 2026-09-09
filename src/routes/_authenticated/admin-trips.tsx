@@ -48,6 +48,20 @@ interface OccurrenceRow {
   bus_ids: string[] | null;
 }
 
+/** هل التاريخ ضمن الأسبوع الحالي (الأحد → السبت)؟ */
+export function isCurrentWeek(iso?: string | null) {
+  if (!iso) return false;
+  const dt = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(dt.getTime())) return false;
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(now.getDate() - now.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return dt >= start && dt < end;
+}
+
 const PERIODS = [
   { v: "morning", l: "صباحاً" },
   { v: "afternoon", l: "ظهراً" },
