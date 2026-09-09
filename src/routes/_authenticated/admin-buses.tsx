@@ -251,8 +251,21 @@ function AdminBuses() {
   }
 
   async function duplicateBus(b: BusRow) {
+    // رقم الحافلة فريد داخل الرحلة (باستثناء 0)، لذلك نبحث عن أول رقم متاح
+    let nextNumber = 0;
+    if (b.trip_id) {
+      const { data: used } = await supabase
+        .from("buses")
+        .select("bus_number")
+        .eq("trip_id", b.trip_id);
+      const taken = new Set((used ?? []).map((r) => r.bus_number));
+      nextNumber = Math.max(1, b.bus_number ?? 1);
+      while (taken.has(nextNumber)) nextNumber++;
+    }
+
     const { error } = await supabase.from("buses").insert({
-      bus_number: b.bus_number ?? 0,
+      bus_number: nextNumber,
+
       name: b.name ? `${b.name} (نسخة)` : "حافلة (نسخة)",
       plate: null,
       model: b.model,
