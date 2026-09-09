@@ -378,9 +378,13 @@ export function TripSheetTab() {
   const housingCost = Object.entries(roomsPerHotel).reduce((s, [h, r]) => s + r * nightPriceOf(h), 0);
 
   /* -------------------------- bus expenses ------------------------------- */
-  const be = ref.busExpenses;
+  // عند تحديد حافلة واحدة: أرقام الحافلة نفسها ÷ ركاب هذه الحافلة فقط.
+  const be = busId ? busExp : ref.busExpenses;
   const busTotal = be.busCost + be.driverTip + be.taxi + be.supervisor + be.extra;
-  const seatCost = passengers > 0 ? busTotal / passengers : 0;
+  const busPassengers = busId
+    ? rows.reduce((s, b) => (b.bus_id === busId && b.status !== "cancelled" ? s + (b.passenger_count || 0) : s), 0)
+    : passengers;
+  const seatCost = busPassengers > 0 ? busTotal / busPassengers : 0;
 
   /* --------------- empty-bed cost shared across all passengers ----------- */
   const usedBedsCost = filtered.reduce((s, b) => {
