@@ -192,6 +192,9 @@ function TicketPage() {
     );
   }
 
+  const hideSeats = hideSeatsOpt && booking.booking_type === "individual";
+
+
   /** Full booking summary used for both WhatsApp sharing and clipboard copy. */
   function summaryText() {
     const b = booking!;
