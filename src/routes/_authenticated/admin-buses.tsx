@@ -746,6 +746,20 @@ function BusEditRow({
 
       <TableCell>
         <Input
+          type="date"
+          className="h-9 w-36"
+          value={local.assigned_date ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              assigned_date: e.target.value || null,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
           className="h-9 w-28"
           value={local.plate ?? ""}
           onChange={(e) =>
