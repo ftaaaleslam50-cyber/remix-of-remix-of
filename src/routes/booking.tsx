@@ -48,6 +48,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { sar } from "@/lib/format";
 import { getPackagePrice, ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-availability";
+import { storeBookingProfit } from "@/lib/profit";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 import { hotelUnavailableReason } from "@/lib/booking/types";
 
@@ -668,6 +669,9 @@ function BookingPage() {
       const code = editingCode ?? generateBookingCode();
 
       const source = accountType === "representative" && repName ? repName : "Website";
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
 
       const payload = {
         booking_code: code,
@@ -697,6 +701,8 @@ function BookingPage() {
         discount_amount: discount,
         status: "confirmed",
         notes: notes.trim() || null,
+        // ربط الحجز بحساب المندوب عند الحجز من حساب مندوب.
+        ...(accountType === "representative" && currentUser?.id ? { rep_profile_id: currentUser.id } : {}),
         trip_mode: tripMode,
         actual_return_day: (tripMode === "outbound"
           ? null
@@ -718,15 +724,15 @@ function BookingPage() {
         if (error) throw error;
       } else {
         // Attach created_by so authenticated users can see the booking in "My Bookings".
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        const insertPayload = { ...payload, created_by: user?.id ?? null };
+        const insertPayload = { ...payload, created_by: currentUser?.id ?? null };
         // Do NOT chain .select() — guests have no SELECT policy on bookings,
         // which would surface as a false RLS-violation error on insert.
         const { error } = await supabase.from("bookings").insert(insertPayload as never);
         if (error) throw error;
       }
+
+      // حفظ أرباح الحجز (إضافة لقسم "أرباحي")
+      void storeBookingProfit(code);
 
       // Increment coupon usage via secure RPC (validates + increments atomically).
       // RPC resolves booking id from booking_code server-side (SECURITY DEFINER),

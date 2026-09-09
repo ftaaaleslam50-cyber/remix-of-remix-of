@@ -423,6 +423,7 @@ export type Database = {
           booking_source: string | null
           booking_type: string
           bus_id: string | null
+          company_share: number | null
           contact_phone: string
           coupon_code: string | null
           created_at: string
@@ -434,6 +435,7 @@ export type Database = {
           discount_amount: number
           extension_nights: number
           female_count: number
+          gross_profit: number | null
           hotel_id: string | null
           id: string
           id_image_url: string | null
@@ -451,6 +453,8 @@ export type Database = {
           price_per_person: number
           rep_name: string | null
           rep_phone: string | null
+          rep_profile_id: string | null
+          rep_share: number | null
           rep_whatsapp: string | null
           return_bus_id: string | null
           return_date: string | null
@@ -474,6 +478,7 @@ export type Database = {
           booking_source?: string | null
           booking_type: string
           bus_id?: string | null
+          company_share?: number | null
           contact_phone: string
           coupon_code?: string | null
           created_at?: string
@@ -485,6 +490,7 @@ export type Database = {
           discount_amount?: number
           extension_nights?: number
           female_count?: number
+          gross_profit?: number | null
           hotel_id?: string | null
           id?: string
           id_image_url?: string | null
@@ -502,6 +508,8 @@ export type Database = {
           price_per_person: number
           rep_name?: string | null
           rep_phone?: string | null
+          rep_profile_id?: string | null
+          rep_share?: number | null
           rep_whatsapp?: string | null
           return_bus_id?: string | null
           return_date?: string | null
@@ -525,6 +533,7 @@ export type Database = {
           booking_source?: string | null
           booking_type?: string
           bus_id?: string | null
+          company_share?: number | null
           contact_phone?: string
           coupon_code?: string | null
           created_at?: string
@@ -536,6 +545,7 @@ export type Database = {
           discount_amount?: number
           extension_nights?: number
           female_count?: number
+          gross_profit?: number | null
           hotel_id?: string | null
           id?: string
           id_image_url?: string | null
@@ -553,6 +563,8 @@ export type Database = {
           price_per_person?: number
           rep_name?: string | null
           rep_phone?: string | null
+          rep_profile_id?: string | null
+          rep_share?: number | null
           rep_whatsapp?: string | null
           return_bus_id?: string | null
           return_date?: string | null
@@ -589,6 +601,13 @@ export type Database = {
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_rep_profile_id_fkey"
+            columns: ["rep_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1360,6 +1379,7 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"]
           active: boolean
           avatar_url: string | null
+          commission_rate: number | null
           created_at: string
           full_name: string | null
           id: string
@@ -1375,6 +1395,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"]
           active?: boolean
           avatar_url?: string | null
+          commission_rate?: number | null
           created_at?: string
           full_name?: string | null
           id: string
@@ -1390,6 +1411,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"]
           active?: boolean
           avatar_url?: string | null
+          commission_rate?: number | null
           created_at?: string
           full_name?: string | null
           id?: string

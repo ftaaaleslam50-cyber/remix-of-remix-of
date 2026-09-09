@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { ROOM_ROWS, ROOM_CAPACITY } from "@/lib/export/rooming";
+import { computeBookingProfit } from "@/lib/profit";
 import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
 
 /**
@@ -48,6 +49,7 @@ interface SheetBooking {
   trip_id: string | null;
   bus_id: string | null;
   package_id: string | null;
+  rep_profile_id?: string | null;
   packages: { name: string } | null;
   trips: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses: { id: string; name: string | null; bus_number: number; capacity: number; expenses: number | null } | null;
@@ -130,12 +132,39 @@ export function TripSheetTab() {
         []) as Array<{ id: string; name: string; active: boolean; extension_price: number | null }>,
   });
 
-  const { data: repProfiles = [] } = useQuery({
+  const { data: repProfiles = [], refetch: refetchReps } = useQuery({
     queryKey: ["ts-reps"],
     queryFn: async () =>
-      ((await supabase.from("profiles").select("id,full_name,account_type").eq("account_type", "representative")).data ??
-        []) as Array<{ id: string; full_name: string | null; account_type: string }>,
+      ((
+        await supabase
+          .from("profiles")
+          .select("id,full_name,account_type,active,commission_rate")
+          .eq("account_type", "representative")
+      ).data ?? []) as Array<{
+        id: string;
+        full_name: string | null;
+        account_type: string;
+        active?: boolean | null;
+        commission_rate?: number | null;
+      }>,
   });
+
+  /** نسب العمولة الجديدة المخزّنة في ملف كل مندوب. */
+  const [repRates, setRepRates] = useState<Record<string, number>>({});
+  useEffect(() => {
+    setRepRates((prev) => {
+      const next = { ...prev };
+      for (const r of repProfiles) if (next[r.id] === undefined) next[r.id] = Number(r.commission_rate ?? 0) || 0;
+      return next;
+    });
+  }, [repProfiles]);
+
+  async function saveRepRate(id: string, value: number) {
+    setRepRates((s) => ({ ...s, [id]: value }));
+    const { error } = await supabase.from("profiles").update({ commission_rate: value } as never).eq("id", id);
+    if (error) toast.error("تعذر حفظ نسبة العمولة");
+    else void refetchReps();
+  }
 
   const { data: rows = [] } = useQuery({
     queryKey: ["ts-bookings"],
@@ -143,7 +172,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
+          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,rep_profile_id,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -318,42 +347,27 @@ export function TripSheetTab() {
         // اجمالي الباقة = المبلغ المدفوع فعليًا الظاهر في الحجز
         const packageTotal = n(b.total_price);
         const extSale = n(ref.ext[hotel]?.sale ?? hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
-        // اجمالي التمديد = عدد الليالي × سعر الغرفة في الفندق (بدون ضرب في عدد الأفراد)
-        const extensionTotal = extSale * nights;
-        const grandTotal = packageTotal + extensionTotal;
-
         const bedCost = hotel === NO_HOTEL ? 0 : nightPriceOf(hotel) / (ROOM_CAPACITY[roomLabel] ?? 5);
-        const costPerPerson = bedCost + seatCost + emptyBedShare;
-        const groupCost = costPerPerson * count;
-        const extNightCost = n(ref.ext[hotel]?.cost);
-        const extensionCost = nights * extNightCost;
-        const extensionProfit = extensionTotal - extensionCost;
-        const grossProfit = grandTotal + extensionProfit - (groupCost + extensionCost);
-        const rate = repRate(rep);
-        const repShare = grossProfit * rate;
+        // النسبة الجديدة من ملف المندوب إن وُجدت، وإلا النظام القديم بالاسم.
+        const profileRate = b.rep_profile_id ? Number(repRates[b.rep_profile_id] ?? 0) || 0 : 0;
+        const rate = profileRate || repRate(rep);
 
-        return {
-          b,
-          rep,
-          hotel,
-          roomLabel,
-          count,
-          nights,
+        const r = computeBookingProfit({
           packageTotal,
-          extensionTotal,
-          grandTotal,
-          costPerPerson,
-          groupCost,
-          extensionCost,
-          extensionProfit,
-          grossProfit,
+          nights,
+          extSale,
+          extNightCost: n(ref.ext[hotel]?.cost),
+          bedCost,
+          seatCost,
+          emptyBedShare,
+          count,
           rate,
-          repShare,
-          companyShare: grossProfit - repShare,
-        };
+        });
+
+        return { b, rep, hotel, roomLabel, count, nights, packageTotal, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filtered, hotelRows, ref, seatCost, emptyBedShare],
+    [filtered, hotelRows, ref, seatCost, emptyBedShare, repRates],
   );
 
   const repNames = useMemo(() => {
@@ -845,6 +859,25 @@ export function TripSheetTab() {
               </div>
             ))}
             {repNames.length === 0 && <p className="text-sm text-muted-foreground">لا يوجد مندوبون</p>}
+          </div>
+
+          <h4 className="font-bold text-sm mt-5 mb-2">نسب عمولة حسابات المناديب (مرتبطة بالحساب)</h4>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {repProfiles.map((p) => (
+              <div key={p.id}>
+                <Label className="text-xs mb-1 block">{p.full_name || "بدون اسم"}</Label>
+                <Input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={String(repRates[p.id] ?? 0)}
+                  onChange={(e) => setRepRates((s) => ({ ...s, [p.id]: Number(e.target.value) || 0 }))}
+                  onBlur={(e) => void saveRepRate(p.id, Number(e.target.value) || 0)}
+                />
+              </div>
+            ))}
+            {repProfiles.length === 0 && <p className="text-sm text-muted-foreground">لا توجد حسابات مناديب</p>}
           </div>
         </div>
       </div>
