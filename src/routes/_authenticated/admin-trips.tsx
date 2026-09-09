@@ -370,6 +370,7 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
         </div>
         <p className="text-[11px] text-muted-foreground mt-1">
           «العودة 1» هي تاريخ العودة الفعلي بالأعلى. كل موعد تضيفه هنا من التقويم سيظهر للعميل كخيار عودة داخل بطاقة الحافلة في خطوات الحجز.
+          وعند تفعيل التقدم الأسبوعي التلقائي تتقدم هذه المواعيد الإضافية معها 7 أيام تلقائيًا.
         </p>
       </div>
 
