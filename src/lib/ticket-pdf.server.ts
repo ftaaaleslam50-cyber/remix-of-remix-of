@@ -14,15 +14,26 @@ import type { RoomType } from "@/lib/booking/types";
 const ARABIC_RE = /[\u0600-\u06FF\uFB50-\uFEFF]/;
 
 
-/** Reshape Arabic to presentation forms; digits and Latin stay in logical order. */
+/**
+ * Reshape Arabic to presentation forms. The embedded font's layout engine
+ * reverses the whole glyph run for Arabic strings, which also flips embedded
+ * digits/Latin ("2026" -> "6202"), so those runs are pre-reversed here to come
+ * out correct after that reversal.
+ */
 function shape(input: string): string {
   const text = String(input ?? "");
   if (!text) return "";
   if (!ARABIC_RE.test(text)) return text;
-  // pdf-lib draws the glyphs exactly as given, so numbers and Latin runs must
-  // NOT be pre-reversed — doing so turned "2026" into "6202" on the ticket.
-  return ArabicReshaper.convertArabic(text);
+  const reshaped = ArabicReshaper.convertArabic(text);
+  return reshaped.replace(/[0-9A-Za-z][0-9A-Za-z.,:/\\+\-()]*/g, (run) => {
+    // Trailing punctuation belongs to the Arabic side, keep it out of the flip.
+    const m = run.match(/^(.*?[0-9A-Za-z])([^0-9A-Za-z]*)$/);
+    const core = m ? m[1] : run;
+    const tail = m ? m[2] : "";
+    return [...core].reverse().join("") + tail;
+  });
 }
+
 
 
 const NAVY = rgb(0.05, 0.13, 0.26);
