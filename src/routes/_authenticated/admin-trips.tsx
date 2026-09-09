@@ -367,10 +367,29 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
 
 
       <div>
-        <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> الحافلات المتاحة والإشغال</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div className="text-sm font-bold flex items-center gap-2"><BusIcon className="h-4 w-4" /> الحافلات المتاحة والإشغال</div>
+          <div className="flex items-center gap-1">
+            {([
+              { v: "all", l: "الكل" },
+              { v: "week", l: "حافلات هذا الأسبوع" },
+              { v: "old", l: "حافلات قديمة" },
+            ] as const).map((f) => (
+              <Button
+                key={f.v}
+                size="sm"
+                variant={busFilter === f.v ? "default" : "outline"}
+                className="rounded-full h-7 text-[11px]"
+                onClick={() => setBusFilter(f.v)}
+              >
+                {f.l}
+              </Button>
+            ))}
+          </div>
+        </div>
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {buses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات مسجلة.</div>}
-          {buses.map((b) => {
+          {visibleBuses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات مطابقة.</div>}
+          {visibleBuses.map((b) => {
             const used = occupancy[b.id] ?? 0;
             const pct = b.capacity > 0 ? Math.round((used / b.capacity) * 100) : 0;
             const isFull = used >= b.capacity;
