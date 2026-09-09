@@ -2152,7 +2152,16 @@ function StepConfirm(props: {
   applyCoupon: () => void;
   clearCoupon: () => void;
 }) {
+  const { data: hideSeatsOpt = false } = useQuery({
+    queryKey: ["hide-seats-individual"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
+      return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
+    },
+  });
+  const hideSeats = hideSeatsOpt && props.bookingType === "individual";
   const rows: [string, string][] = [
+
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
     ["نوع الغرفة", roomDisplayLabel(props.roomType, props.bookingType, !props.noHotel && !!props.pkg)],
     ["عدد الأفراد", String(props.passengerCount)],
@@ -2165,7 +2174,7 @@ function StepConfirm(props: {
     ["الذهاب", departureDisplay((props.trip as unknown as { departure_date?: string | null } | null)?.departure_date, props.trip?.departure_day, "—")],
     ["العودة الفعلية", returnActualDisplay(props.returnDate ?? (props.trip as unknown as { return_date?: string | null } | null)?.return_date, props.actualReturnDay || props.trip?.return_day, props.extensionNights, undefined, "—")],
     ["الحافلة", props.noBus ? "بدون حافلة" : `رقم ${props.busNumber}`],
-    ...(!props.noBus ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
+    ...(!props.noBus && !hideSeats ? [["المقاعد", props.seats.join(", ")] as [string, string]] : []),
     ["الاسم", props.customer.customer_name],
     ["رقم الهوية", props.customer.id_number],
     ["الجنسية", props.customer.nationality || "—"],

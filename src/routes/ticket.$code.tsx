@@ -85,6 +85,15 @@ function TicketPage() {
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<LayoutJson | null>(null);
+  // Admin option: hide seat numbers for individual bookings.
+  const [hideSeatsOpt, setHideSeatsOpt] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
+      setHideSeatsOpt(Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual));
+    })();
+  }, []);
+
 
   useEffect(() => {
     (async () => {
@@ -183,6 +192,9 @@ function TicketPage() {
     );
   }
 
+  const hideSeats = hideSeatsOpt && booking.booking_type === "individual";
+
+
   /** Full booking summary used for both WhatsApp sharing and clipboard copy. */
   function summaryText() {
     const b = booking!;
@@ -202,11 +214,13 @@ function TicketPage() {
     lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`);
     lines.push(`عدد الأفراد: ${b.passenger_count}`);
     lines.push(`رقم الباص: ${busLabel(b.buses)}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`);
-    lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
+    if (!hideSeats) lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
     if (b.return_buses) {
       lines.push(`حافلة العودة: ${busLabel(b.return_buses)}`);
-      if ((b.return_seat_numbers ?? []).length) lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
+      if (!hideSeats && (b.return_seat_numbers ?? []).length)
+        lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
     }
+
     lines.push(`الذهاب: ${departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode)}`);
     lines.push(`العودة الفعلية: ${returnValue(b)}`);
     lines.push(`تاريخ الحجز: ${formatDate(b.created_at)}`);
@@ -322,11 +336,12 @@ function TicketPage() {
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
             <TicketRow label="رقم الباص" value={busLabel(booking.buses)} />
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
-            <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />
+            {!hideSeats && <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />}
             {booking.return_buses && <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />}
-            {booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 && (
+            {!hideSeats && booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 && (
               <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />
             )}
+
             <TicketRow label="الذهاب" value={departureDisplay(booking.departure_date ?? booking.trips?.departure_date, booking.trips?.departure_day, "-", booking.trip_mode)} />
             <TicketRow label="العودة الفعلية" value={returnValue(booking)} />
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
@@ -373,7 +388,7 @@ function TicketPage() {
         </div>
       </div>
 
-      {layout && (
+      {layout && !hideSeats && (
         <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
           <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
             <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>

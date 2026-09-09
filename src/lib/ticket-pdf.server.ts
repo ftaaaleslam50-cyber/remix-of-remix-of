@@ -14,15 +14,29 @@ import type { RoomType } from "@/lib/booking/types";
 const ARABIC_RE = /[\u0600-\u06FF\uFB50-\uFEFF]/;
 
 
-/** Reshape Arabic to presentation forms; digits and Latin stay in logical order. */
+/**
+ * Reshape Arabic to presentation forms. The embedded font's layout engine
+ * reverses the whole glyph run for Arabic strings, which also flips embedded
+ * digits/Latin ("2026" -> "6202"), so those runs are pre-reversed here to come
+ * out correct after that reversal.
+ */
 function shape(input: string): string {
   const text = String(input ?? "");
   if (!text) return "";
   if (!ARABIC_RE.test(text)) return text;
-  // pdf-lib draws the glyphs exactly as given, so numbers and Latin runs must
-  // NOT be pre-reversed — doing so turned "2026" into "6202" on the ticket.
-  return ArabicReshaper.convertArabic(text);
+  const reshaped = ArabicReshaper.convertArabic(text);
+  // Arabic-Indic digits (٠-٩) need the same treatment as Western ones.
+  const D = "0-9\\u0660-\\u0669\\u06F0-\\u06F9A-Za-z";
+  return reshaped.replace(new RegExp(`[${D}][${D}.,:/\\\\+\\-()]*`, "g"), (run) => {
+    // Trailing punctuation belongs to the Arabic side, keep it out of the flip.
+    const m = run.match(new RegExp(`^(.*?[${D}])([^${D}]*)$`));
+    const core = m ? m[1] : run;
+    const tail = m ? m[2] : "";
+    return [...core].reverse().join("") + tail;
+  });
+
 }
+
 
 
 const NAVY = rgb(0.05, 0.13, 0.26);
@@ -145,20 +159,16 @@ function formatDate(iso: string): string {
   }).format(d);
 }
 
-function defaultLayout(): LayoutJson {
-  const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
-  const cells: LayoutCell[] = [];
-  rows.forEach((r, i) => {
-    const row = i + 1;
-    cells.push({ row, col: 1, kind: "seat", label: `${r}1` });
-    cells.push({ row, col: 2, kind: "seat", label: `${r}2` });
-    cells.push({ row, col: 4, kind: "seat", label: `${r}3` });
-    cells.push({ row, col: 5, kind: "seat", label: `${r}4` });
-  });
-  const mRow = rows.length + 1;
-  for (let c = 1; c <= 5; c++) cells.push({ row: mRow, col: c, kind: "seat", label: `M${c}` });
-  return { rows: mRow, cols: 5, cells };
+/** Admin toggle: hide seat numbers on individual bookings. */
+async function hideSeatsForIndividual(): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("hide_seats_individual")
+    .eq("id", 1)
+    .maybeSingle();
+  return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
 }
+
 
 const A4: [number, number] = [595.28, 841.89];
 const M = 40; // page margin
@@ -220,11 +230,14 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
   rows.push(["رقم الباص", busLabel(b.buses)]);
   if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
-  rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
+  const hideSeats = b.booking_type === "individual" && (await hideSeatsForIndividual());
+  if (!hideSeats) rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
   if (b.return_buses) {
     rows.push(["حافلة العودة", busLabel(b.return_buses)]);
-    if ((b.return_seat_numbers ?? []).length > 0) rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
+    if (!hideSeats && (b.return_seat_numbers ?? []).length > 0)
+      rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
   }
+
   rows.push([
     "الذهاب",
     departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode),
@@ -279,77 +292,8 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
 
   rtl(page, "يرجى إبراز التذكرة عند الصعود للباص.", W / 2 + 90, boxY - 24, 10, GREY);
 
-  // ---- Page 2: seat map ----
-  const layout = b.layout_json ?? defaultLayout();
-  const seats = new Set(b.seat_numbers ?? []);
-  const p2 = pdf.addPage(A4);
-  p2.drawRectangle({ x: 0, y: A4[1] - 80, width: W, height: 80, color: NAVY });
-  rtl(p2, "مخطط الحافلة", right, A4[1] - 44, 17, rgb(1, 1, 1), true);
-  rtl(
-    p2,
-    `${b.customer_name} — مقاعد: ${(b.seat_numbers ?? []).join(", ") || "-"}`,
-    right,
-    A4[1] - 64,
-    10,
-    rgb(0.82, 0.85, 0.9),
-  );
+  // ---- Page 2: important notices image (seat-map page removed) ----
 
-  const cols = Math.max(1, layout.cols || 1);
-  const lrows = Math.max(1, layout.rows || 1);
-  const cell = Math.min(46, (right - M) / cols - 6, (A4[1] - 200) / lrows - 6);
-  const gridW = cols * (cell + 6) - 6;
-  const startX = (W - gridW) / 2;
-  const startY = A4[1] - 120;
-  const map = new Map<string, LayoutCell>();
-  for (const c of layout.cells) map.set(`${c.row}:${c.col}`, c);
-
-  for (let r = 1; r <= lrows; r++) {
-    for (let c = 1; c <= cols; c++) {
-      const cl = map.get(`${r}:${c}`);
-      if (!cl || cl.kind === "empty") continue;
-      // RTL grid: column 1 is on the right.
-      const x = startX + (cols - c) * (cell + 6);
-      const yy = startY - r * (cell + 6);
-      const id = cl.label && cl.label.trim() ? cl.label : `${cl.row}-${cl.col}`;
-      const isSeat = cl.kind === "seat";
-      const mine = isSeat && seats.has(id);
-      p2.drawRectangle({
-        x,
-        y: yy,
-        width: cell,
-        height: cell,
-        color: mine ? NAVY : isSeat ? rgb(1, 1, 1) : LIGHT,
-        borderColor: mine ? NAVY : BORDER,
-        borderWidth: 1.2,
-      });
-      const label = isSeat
-        ? id
-        : cl.label || (cl.kind === "driver" ? "السائق" : cl.kind === "door" ? "باب" : "دورة مياه");
-      const t = shape(label);
-      const size = 8;
-      const tw = font.widthOfTextAtSize(t, size);
-      p2.drawText(t, {
-        x: x + (cell - tw) / 2,
-        y: yy + cell / 2 - (mine ? 1 : 3),
-        size,
-        font,
-        color: mine ? rgb(1, 1, 1) : GREY,
-      });
-      if (mine) {
-        const nm = shape(b.customer_name.split(" ")[0] ?? "");
-        const nw = Math.min(font.widthOfTextAtSize(nm, 6), cell - 4);
-        p2.drawText(nm, { x: x + (cell - nw) / 2, y: yy + cell / 2 - 10, size: 6, font, color: rgb(1, 1, 1) });
-      }
-    }
-  }
-
-  const legendY = startY - lrows * (cell + 6) - 30;
-  p2.drawRectangle({ x: right - 14, y: legendY, width: 12, height: 12, color: NAVY });
-  rtl(p2, `مقاعدك (${b.customer_name})`, right - 22, legendY + 2, 10, GREY);
-  p2.drawRectangle({ x: right - 190, y: legendY, width: 12, height: 12, color: rgb(1, 1, 1), borderColor: BORDER, borderWidth: 1 });
-  rtl(p2, "مقاعد أخرى", right - 198, legendY + 2, 10, GREY);
-
-  // ---- Page 3: important notices image ----
   try {
     const notes = await loadNotesImage();
     if (notes) {

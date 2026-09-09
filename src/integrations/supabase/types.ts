@@ -55,6 +55,7 @@ export type Database = {
           hero_image_url: string | null
           hero_subtitle: string
           hero_title: string
+          hide_seats_individual: boolean
           id: number
           instagram: string | null
           instagram_url: string | null
@@ -132,6 +133,7 @@ export type Database = {
           hero_image_url?: string | null
           hero_subtitle?: string
           hero_title?: string
+          hide_seats_individual?: boolean
           id?: number
           instagram?: string | null
           instagram_url?: string | null
@@ -209,6 +211,7 @@ export type Database = {
           hero_image_url?: string | null
           hero_subtitle?: string
           hero_title?: string
+          hide_seats_individual?: boolean
           id?: number
           instagram?: string | null
           instagram_url?: string | null

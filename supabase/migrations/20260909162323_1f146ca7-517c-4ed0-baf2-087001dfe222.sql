@@ -1,0 +1,1 @@
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS hide_seats_individual boolean NOT NULL DEFAULT false;
