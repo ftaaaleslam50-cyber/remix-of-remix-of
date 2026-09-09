@@ -294,6 +294,23 @@ export function TripSheetTab() {
   );
 
   const bus = buses.find((b) => b.id === busId) ?? null;
+
+  /** مصاريف الحافلة المحددة (تُحفظ عند الاعتماد) — الإعداد العام يبقى كما هو. */
+  const [busExp, setBusExp] = useState<BusExpenses>(EMPTY_REF.busExpenses);
+  useEffect(() => {
+    setBusExp(
+      bus
+        ? {
+            busCost: n(bus.expense_bus_cost),
+            driverTip: n(bus.expense_driver_tip),
+            taxi: n(bus.expense_taxi),
+            supervisor: n(bus.expense_supervisor),
+            extra: n(bus.expense_extra),
+          }
+        : EMPTY_REF.busExpenses,
+    );
+  }, [bus?.id, buses]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const trip = trips.find((t) => t.id === tripId) ?? null;
   const tripInfo = filtered.find((b) => b.trips)?.trips ?? null;
 
