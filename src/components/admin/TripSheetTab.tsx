@@ -132,12 +132,39 @@ export function TripSheetTab() {
         []) as Array<{ id: string; name: string; active: boolean; extension_price: number | null }>,
   });
 
-  const { data: repProfiles = [] } = useQuery({
+  const { data: repProfiles = [], refetch: refetchReps } = useQuery({
     queryKey: ["ts-reps"],
     queryFn: async () =>
-      ((await supabase.from("profiles").select("id,full_name,account_type").eq("account_type", "representative")).data ??
-        []) as Array<{ id: string; full_name: string | null; account_type: string }>,
+      ((
+        await supabase
+          .from("profiles")
+          .select("id,full_name,account_type,active,commission_rate")
+          .eq("account_type", "representative")
+      ).data ?? []) as Array<{
+        id: string;
+        full_name: string | null;
+        account_type: string;
+        active?: boolean | null;
+        commission_rate?: number | null;
+      }>,
   });
+
+  /** نسب العمولة الجديدة المخزّنة في ملف كل مندوب. */
+  const [repRates, setRepRates] = useState<Record<string, number>>({});
+  useEffect(() => {
+    setRepRates((prev) => {
+      const next = { ...prev };
+      for (const r of repProfiles) if (next[r.id] === undefined) next[r.id] = Number(r.commission_rate ?? 0) || 0;
+      return next;
+    });
+  }, [repProfiles]);
+
+  async function saveRepRate(id: string, value: number) {
+    setRepRates((s) => ({ ...s, [id]: value }));
+    const { error } = await supabase.from("profiles").update({ commission_rate: value } as never).eq("id", id);
+    if (error) toast.error("تعذر حفظ نسبة العمولة");
+    else void refetchReps();
+  }
 
   const { data: rows = [] } = useQuery({
     queryKey: ["ts-bookings"],
