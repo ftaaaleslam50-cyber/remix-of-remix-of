@@ -482,17 +482,19 @@ export function TripSheetTab() {
   }
 
   async function approveOccurrence() {
-    if (!occ) return;
+    if (!occDate || !tripId) return;
     setApproving(true);
     try {
-      const { error } = await supabase
-        .from("trip_occurrences")
-        .update({ bed_costs: bedCosts, settled_at: new Date().toISOString() } as never)
-        .eq("id", occ.id);
+      const payload = { bed_costs: bedCosts, settled_at: new Date().toISOString() } as never;
+      const { error } = occ
+        ? await supabase.from("trip_occurrences").update(payload).eq("id", occ.id)
+        : await supabase
+            .from("trip_occurrences")
+            .insert({ trip_id: tripId, departure_date: occDate, ...(payload as object) } as never);
       if (error) throw error;
       const { error: rpcErr } = await supabase.rpc("recalc_settled_profits" as never, {
-        _trip_id: occ.trip_id,
-        _departure_date: occ.departure_date,
+        _trip_id: tripId,
+        _departure_date: occDate,
       } as never);
       if (rpcErr) throw rpcErr;
       await refetchOcc();
@@ -702,10 +704,10 @@ export function TripSheetTab() {
             className="h-10 w-full rounded-md border px-3 text-sm bg-white disabled:opacity-60"
           >
             <option value="">— اختر التاريخ —</option>
-            {occurrences.map((o) => (
-              <option key={o.id} value={o.departure_date}>
-                {o.departure_date}
-                {o.settled_at ? " — معتمدة" : ""}
+            {occDateOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+                {occurrences.find((o) => o.departure_date === d)?.settled_at ? " — معتمدة" : ""}
               </option>
             ))}
           </select>
