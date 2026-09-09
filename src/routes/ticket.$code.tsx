@@ -388,7 +388,7 @@ function TicketPage() {
         </div>
       </div>
 
-      {layout && (
+      {layout && !hideSeats && (
         <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
           <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
             <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>
