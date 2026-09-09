@@ -913,6 +913,19 @@ export function TripSheetTab() {
           ))}
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs text-muted-foreground">
+            {occ
+              ? `تكلفة السرير للرحلة بتاريخ ${occ.departure_date}${occ.settled_at ? " — معتمدة" : " — غير معتمدة"}`
+              : "الإعداد العام — اختر رحلة وتاريخًا في الفلتر لتعديل تكلفة الأسرّة الخاصة بها"}
+          </p>
+          {occ ? (
+            <Button className="rounded-full" disabled={approving} onClick={() => void approveOccurrence()}>
+              اعتماد تكلفة الفنادق
+            </Button>
+          ) : null}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead className="bg-muted">
@@ -921,7 +934,9 @@ export function TripSheetTab() {
                 {ROOM_ROWS.map((r) => (
                   <th key={r} className="border px-2 py-0.5 whitespace-nowrap">
                     تكلفة {r}
-                    <span className="block text-[10px] font-normal text-muted-foreground">÷ {ROOM_CAPACITY[r]}</span>
+                    <span className="block text-[10px] font-normal text-muted-foreground">
+                      {occ ? "سرير واحد" : `÷ ${ROOM_CAPACITY[r]}`}
+                    </span>
                   </th>
                 ))}
                 <th className="border px-2 py-0.5">سعر ليلة التمديد</th>
@@ -937,13 +952,18 @@ export function TripSheetTab() {
                       <Input
                         type="number"
                         className="h-8 text-xs"
-                        value={String(ref.costs[hotel]?.[r] ?? 0)}
-                        onChange={(e) =>
-                          setRef((s) => ({
-                            ...s,
-                            costs: { ...s.costs, [hotel]: { ...(s.costs[hotel] ?? {}), [r]: Number(e.target.value) || 0 } },
-                          }))
-                        }
+                        value={String((occ ? bedCosts[hotel]?.[r] : ref.costs[hotel]?.[r]) ?? 0)}
+                        onChange={(e) => {
+                          const v = Number(e.target.value) || 0;
+                          if (occ) {
+                            setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
+                          } else {
+                            setRef((s) => ({
+                              ...s,
+                              costs: { ...s.costs, [hotel]: { ...(s.costs[hotel] ?? {}), [r]: v } },
+                            }));
+                          }
+                        }}
                       />
                     </td>
                   ))}
