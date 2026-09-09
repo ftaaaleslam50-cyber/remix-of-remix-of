@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User, PlusCircle, Search } from "lucide-react";
+import { Ticket, Calendar, Users, Edit, XCircle, Eye, ArrowRight, Loader2, MapPin, Bus, Hotel, Phone, MessageCircle, Globe, User, PlusCircle, Search, TrendingUp } from "lucide-react";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +78,42 @@ function MyBookingsPage() {
   }, [uid]);
 
 
+
+  // ------------------------- أرباحي (المناديب) -------------------------
+  const [weekBack, setWeekBack] = useState(0);
+  const { data: earnings = [] } = useQuery({
+    queryKey: ["my-earnings", uid],
+    enabled: !!uid && isRep,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("id,booking_code,customer_name,created_at,total_price,rep_share,status")
+        .eq("rep_profile_id", uid)
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as {
+        id: string; booking_code: string; customer_name: string | null;
+        created_at: string; total_price: number | null; rep_share: number | null; status: string;
+      }[];
+    },
+  });
+
+  const weekEarnings = useMemo(() => {
+    const start = startOfWeek(new Date());
+    start.setDate(start.getDate() - weekBack * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    const items = earnings.filter((e) => {
+      const t = new Date(e.created_at).getTime();
+      return t >= start.getTime() && t < end.getTime();
+    });
+    const total = items.reduce((s, e) => s + (Number(e.rep_share) || 0), 0);
+    const fmt = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
+    const endLabel = new Date(end);
+    endLabel.setDate(end.getDate() - 1);
+    return { items, total, label: `${fmt(start)} - ${fmt(endLabel)}` };
+  }, [earnings, weekBack]);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -252,6 +288,61 @@ function MyBookingsPage() {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {isRep && (
+          <section className="surface-card p-4 mb-5" aria-label="أرباحي">
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+              <h2 className="font-extrabold text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" /> أرباحي
+              </h2>
+              <select
+                className="h-9 rounded-xl border bg-background px-3 text-sm"
+                value={weekBack}
+                onChange={(e) => setWeekBack(Number(e.target.value))}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i} value={i}>
+                    {i === 0 ? "الأسبوع الحالي" : i === 1 ? "الأسبوع الماضي" : `قبل ${i} أسابيع`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center mb-3">
+              <p className="text-2xl font-extrabold text-primary">{sar(weekEarnings.total)}</p>
+              <p className="text-[11px] text-muted-foreground font-semibold mt-1">
+                {weekBack === 0 ? "أرباح الأسبوع الحالي" : "أرباح الأسبوع المختار"} ({weekEarnings.label})
+              </p>
+            </div>
+
+            {weekEarnings.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">لا توجد حجوزات في هذا الأسبوع.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground text-xs">
+                      <th className="text-right py-2">رقم الحجز</th>
+                      <th className="text-right py-2">العميل</th>
+                      <th className="text-right py-2">التاريخ</th>
+                      <th className="text-left py-2">حصتي</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {weekEarnings.items.map((e) => (
+                      <tr key={e.id}>
+                        <td className="py-2 font-mono text-primary">{e.booking_code}</td>
+                        <td className="py-2 font-semibold">{e.customer_name || "—"}</td>
+                        <td className="py-2 text-muted-foreground text-xs">{formatDateTime(e.created_at)}</td>
+                        <td className="py-2 text-left font-bold">{sar(Number(e.rep_share) || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
 
