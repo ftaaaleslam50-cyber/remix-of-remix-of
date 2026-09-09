@@ -1070,19 +1070,8 @@ function UnifiedBookingsTab(props: {
           </select>
         </div>
         <div>
-          <Label className="text-xs mb-1 block">الحافلة</Label>
-          <select
-            value={busId}
-            onChange={(e) => setBusId(e.target.value)}
-            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
-          >
-            <option value="">— كل الحافلات —</option>
-            {buses.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name || `حافلة ${b.bus_number}`} — سعة {b.capacity}
-              </option>
-            ))}
-          </select>
+          <Label className="text-xs mb-1 block">الحافلة (اختيار متعدد)</Label>
+          <BusMultiSelect buses={buses} value={busIds} onChange={setBusIds} />
         </div>
         <div>
           <Label className="text-xs mb-1 block">الحالة</Label>
