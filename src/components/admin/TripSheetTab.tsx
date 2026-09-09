@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { ROOM_ROWS, ROOM_CAPACITY } from "@/lib/export/rooming";
+import { computeBookingProfit } from "@/lib/profit";
 import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
 
 /**
@@ -48,6 +49,7 @@ interface SheetBooking {
   trip_id: string | null;
   bus_id: string | null;
   package_id: string | null;
+  rep_profile_id?: string | null;
   packages: { name: string } | null;
   trips: { name: string; departure_day: string | null; return_day: string | null } | null;
   buses: { id: string; name: string | null; bus_number: number; capacity: number; expenses: number | null } | null;
