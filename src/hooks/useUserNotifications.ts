@@ -25,10 +25,13 @@ export const NOTIF_TYPE_LABELS: Record<string, string> = {
   booking_cancelled: "إلغاء حجز",
   booking_rescheduled: "تغيير موعد الرحلة",
   bus_changed: "تغيير الحافلة",
-  seat_changed: "تغيير المقعد",
+  bus_number_changed: "تغيير رقم الحافلة",
+  seat_changed: "تغيير المقاعد",
+  booking_settled: "اعتماد حسابات الحجز",
   customer_updated: "تحديث البيانات",
   booking_note_added: "ملاحظة جديدة",
   system: "النظام",
+
 };
 
 /** Notifications addressed to the currently signed-in user (customer / representative). */

@@ -168,11 +168,37 @@ export function TripSheetTab() {
   const [occDate, setOccDate] = useState("");
   const occ = occurrences.find((o) => o.departure_date === occDate) ?? null;
 
-  /** تكلفة السرير للرحلة/التاريخ المحدد (تُحفظ عند الاعتماد). */
+  /** تكلفة السرير للرحلة/التاريخ المحدد — تُحفظ تلقائيًا وتبقى ثابتة حتى تغيّرها. */
   const [bedCosts, setBedCosts] = useState<Record<string, Record<string, number>>>({});
+  const bedDirty = useRef(false);
+  const bedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    setBedCosts((occ?.bed_costs as Record<string, Record<string, number>>) ?? {});
+    bedDirty.current = false;
+    const stored = (occ?.bed_costs as Record<string, Record<string, number>> | null) ?? null;
+    if (stored && Object.keys(stored).length > 0) setBedCosts(stored);
+    else if (!occDate) setBedCosts({});
+    // لا نمسح القيم المكتوبة عند عدم وجود سجل محفوظ بعد
   }, [occ?.id, occDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** حفظ تلقائي لتكلفة الأسرّة دون المساس بحالة الاعتماد. */
+  useEffect(() => {
+    if (!bedDirty.current || !occDate || !tripId) return;
+    if (bedTimer.current) clearTimeout(bedTimer.current);
+    bedTimer.current = setTimeout(async () => {
+      const payload = { bed_costs: bedCosts } as never;
+      const { error } = occ
+        ? await supabase.from("trip_occurrences").update(payload).eq("id", occ.id)
+        : await supabase
+            .from("trip_occurrences")
+            .insert({ trip_id: tripId, departure_date: occDate, ...(payload as object) } as never);
+      if (error) toast.error("تعذر حفظ تكلفة الأسرّة");
+      else if (!occ) void refetchOcc();
+    }, 800);
+    return () => {
+      if (bedTimer.current) clearTimeout(bedTimer.current);
+    };
+  }, [bedCosts, occDate, tripId, occ, refetchOcc]);
+
 
 
 
@@ -968,7 +994,9 @@ export function TripSheetTab() {
                         onChange={(e) => {
                           const v = Number(e.target.value) || 0;
                           if (occDate) {
+                            bedDirty.current = true;
                             setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
+
                           } else {
                             setRef((s) => ({
                               ...s,
