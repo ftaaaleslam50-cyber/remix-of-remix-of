@@ -1053,43 +1053,56 @@ export function TripSheetTab() {
         </div>
 
         <div>
-          <h4 className="font-bold text-sm mb-2">نسب عمولة المندوبين</h4>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {repNames.map((name) => (
-              <div key={name}>
-                <Label className="text-xs mb-1 block">{name}</Label>
-                <Input
-                  type="number"
-                  step="0.05"
-                  min="0"
-                  max="1"
-                  value={String(ref.commissions[name] ?? 0)}
-                  onChange={(e) =>
-                    setRef((s) => ({ ...s, commissions: { ...s.commissions, [name]: Number(e.target.value) || 0 } }))
-                  }
-                />
-              </div>
-            ))}
-            {repNames.length === 0 && <p className="text-sm text-muted-foreground">لا يوجد مندوبون</p>}
-          </div>
-
-          <h4 className="font-bold text-sm mt-5 mb-2">نسب عمولة حسابات المناديب (مرتبطة بالحساب)</h4>
+          <h4 className="font-bold text-sm mb-1">نسب عمولة المناديب</h4>
+          <p className="text-xs text-muted-foreground mb-2">
+            تُكتب النسبة كنسبة مئوية (مثال: 10 تعني 10٪). النسبة المرتبطة بالحساب لها الأولوية على النسبة بالاسم.
+          </p>
           <div className="grid gap-3 sm:grid-cols-3">
             {repProfiles.map((p) => (
               <div key={p.id}>
                 <Label className="text-xs mb-1 block">{p.full_name || "بدون اسم"}</Label>
-                <Input
-                  type="number"
-                  step="0.05"
-                  min="0"
-                  max="1"
-                  value={String(repRates[p.id] ?? 0)}
-                  onChange={(e) => setRepRates((s) => ({ ...s, [p.id]: Number(e.target.value) || 0 }))}
-                  onBlur={(e) => void saveRepRate(p.id, Number(e.target.value) || 0)}
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    className="pl-8"
+                    value={String(Math.round(((repRates[p.id] ?? 0) as number) * 10000) / 100)}
+                    onChange={(e) =>
+                      setRepRates((s) => ({ ...s, [p.id]: (Number(e.target.value) || 0) / 100 }))
+                    }
+                    onBlur={(e) => void saveRepRate(p.id, (Number(e.target.value) || 0) / 100)}
+                  />
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">٪</span>
+                </div>
               </div>
             ))}
-            {repProfiles.length === 0 && <p className="text-sm text-muted-foreground">لا توجد حسابات مناديب</p>}
+            {repNames.map((name) => (
+              <div key={name}>
+                <Label className="text-xs mb-1 block">{name}</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    className="pl-8"
+                    value={String(Math.round(((ref.commissions[name] ?? 0) as number) * 10000) / 100)}
+                    onChange={(e) =>
+                      setRef((s) => ({
+                        ...s,
+                        commissions: { ...s.commissions, [name]: (Number(e.target.value) || 0) / 100 },
+                      }))
+                    }
+                  />
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">٪</span>
+                </div>
+              </div>
+            ))}
+            {repProfiles.length === 0 && repNames.length === 0 && (
+              <p className="text-sm text-muted-foreground">لا يوجد مناديب</p>
+            )}
           </div>
         </div>
       </div>
