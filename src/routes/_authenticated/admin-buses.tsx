@@ -44,6 +44,7 @@ interface BusRow {
   open_return_price: number;
   direction: "outbound" | "return";
   assigned_date: string | null;
+  notification_date: string | null;
 }
 
 
@@ -325,6 +326,7 @@ function AdminBuses() {
       open_return_price: Number(b.open_return_price) || 0,
       direction: b.direction === "return" ? "return" : "outbound",
       assigned_date: b.assigned_date || null,
+      notification_date: b.notification_date || null,
     };
 
     // مزامنة سعة الحافلة مع القالب المختار
@@ -517,6 +519,7 @@ function AdminBuses() {
                         <TableHead>الاسم</TableHead>
                         <TableHead>الرحلة المرتبطة</TableHead>
                         <TableHead>التاريخ</TableHead>
+                        <TableHead>تاريخ الإشعار</TableHead>
                         <TableHead>اللوحة</TableHead>
                         <TableHead>الطراز</TableHead>
                         <TableHead>النوع</TableHead>
@@ -592,7 +595,7 @@ function AdminBuses() {
  * داخل المتصفح، بدون أي AI أو API أو خدمة خارجية.
  * يعتمد على عناوين الحقول (عربي/إنجليزي) وليس على مواقع الأسطر.
  */
-type NotificationField = "driver_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate";
+type NotificationField = "driver_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate" | "notification_date";
 
 const NOTIF_FIELD_LABELS: Record<NotificationField, string> = {
   driver_name: "اسم السائق",
@@ -600,6 +603,7 @@ const NOTIF_FIELD_LABELS: Record<NotificationField, string> = {
   driver_phone: "جوال السائق",
   bus_number: "رقم الحافلة",
   plate: "رقم اللوحة",
+  notification_date: "تاريخ الإشعار",
 };
 
 /** تنظيف السطر: إزالة * و _ والإيموجي والمسافات الزائدة وتوحيد حالة الأحرف للمطابقة. */
@@ -621,10 +625,10 @@ function matchNotifHeader(cleaned: string): NotificationField | "other" | null {
   if (cleaned.includes("رقم اللوحة") || cleaned.includes("plate")) return "plate";
   if (cleaned.includes("الهوية") || cleaned.includes("identity")) return "driver_id_number";
   if (cleaned.includes("السائق") || cleaned.includes("driver")) return "driver_name";
+  if (cleaned.includes("التاريخ") || cleaned.includes("date")) return "notification_date";
   // عناوين أخرى في الإشعار تعمل كحدّ فاصل (نهاية قيمة الحقل السابق)
   if (
     cleaned.includes("الرحلة") || cleaned.includes("trip") ||
-    cleaned.includes("التاريخ") || cleaned.includes("date") ||
     cleaned.includes("الوقت") || cleaned.includes("time") ||
     cleaned.includes("عدد الركاب") || cleaned.includes("passenger")
   ) return "other";
@@ -696,12 +700,18 @@ function BusEditRow({
       if (n) { next.bus_number = n; count++; } else missing.push(NOTIF_FIELD_LABELS.bus_number);
     } else missing.push(NOTIF_FIELD_LABELS.bus_number);
     if (parsed.plate) { next.plate = parsed.plate; count++; } else missing.push(NOTIF_FIELD_LABELS.plate);
+    if (parsed.notification_date) {
+      // التقاط أول تاريخ بصيغة ISO داخل قيمة السطر، وإلا حفظ النص كما هو
+      const m = parsed.notification_date.match(/\d{4}-\d{1,2}-\d{1,2}/);
+      next.notification_date = m ? m[0] : parsed.notification_date;
+      count++;
+    } else missing.push(NOTIF_FIELD_LABELS.notification_date);
 
     setLocal(next);
-    if (count === 5) {
+    if (count === 6) {
       toast.success("تم استخراج جميع البيانات بنجاح ✓");
     } else if (count > 0) {
-      toast.warning(`تم استخراج ${count} من 5 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
+      toast.warning(`تم استخراج ${count} من 6 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
     } else {
       toast.error("لم يتم العثور على أي بيانات — تأكد من صيغة الإشعار");
     }
@@ -761,6 +771,22 @@ function BusEditRow({
             setLocal({
               ...local,
               assigned_date: e.target.value || null,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="date"
+          dir="ltr"
+          className="h-9 w-36"
+          title="تاريخ الإشعار"
+          value={local.notification_date ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              notification_date: e.target.value || null,
             })
           }
         />
