@@ -1234,7 +1234,7 @@ function UnifiedBookingsTab(props: {
                 <LiveSeatBoard
                   layout={mirrorLayout(liveLayout)}
                   bookings={activeSeatBookings as never}
-                  shortName={twoPartName}
+                  shortName={(n) => twoPartName(n ?? "")}
                   onSaved={() => qcInner.invalidateQueries({ queryKey: ["admin-bookings"] })}
                 />
 
