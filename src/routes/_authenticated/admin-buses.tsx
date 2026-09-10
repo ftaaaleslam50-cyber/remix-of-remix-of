@@ -519,6 +519,7 @@ function AdminBuses() {
                         <TableHead>الاسم</TableHead>
                         <TableHead>الرحلة المرتبطة</TableHead>
                         <TableHead>التاريخ</TableHead>
+                        <TableHead>تاريخ الإشعار</TableHead>
                         <TableHead>اللوحة</TableHead>
                         <TableHead>الطراز</TableHead>
                         <TableHead>النوع</TableHead>
@@ -770,6 +771,22 @@ function BusEditRow({
             setLocal({
               ...local,
               assigned_date: e.target.value || null,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          type="date"
+          dir="ltr"
+          className="h-9 w-36"
+          title="تاريخ الإشعار"
+          value={local.notification_date ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              notification_date: e.target.value || null,
             })
           }
         />
