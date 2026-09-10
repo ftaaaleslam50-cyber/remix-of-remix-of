@@ -1230,18 +1230,13 @@ function UnifiedBookingsTab(props: {
                   </h3>
                   <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
                 </div>
-                <div className="pointer-events-none" style={{ direction: "ltr" }}>
-                  <LayoutSeatMap
-                    layout={mirrorLayout(liveLayout)}
-                    selected={liveSeatNumbers}
-                    reserved={[]}
-                    maxSelectable={liveSeatNumbers.length}
-                    genders={liveSeatGenders}
-                    names={liveSeatNames}
-                    large
-                    onChange={() => undefined}
-                  />
-                </div>
+                <LiveSeatBoard
+                  layout={mirrorLayout(liveLayout)}
+                  bookings={activeSeatBookings as never}
+                  shortName={twoPartName}
+                  onSaved={() => qcInner.invalidateQueries({ queryKey: ["admin-bookings"] })}
+                />
+
 
                 {/* Detailed occupancy: seat → passenger name → representative */}
                 {activeSeatBookings.length > 0 && (
