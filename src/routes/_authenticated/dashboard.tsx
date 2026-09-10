@@ -36,6 +36,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { LayoutSeatMap, mirrorLayout, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { LiveSeatBoard } from "@/components/admin/LiveSeatBoard";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
