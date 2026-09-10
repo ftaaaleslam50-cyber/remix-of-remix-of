@@ -994,7 +994,9 @@ export function TripSheetTab() {
                         onChange={(e) => {
                           const v = Number(e.target.value) || 0;
                           if (occDate) {
+                            bedDirty.current = true;
                             setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
+
                           } else {
                             setRef((s) => ({
                               ...s,
