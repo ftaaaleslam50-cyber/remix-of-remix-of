@@ -210,8 +210,15 @@ export function LiveSeatBoard({
               {occ?.gender === "female" && <Venus className="h-3.5 w-3.5" />}
               <span className="font-extrabold">{label}</span>
               {occ && (
-                <span className="w-full text-center text-[9px] font-extrabold" style={{ overflowWrap: "anywhere" }} dir="rtl">
+                <span className="w-full text-center text-[9px] font-extrabold leading-tight" style={{ overflowWrap: "anywhere" }} dir="rtl">
                   {occ.name}
+                  {(occ.rep || occ.bookingType) && (
+                    <span className="block text-[8px] font-bold opacity-90">
+                      {occ.rep && <>· {occ.rep}</>}
+                      {occ.rep && occ.bookingType && " "}
+                      {occ.bookingType}
+                    </span>
+                  )}
                 </span>
               )}
             </button>
