@@ -990,6 +990,20 @@ function BusEditRow({
 
       <TableCell>
         <Input
+          className="h-9 w-36"
+          placeholder="اسم المشرف"
+          value={local.supervisor_name ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              supervisor_name: e.target.value,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
           dir="ltr"
           className="h-9 w-32"
           value={local.driver_phone ?? ""}
