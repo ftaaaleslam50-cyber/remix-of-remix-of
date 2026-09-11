@@ -35,6 +35,7 @@ interface BusRow {
   bus_type: string | null;
   details: string | null;
   driver_name: string | null;
+  supervisor_name: string | null;
   driver_phone: string | null;
   driver_id_number: string | null;
   price_addition: number;
@@ -273,6 +274,7 @@ function AdminBuses() {
       bus_type: b.bus_type,
       details: b.details,
       driver_name: b.driver_name,
+      supervisor_name: b.supervisor_name,
       driver_phone: b.driver_phone,
       driver_id_number: b.driver_id_number,
       capacity: b.capacity,
@@ -534,6 +536,7 @@ function AdminBuses() {
                         <TableHead>صورة</TableHead>
                         <TableHead>إشعار الرحلة</TableHead>
                         <TableHead>اسم السائق</TableHead>
+                        <TableHead>اسم المشرف</TableHead>
                         <TableHead>جوال السائق</TableHead>
                         <TableHead>هوية السائق</TableHead>
                         <TableHead>الحالة</TableHead>
