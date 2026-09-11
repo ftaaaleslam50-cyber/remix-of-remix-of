@@ -44,11 +44,15 @@ export function LiveSeatBoard({
     const m: Record<string, Occupant> = {};
     for (const b of bookings) {
       const explicit = (b.seat_genders ?? {}) as Record<string, SeatGender>;
+      const rep = b.booking_source && b.booking_source !== "Admin" && b.booking_source !== "الموقع" ? b.booking_source : "";
+      const bt = b.booking_type === "family" ? "عوائل" : b.booking_type === "individual" ? "أفراد" : (b.booking_type ?? "");
       (b.seat_numbers ?? []).forEach((seat, idx) => {
         m[seat] = {
           bookingId: b.id,
           name: shortName(b.customer_name),
           gender: explicit[seat] ?? (idx < Number(b.male_count ?? 0) ? "male" : "female"),
+          rep,
+          bookingType: bt,
         };
       });
     }
