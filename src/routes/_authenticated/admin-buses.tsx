@@ -35,6 +35,7 @@ interface BusRow {
   bus_type: string | null;
   details: string | null;
   driver_name: string | null;
+  supervisor_name: string | null;
   driver_phone: string | null;
   driver_id_number: string | null;
   price_addition: number;
@@ -273,6 +274,7 @@ function AdminBuses() {
       bus_type: b.bus_type,
       details: b.details,
       driver_name: b.driver_name,
+      supervisor_name: b.supervisor_name,
       driver_phone: b.driver_phone,
       driver_id_number: b.driver_id_number,
       capacity: b.capacity,
@@ -317,6 +319,7 @@ function AdminBuses() {
       bus_type: b.bus_type,
       details: b.details,
       driver_name: b.driver_name,
+      supervisor_name: b.supervisor_name,
       driver_phone: b.driver_phone,
       driver_id_number: b.driver_id_number,
       price_addition: Number(b.round_trip_price) || 0,
@@ -534,6 +537,7 @@ function AdminBuses() {
                         <TableHead>صورة</TableHead>
                         <TableHead>إشعار الرحلة</TableHead>
                         <TableHead>اسم السائق</TableHead>
+                        <TableHead>اسم المشرف</TableHead>
                         <TableHead>جوال السائق</TableHead>
                         <TableHead>هوية السائق</TableHead>
                         <TableHead>الحالة</TableHead>
@@ -595,10 +599,11 @@ function AdminBuses() {
  * داخل المتصفح، بدون أي AI أو API أو خدمة خارجية.
  * يعتمد على عناوين الحقول (عربي/إنجليزي) وليس على مواقع الأسطر.
  */
-type NotificationField = "driver_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate" | "notification_date";
+type NotificationField = "driver_name" | "supervisor_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate" | "notification_date";
 
 const NOTIF_FIELD_LABELS: Record<NotificationField, string> = {
   driver_name: "اسم السائق",
+  supervisor_name: "اسم المشرف",
   driver_id_number: "هوية السائق",
   driver_phone: "جوال السائق",
   bus_number: "رقم الحافلة",
@@ -620,6 +625,7 @@ function cleanNotifLine(line: string): string {
 function matchNotifHeader(cleaned: string): NotificationField | "other" | null {
   if (!cleaned) return null;
   // الأكثر تحديدًا أولًا: «رقم السائق» يحتوي «السائق» لذا يُفحص قبلها.
+  if (cleaned.includes("المشرف") || cleaned.includes("supervisor")) return "supervisor_name";
   if (cleaned.includes("رقم السائق") || cleaned.includes("mobile")) return "driver_phone";
   if (cleaned.includes("رقم المركبة") || cleaned.includes("vehicle")) return "bus_number";
   if (cleaned.includes("رقم اللوحة") || cleaned.includes("plate")) return "plate";
@@ -693,6 +699,7 @@ function BusEditRow({
     const missing: string[] = [];
 
     if (parsed.driver_name) { next.driver_name = parsed.driver_name; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_name);
+    if (parsed.supervisor_name) { next.supervisor_name = parsed.supervisor_name; count++; } else missing.push(NOTIF_FIELD_LABELS.supervisor_name);
     if (parsed.driver_id_number) { next.driver_id_number = parsed.driver_id_number; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_id_number);
     if (parsed.driver_phone) { next.driver_phone = parsed.driver_phone; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_phone);
     if (parsed.bus_number) {
@@ -708,10 +715,10 @@ function BusEditRow({
     } else missing.push(NOTIF_FIELD_LABELS.notification_date);
 
     setLocal(next);
-    if (count === 6) {
+    if (count === 7) {
       toast.success("تم استخراج جميع البيانات بنجاح ✓");
     } else if (count > 0) {
-      toast.warning(`تم استخراج ${count} من 6 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
+      toast.warning(`تم استخراج ${count} من 7 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
     } else {
       toast.error("لم يتم العثور على أي بيانات — تأكد من صيغة الإشعار");
     }
@@ -976,6 +983,20 @@ function BusEditRow({
             setLocal({
               ...local,
               driver_name: e.target.value,
+            })
+          }
+        />
+      </TableCell>
+
+      <TableCell>
+        <Input
+          className="h-9 w-36"
+          placeholder="اسم المشرف"
+          value={local.supervisor_name ?? ""}
+          onChange={(e) =>
+            setLocal({
+              ...local,
+              supervisor_name: e.target.value,
             })
           }
         />

@@ -47,8 +47,8 @@ interface Booking {
   actual_return_date?: string | null;
   return_seat_numbers?: string[] | null;
   trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
-  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
-  return_buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
+  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
+  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; supervisor_name?: string | null } | null;
 }
 
 function busLabel(bus?: { bus_number: number; name?: string | null } | null): string {
@@ -108,7 +108,7 @@ function TicketPage() {
         const { data } = await supabase
           .from("bookings")
           .select(
-            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate)",
+            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id,supervisor_name),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate,supervisor_name)",
           )
           .eq("booking_code", code)
           .maybeSingle();
@@ -214,9 +214,11 @@ function TicketPage() {
     lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`);
     lines.push(`عدد الأفراد: ${b.passenger_count}`);
     lines.push(`رقم الباص: ${busLabel(b.buses)}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`);
+    if (b.buses?.supervisor_name) lines.push(`اسم المشرف: ${b.buses.supervisor_name}`);
     if (!hideSeats) lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
     if (b.return_buses) {
       lines.push(`حافلة العودة: ${busLabel(b.return_buses)}`);
+      if (b.return_buses.supervisor_name) lines.push(`مشرف العودة: ${b.return_buses.supervisor_name}`);
       if (!hideSeats && (b.return_seat_numbers ?? []).length)
         lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
     }
@@ -336,8 +338,10 @@ function TicketPage() {
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
             <TicketRow label="رقم الباص" value={busLabel(booking.buses)} />
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
+            {booking.buses?.supervisor_name && <TicketRow label="اسم المشرف" value={booking.buses.supervisor_name} />}
             {!hideSeats && <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />}
             {booking.return_buses && <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />}
+            {booking.return_buses?.supervisor_name && <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />}
             {!hideSeats && booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 && (
               <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />
             )}

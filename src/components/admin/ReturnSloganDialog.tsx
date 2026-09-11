@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-interface SloganBus { id: string; name: string | null; bus_number: number; plate?: string | null }
+interface SloganBus { id: string; name: string | null; bus_number: number; plate?: string | null; supervisor_name?: string | null }
 
 const AR_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
@@ -51,7 +51,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     queryKey: ["slogan-bus", selected?.id],
     enabled: open && !!selected?.id,
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,plate").eq("id", selected!.id).maybeSingle();
+      const { data, error } = await supabase.from("buses").select("id,name,bus_number,plate,supervisor_name").eq("id", selected!.id).maybeSingle();
       if (error) throw error;
       return data as SloganBus | null;
     },
@@ -123,6 +123,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     if (!bus?.name) gaps.push("اسم الباص غير مسجّل");
     if (!bus?.bus_number) gaps.push("رقم الباص غير مسجّل");
     if (!bus?.plate) gaps.push("رقم اللوحة غير مسجّل لهذه الحافلة");
+    if (!bus?.supervisor_name) gaps.push("اسم المشرف غير مسجّل لهذه الحافلة");
     if (rows.length === 0) gaps.push("لا توجد عودات مسندة لهذه الحافلة");
 
     const lines = rows.map((r) => {
@@ -149,6 +150,8 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
       `* رقم الباص : ${bus?.bus_number ? bus.bus_number : "—"}`,
       "",
       `* رقم اللوحة : ${bus?.plate || "—"}`,
+      "",
+      `* اسم المشرف : ${bus?.supervisor_name || "—"}`,
       "",
       "💢 🚨 تنبيـ هام ــات",
       "________",

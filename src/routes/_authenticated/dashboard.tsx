@@ -107,6 +107,8 @@ interface BookingRow {
   no_show?: boolean | null;
   notes?: string | null;
   actual_return_day?: string | null;
+  actual_return_date?: string | null;
+  no_hotel?: boolean | null;
   nationality?: string | null;
   booking_source?: string | null;
   extension_nights?: number | null;
@@ -147,6 +149,16 @@ function Dashboard() {
   }, []);
 
 
+  // التقدم الأسبوعي: يُشغَّل أيضًا من لوحة التحكم حتى لا يتوقف إذا لم تُفتح صفحة الرحلات.
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      await supabase.rpc("advance_due_trips" as never);
+      await supabase.rpc("advance_due_return_trips" as never);
+      qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+    })();
+  }, [isAdmin, qc]);
+
   // Realtime: refresh bookings list & stats when anything changes server-side
   useEffect(() => {
     if (!isAdmin) return;
@@ -168,7 +180,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,actual_return_date,no_hotel,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -515,6 +527,7 @@ interface UBBusOpt {
   layout?: string | null;
   layout_id?: string | null;
   driver_name?: string | null;
+  supervisor_name?: string | null;
   plate?: string | null;
   driver_phone?: string | null;
   driver_id_number?: string | null;
@@ -577,6 +590,10 @@ function UnifiedBookingsTab(props: {
   const [importing, setImporting] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [source, setSource] = useState<string>("");
+  const [hotel, setHotel] = useState<string>("");
+  const [tripMode, setTripMode] = useState<string>("");
+  const [returnPick, setReturnPick] = useState<string>("");
+  const [bookingType, setBookingType] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -594,7 +611,7 @@ function UnifiedBookingsTab(props: {
       // the admin can filter/report on any bus independently.
       // Only buses flagged active-for-booking are shown/counted.
       const COLS =
-        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number,assigned_date";
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,supervisor_name,driver_phone,driver_id_number,assigned_date";
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
@@ -618,6 +635,20 @@ function UnifiedBookingsTab(props: {
     ...new Set(bookings.map((b) => (b.booking_source ?? "").trim() || "الموقع")),
   ].sort((a, z) => a.localeCompare(z, "ar"));
 
+  // خيارات الفندق الموجودة فعليًا في الحجوزات المحمّلة («بدون فندق» ضمنها).
+  const hotelOptions: string[] = [
+    ...new Set(bookings.map((b) => b.packages?.name?.trim() || "بدون فندق")),
+  ].sort((a, z) => a.localeCompare(z, "ar"));
+
+  // مواعيد العودة الفعلية الموجودة (للرحلات ذات أكثر من عودة).
+  const returnOptions: string[] = [
+    ...new Set(
+      bookings
+        .map((b) => b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "")
+        .filter((d) => !!d),
+    ),
+  ].sort();
+
   const { data: importHotels = [] } = useQuery({
     queryKey: ["ub-import-hotels"],
     queryFn: async () =>
@@ -632,6 +663,10 @@ function UnifiedBookingsTab(props: {
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
     if (source && ((b.booking_source ?? "").trim() || "الموقع") !== source) return false;
+    if (hotel && (b.packages?.name?.trim() || "بدون فندق") !== hotel) return false;
+    if (tripMode && (b.trip_mode ?? "round") !== tripMode) return false;
+    if (bookingType && (b.booking_type ?? "family") !== bookingType) return false;
+    if (returnPick && (b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "") !== returnPick) return false;
     if (busIds.length > 0) {
       if (!b.bus_id || !busIds.includes(b.bus_id)) return false;
     } else if (tripId) {
@@ -1036,7 +1071,7 @@ function UnifiedBookingsTab(props: {
           <DepartureSloganDialog
             bookings={filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && !b.no_show)}
             tripName={trips.find((t) => t.id === tripId)?.name}
-            bus={bus ? { name: bus.name, bus_number: bus.bus_number, plate: bus.plate } : null}
+            bus={bus ? { name: bus.name, bus_number: bus.bus_number, plate: bus.plate, supervisor_name: bus.supervisor_name } : null}
             disabled={!busId}
             disabledReason="اختر الحافلة أولاً"
           />
@@ -1102,6 +1137,62 @@ function UnifiedBookingsTab(props: {
                 {s}
               </option>
             ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">الفندق</Label>
+          <select
+            value={hotel}
+            onChange={(e) => setHotel(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل الفنادق —</option>
+            {hotelOptions.map((h) => (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">نوع الرحلة</Label>
+          <select
+            value={tripMode}
+            onChange={(e) => setTripMode(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— الكل —</option>
+            <option value="round">ذهاب وعودة</option>
+            <option value="outbound">ذهاب فقط</option>
+            <option value="return">عودة فقط</option>
+            <option value="round_open">عودة في رحلة أخرى</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">موعد العودة</Label>
+          <select
+            value={returnPick}
+            onChange={(e) => setReturnPick(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل مواعيد العودة —</option>
+            {returnOptions.map((d) => (
+              <option key={d} value={d}>
+                {formatTripDateCompact(d)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">نوع الحجز</Label>
+          <select
+            value={bookingType}
+            onChange={(e) => setBookingType(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— الكل —</option>
+            <option value="individual">أفراد</option>
+            <option value="family">عوائل</option>
           </select>
         </div>
         <div>

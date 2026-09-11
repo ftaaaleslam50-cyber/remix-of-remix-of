@@ -715,6 +715,7 @@ export type Database = {
           round_trip_price: number
           settled_at: string | null
           status: Database["public"]["Enums"]["bus_status"]
+          supervisor_name: string | null
           trip_id: string | null
           updated_at: string
         }
@@ -754,6 +755,7 @@ export type Database = {
           round_trip_price?: number
           settled_at?: string | null
           status?: Database["public"]["Enums"]["bus_status"]
+          supervisor_name?: string | null
           trip_id?: string | null
           updated_at?: string
         }
@@ -793,6 +795,7 @@ export type Database = {
           round_trip_price?: number
           settled_at?: string | null
           status?: Database["public"]["Enums"]["bus_status"]
+          supervisor_name?: string | null
           trip_id?: string | null
           updated_at?: string
         }

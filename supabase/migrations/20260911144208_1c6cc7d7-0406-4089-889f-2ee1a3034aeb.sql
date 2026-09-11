@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.tg_sync_bus_trip_link() FROM PUBLIC, anon, authenticated;

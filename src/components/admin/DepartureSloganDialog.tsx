@@ -19,6 +19,7 @@ export interface DepartureSloganBus {
   name: string | null;
   bus_number: number;
   plate?: string | null;
+  supervisor_name?: string | null;
 }
 
 const AR_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -55,6 +56,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
     if (!bus?.name) gaps.push("اسم الباص غير مسجّل");
     if (!bus?.bus_number) gaps.push("رقم الباص غير مسجّل");
     if (!bus?.plate) gaps.push("رقم لوحة الباص غير مسجّل");
+    if (!bus?.supervisor_name) gaps.push("اسم المشرف غير مسجّل");
     if (!dateIso) gaps.push("تاريخ المغادرة غير معروف — حدّد رحلة لها تاريخ مغادرة");
     if (bookings.length === 0) gaps.push("لا يوجد ركاب في التحديد الحالي");
 
@@ -80,6 +82,8 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
       `* رقم الباص : ${bus?.bus_number ? bus.bus_number : "—"}`,
       "",
       `* رقم لوحة الباص : ${bus?.plate || "—"}`,
+      "",
+      `* اسم المشرف : ${bus?.supervisor_name || "—"}`,
       "",
       "",
       "*💢 🚨 تنبيـ هام ــات*",

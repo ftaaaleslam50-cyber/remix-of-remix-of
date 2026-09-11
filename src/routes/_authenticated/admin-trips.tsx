@@ -167,11 +167,16 @@ function AdminTrips() {
     if (add) {
       const { error } = await supabase.from("trip_buses").insert({ trip_id: tripId, bus_id: busId } as never);
       if (error) return toast.error(error.message);
+      // مزامنة الربط القديم (buses.trip_id) حتى لا تظهر الحافلة مرتبطة برحلة قديمة.
+      await supabase.from("buses").update({ trip_id: tripId } as never).eq("id", busId);
     } else {
       const { error } = await supabase.from("trip_buses").delete().eq("trip_id", tripId).eq("bus_id", busId);
       if (error) return toast.error(error.message);
+      await supabase.from("buses").update({ trip_id: null } as never).eq("id", busId).eq("trip_id", tripId);
     }
     qc.invalidateQueries({ queryKey: ["admin-trip-buses"] });
+    qc.invalidateQueries({ queryKey: ["admin-buses"] });
+    qc.invalidateQueries({ queryKey: ["trip-buses"] });
   }
 
   if (isAdmin === false) return <div className="p-8 text-center">ليس لديك صلاحية</div>;
