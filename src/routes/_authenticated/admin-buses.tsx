@@ -699,6 +699,7 @@ function BusEditRow({
     const missing: string[] = [];
 
     if (parsed.driver_name) { next.driver_name = parsed.driver_name; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_name);
+    if (parsed.supervisor_name) { next.supervisor_name = parsed.supervisor_name; count++; } else missing.push(NOTIF_FIELD_LABELS.supervisor_name);
     if (parsed.driver_id_number) { next.driver_id_number = parsed.driver_id_number; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_id_number);
     if (parsed.driver_phone) { next.driver_phone = parsed.driver_phone; count++; } else missing.push(NOTIF_FIELD_LABELS.driver_phone);
     if (parsed.bus_number) {
@@ -714,10 +715,10 @@ function BusEditRow({
     } else missing.push(NOTIF_FIELD_LABELS.notification_date);
 
     setLocal(next);
-    if (count === 6) {
+    if (count === 7) {
       toast.success("تم استخراج جميع البيانات بنجاح ✓");
     } else if (count > 0) {
-      toast.warning(`تم استخراج ${count} من 6 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
+      toast.warning(`تم استخراج ${count} من 7 بيانات — لم يتم العثور على: ${missing.join("، ")}`);
     } else {
       toast.error("لم يتم العثور على أي بيانات — تأكد من صيغة الإشعار");
     }
