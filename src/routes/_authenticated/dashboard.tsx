@@ -515,6 +515,7 @@ interface UBBusOpt {
   layout?: string | null;
   layout_id?: string | null;
   driver_name?: string | null;
+  supervisor_name?: string | null;
   plate?: string | null;
   driver_phone?: string | null;
   driver_id_number?: string | null;
@@ -594,7 +595,7 @@ function UnifiedBookingsTab(props: {
       // the admin can filter/report on any bus independently.
       // Only buses flagged active-for-booking are shown/counted.
       const COLS =
-        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,driver_phone,driver_id_number,assigned_date";
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,supervisor_name,driver_phone,driver_id_number,assigned_date";
       if (tripId) {
         const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
@@ -1036,7 +1037,7 @@ function UnifiedBookingsTab(props: {
           <DepartureSloganDialog
             bookings={filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && !b.no_show)}
             tripName={trips.find((t) => t.id === tripId)?.name}
-            bus={bus ? { name: bus.name, bus_number: bus.bus_number, plate: bus.plate } : null}
+            bus={bus ? { name: bus.name, bus_number: bus.bus_number, plate: bus.plate, supervisor_name: bus.supervisor_name } : null}
             disabled={!busId}
             disabledReason="اختر الحافلة أولاً"
           />
