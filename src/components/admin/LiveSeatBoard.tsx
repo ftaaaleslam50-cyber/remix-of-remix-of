@@ -14,12 +14,16 @@ export interface LiveSeatBooking {
   seat_numbers: string[] | null;
   seat_genders?: Record<string, SeatGender> | null;
   male_count?: number | null;
+  booking_source?: string | null;
+  booking_type?: string | null;
 }
 
 interface Occupant {
   bookingId: string;
   name: string;
   gender?: SeatGender;
+  rep?: string;
+  bookingType?: string | null;
 }
 
 const cellLabel = (c: LayoutCell) => (c.label && c.label.trim() ? c.label : `${c.row}-${c.col}`);
@@ -40,11 +44,15 @@ export function LiveSeatBoard({
     const m: Record<string, Occupant> = {};
     for (const b of bookings) {
       const explicit = (b.seat_genders ?? {}) as Record<string, SeatGender>;
+      const rep = b.booking_source && b.booking_source !== "Admin" && b.booking_source !== "الموقع" ? b.booking_source : "";
+      const bt = b.booking_type === "family" ? "عوائل" : b.booking_type === "individual" ? "أفراد" : (b.booking_type ?? "");
       (b.seat_numbers ?? []).forEach((seat, idx) => {
         m[seat] = {
           bookingId: b.id,
           name: shortName(b.customer_name),
           gender: explicit[seat] ?? (idx < Number(b.male_count ?? 0) ? "male" : "female"),
+          rep,
+          bookingType: bt,
         };
       });
     }
@@ -202,8 +210,15 @@ export function LiveSeatBoard({
               {occ?.gender === "female" && <Venus className="h-3.5 w-3.5" />}
               <span className="font-extrabold">{label}</span>
               {occ && (
-                <span className="w-full text-center text-[9px] font-extrabold" style={{ overflowWrap: "anywhere" }} dir="rtl">
+                <span className="w-full text-center text-[9px] font-extrabold leading-tight" style={{ overflowWrap: "anywhere" }} dir="rtl">
                   {occ.name}
+                  {(occ.rep || occ.bookingType) && (
+                    <span className="block text-[8px] font-bold opacity-90">
+                      {occ.rep && <>· {occ.rep}</>}
+                      {occ.rep && occ.bookingType && " "}
+                      {occ.bookingType}
+                    </span>
+                  )}
                 </span>
               )}
             </button>
