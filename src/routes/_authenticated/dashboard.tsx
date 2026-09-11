@@ -107,6 +107,8 @@ interface BookingRow {
   no_show?: boolean | null;
   notes?: string | null;
   actual_return_day?: string | null;
+  actual_return_date?: string | null;
+  no_hotel?: boolean | null;
   nationality?: string | null;
   booking_source?: string | null;
   extension_nights?: number | null;
@@ -168,7 +170,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
+          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,actual_return_date,no_hotel,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -578,6 +580,10 @@ function UnifiedBookingsTab(props: {
   const [importing, setImporting] = useState<boolean>(false);
   const [status, setStatus] = useState<string>("");
   const [source, setSource] = useState<string>("");
+  const [hotel, setHotel] = useState<string>("");
+  const [tripMode, setTripMode] = useState<string>("");
+  const [returnPick, setReturnPick] = useState<string>("");
+  const [bookingType, setBookingType] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -619,6 +625,20 @@ function UnifiedBookingsTab(props: {
     ...new Set(bookings.map((b) => (b.booking_source ?? "").trim() || "الموقع")),
   ].sort((a, z) => a.localeCompare(z, "ar"));
 
+  // خيارات الفندق الموجودة فعليًا في الحجوزات المحمّلة («بدون فندق» ضمنها).
+  const hotelOptions: string[] = [
+    ...new Set(bookings.map((b) => b.packages?.name?.trim() || "بدون فندق")),
+  ].sort((a, z) => a.localeCompare(z, "ar"));
+
+  // مواعيد العودة الفعلية الموجودة (للرحلات ذات أكثر من عودة).
+  const returnOptions: string[] = [
+    ...new Set(
+      bookings
+        .map((b) => b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "")
+        .filter((d) => !!d),
+    ),
+  ].sort();
+
   const { data: importHotels = [] } = useQuery({
     queryKey: ["ub-import-hotels"],
     queryFn: async () =>
@@ -633,6 +653,10 @@ function UnifiedBookingsTab(props: {
   const filtered = bookings.filter((b) => {
     if (status && b.status !== status) return false;
     if (source && ((b.booking_source ?? "").trim() || "الموقع") !== source) return false;
+    if (hotel && (b.packages?.name?.trim() || "بدون فندق") !== hotel) return false;
+    if (tripMode && (b.trip_mode ?? "round") !== tripMode) return false;
+    if (bookingType && (b.booking_type ?? "family") !== bookingType) return false;
+    if (returnPick && (b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "") !== returnPick) return false;
     if (busIds.length > 0) {
       if (!b.bus_id || !busIds.includes(b.bus_id)) return false;
     } else if (tripId) {
