@@ -149,6 +149,16 @@ function Dashboard() {
   }, []);
 
 
+  // التقدم الأسبوعي: يُشغَّل أيضًا من لوحة التحكم حتى لا يتوقف إذا لم تُفتح صفحة الرحلات.
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      await supabase.rpc("advance_due_trips" as never);
+      await supabase.rpc("advance_due_return_trips" as never);
+      qc.invalidateQueries({ queryKey: ["admin-bookings"] });
+    })();
+  }, [isAdmin, qc]);
+
   // Realtime: refresh bookings list & stats when anything changes server-side
   useEffect(() => {
     if (!isAdmin) return;
