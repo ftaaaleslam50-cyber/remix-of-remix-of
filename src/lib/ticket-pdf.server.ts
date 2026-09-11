@@ -91,8 +91,8 @@ export interface TicketBooking {
   actual_return_date?: string | null;
   return_seat_numbers?: string[] | null;
   trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
-  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null } | null;
-  return_buses?: { bus_number: number; name?: string | null; plate?: string | null } | null;
+  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
+  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; supervisor_name?: string | null } | null;
   layout_json?: LayoutJson | null;
 }
 
@@ -125,7 +125,7 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
   const { data } = await supabaseAdmin
     .from("bookings")
     .select(
-      "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate)",
+      "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id,supervisor_name),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate,supervisor_name)",
     )
     .eq("booking_code", code)
     .is("deleted_at", null)
@@ -248,10 +248,12 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   rows.push(["رقم الباص", Number(b.buses?.bus_number || 0) > 0 ? String(b.buses?.bus_number) : "-"]);
   if (b.buses?.name) rows.push(["اسم الباص", b.buses.name]);
   if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
+  if (b.buses?.supervisor_name) rows.push(["اسم المشرف", b.buses.supervisor_name]);
   const hideSeats = b.booking_type === "individual" && (await hideSeatsForIndividual());
   if (!hideSeats) rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
   if (b.return_buses) {
     rows.push(["حافلة العودة", busLabel(b.return_buses)]);
+    if (b.return_buses.supervisor_name) rows.push(["مشرف العودة", b.return_buses.supervisor_name]);
     if (!hideSeats && (b.return_seat_numbers ?? []).length > 0)
       rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
   }
