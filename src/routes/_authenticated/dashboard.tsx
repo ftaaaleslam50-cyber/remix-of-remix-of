@@ -1130,6 +1130,62 @@ function UnifiedBookingsTab(props: {
           </select>
         </div>
         <div>
+          <Label className="text-xs mb-1 block">الفندق</Label>
+          <select
+            value={hotel}
+            onChange={(e) => setHotel(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل الفنادق —</option>
+            {hotelOptions.map((h) => (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">نوع الرحلة</Label>
+          <select
+            value={tripMode}
+            onChange={(e) => setTripMode(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— الكل —</option>
+            <option value="round">ذهاب وعودة</option>
+            <option value="outbound">ذهاب فقط</option>
+            <option value="return">عودة فقط</option>
+            <option value="round_open">عودة في رحلة أخرى</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">موعد العودة</Label>
+          <select
+            value={returnPick}
+            onChange={(e) => setReturnPick(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل مواعيد العودة —</option>
+            {returnOptions.map((d) => (
+              <option key={d} value={d}>
+                {formatTripDateCompact(d)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">نوع الحجز</Label>
+          <select
+            value={bookingType}
+            onChange={(e) => setBookingType(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— الكل —</option>
+            <option value="individual">أفراد</option>
+            <option value="family">عوائل</option>
+          </select>
+        </div>
+        <div>
           <Label className="text-xs mb-1 block">بحث</Label>
           <div className="relative">
             <Search className="h-4 w-4 absolute top-3 right-3 text-muted-foreground" />
