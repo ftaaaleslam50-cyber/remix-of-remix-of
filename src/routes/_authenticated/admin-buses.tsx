@@ -319,6 +319,7 @@ function AdminBuses() {
       bus_type: b.bus_type,
       details: b.details,
       driver_name: b.driver_name,
+      supervisor_name: b.supervisor_name,
       driver_phone: b.driver_phone,
       driver_id_number: b.driver_id_number,
       price_addition: Number(b.round_trip_price) || 0,
