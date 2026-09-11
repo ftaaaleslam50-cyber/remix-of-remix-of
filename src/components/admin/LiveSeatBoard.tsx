@@ -14,12 +14,16 @@ export interface LiveSeatBooking {
   seat_numbers: string[] | null;
   seat_genders?: Record<string, SeatGender> | null;
   male_count?: number | null;
+  booking_source?: string | null;
+  booking_type?: string | null;
 }
 
 interface Occupant {
   bookingId: string;
   name: string;
   gender?: SeatGender;
+  rep?: string;
+  bookingType?: string | null;
 }
 
 const cellLabel = (c: LayoutCell) => (c.label && c.label.trim() ? c.label : `${c.row}-${c.col}`);
