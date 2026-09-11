@@ -599,10 +599,11 @@ function AdminBuses() {
  * داخل المتصفح، بدون أي AI أو API أو خدمة خارجية.
  * يعتمد على عناوين الحقول (عربي/إنجليزي) وليس على مواقع الأسطر.
  */
-type NotificationField = "driver_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate" | "notification_date";
+type NotificationField = "driver_name" | "supervisor_name" | "driver_id_number" | "driver_phone" | "bus_number" | "plate" | "notification_date";
 
 const NOTIF_FIELD_LABELS: Record<NotificationField, string> = {
   driver_name: "اسم السائق",
+  supervisor_name: "اسم المشرف",
   driver_id_number: "هوية السائق",
   driver_phone: "جوال السائق",
   bus_number: "رقم الحافلة",
@@ -624,6 +625,7 @@ function cleanNotifLine(line: string): string {
 function matchNotifHeader(cleaned: string): NotificationField | "other" | null {
   if (!cleaned) return null;
   // الأكثر تحديدًا أولًا: «رقم السائق» يحتوي «السائق» لذا يُفحص قبلها.
+  if (cleaned.includes("المشرف") || cleaned.includes("supervisor")) return "supervisor_name";
   if (cleaned.includes("رقم السائق") || cleaned.includes("mobile")) return "driver_phone";
   if (cleaned.includes("رقم المركبة") || cleaned.includes("vehicle")) return "bus_number";
   if (cleaned.includes("رقم اللوحة") || cleaned.includes("plate")) return "plate";
