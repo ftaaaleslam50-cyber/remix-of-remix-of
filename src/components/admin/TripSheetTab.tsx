@@ -471,7 +471,7 @@ export function TripSheetTab() {
           rate,
         });
 
-        return { b, rep, hotel, roomLabel, count, nights, packageTotal, ...r };
+        return { b, rep, hotel, roomLabel, count, nights, packageTotal, bedCost, seatCost, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filtered, hotelRows, ref, seatCost, emptyBedShare, repRates, occ, bedCosts],
@@ -585,7 +585,10 @@ export function TripSheetTab() {
     "اجمالي التمديد",
     "إجمالي",
     "ملاحظات",
+    "ت. المقعد",
+    "ت. السرير",
     "ت. الباقه/للفرد",
+
     "ت. المجموعه بالمرافقين الباقه الاساسية",
     "ت. التمديد",
     "ربح التمديد",
@@ -618,7 +621,10 @@ export function TripSheetTab() {
         round(r.extensionTotal),
         round(r.grandTotal),
         r.b.notes ?? "",
+        round(r.seatCost),
+        round(r.bedCost),
         round(r.costPerPerson),
+
         round(r.groupCost),
         round(r.extensionCost),
         round(r.extensionProfit),
@@ -643,6 +649,9 @@ export function TripSheetTab() {
         round(totals.grandTotal),
         "",
         "",
+        "",
+        "",
+
         round(totals.groupCost),
         round(totals.extensionCost),
         round(totals.extensionProfit),
@@ -788,6 +797,9 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5 text-center">{round(r.extensionTotal)}</td>
                 <td className="border px-2 py-0.5 text-center font-bold">{round(r.grandTotal)}</td>
                 <td className="border px-2 py-0.5">{r.b.notes ?? ""}</td>
+                <td className="border px-2 py-0.5 text-center">{round(r.seatCost)}</td>
+                <td className="border px-2 py-0.5 text-center">{round(r.bedCost)}</td>
+
                 <td className="border px-2 py-0.5 text-center">{round(r.costPerPerson)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.groupCost)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.extensionCost)}</td>
@@ -817,7 +829,7 @@ export function TripSheetTab() {
               <td className="border px-2 py-0.5" />
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionTotal)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.grandTotal)}</td>
-              <td className="border px-2 py-0.5" colSpan={2} />
+              <td className="border px-2 py-0.5" colSpan={4} />
               <td className="border px-2 py-0.5 text-center">{round(totals.groupCost)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionCost)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionProfit)}</td>
