@@ -143,7 +143,7 @@ export function LiveSeatBoard({
       {dirty && <Badge variant="secondary" className="text-[11px]">تغييرات غير معتمدة</Badge>}
 
       <div
-        className="grid gap-1.5 mx-auto"
+        className="grid gap-1 sm:gap-1.5 mx-auto w-full"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, maxWidth: cols * 110 }}
         dir="ltr"
       >
@@ -151,17 +151,18 @@ export function LiveSeatBoard({
           const r = Math.floor(i / cols) + 1;
           const c = (i % cols) + 1;
           const cell = layout.cells.find((x) => x.row === r && x.col === c);
-          if (!cell || cell.kind === "empty") return <div key={i} className="aspect-square" />;
+          if (!cell || cell.kind === "empty") return <div key={i} className="min-h-[70px] sm:min-h-0 sm:aspect-square" />;
           if (cell.kind !== "seat") {
             return (
               <div
                 key={i}
-                className="aspect-square rounded-lg border-2 bg-muted/60 text-[10px] font-bold flex items-center justify-center text-muted-foreground"
+                className="min-h-[70px] sm:min-h-0 sm:aspect-square rounded-lg border-2 bg-muted/60 text-[10px] font-bold flex items-center justify-center text-muted-foreground"
               >
                 {cell.kind === "driver" ? "🚍" : cell.kind === "door" ? "🚪" : cell.kind === "restroom" ? "🚻" : "👤"}
               </div>
             );
           }
+
           const label = cellLabel(cell);
           const occ = map[label];
           const isPicked = picked === label;
