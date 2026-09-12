@@ -16,9 +16,20 @@ export const Route = createFileRoute("/gallery")({
   head: () => ({
     meta: [
       { title: `المعرض | ${BRAND.name}` },
-      { name: "description", content: "استعرض صور الرحلات والفنادق والحافلات والخدمات." },
+      {
+        name: "description",
+        content:
+          "شاهد صور وفيديوهات رحلات العمرة مع مؤسسة زهرة طيبة: الحافلات الحديثة، الفنادق المختارة في مكة المكرمة، ولحظات المعتمرين أثناء الرحلة من المدينة المنورة.",
+      },
       { property: "og:title", content: `معرض الصور | ${BRAND.name}` },
+      {
+        property: "og:description",
+        content: "صور وفيديوهات من رحلات العمرة: الحافلات، الفنادق، وخدمات المعتمرين مع زهرة طيبة.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://zt-travel.sa/gallery" },
     ],
+    links: [{ rel: "canonical", href: "https://zt-travel.sa/gallery" }],
   }),
   component: GalleryPage,
 });
