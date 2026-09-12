@@ -199,9 +199,6 @@ export function TripSheetTab() {
     };
   }, [bedCosts, occDate, tripId, occ, refetchOcc]);
 
-
-
-
   const { data: repProfiles = [], refetch: refetchReps } = useQuery({
     queryKey: ["ts-reps"],
     queryFn: async () =>
@@ -231,7 +228,10 @@ export function TripSheetTab() {
 
   async function saveRepRate(id: string, value: number) {
     setRepRates((s) => ({ ...s, [id]: value }));
-    const { error } = await supabase.from("profiles").update({ commission_rate: value } as never).eq("id", id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ commission_rate: value } as never)
+      .eq("id", id);
     if (error) toast.error("تعذر حفظ نسبة العمولة");
     else void refetchReps();
   }
@@ -444,9 +444,12 @@ export function TripSheetTab() {
         const nights = n(b.extension_nights);
         const rep = b.booking_source || "الموقع";
 
-        // اجمالي الباقة = المبلغ المدفوع فعليًا الظاهر في الحجز
-        const packageTotal = n(b.total_price);
+        // سعر بيع ليلة التمديد لهذا الفندق — يُحسب أولاً لأن "اجمالي الباقة" يعتمد عليه.
         const extSale = n(ref.ext[hotel]?.sale ?? hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
+        // اجمالي الباقة = المبلغ الكلي المحفوظ (total_price) ناقص قيمة التمديد،
+        // لأن total_price يشمل التمديد من الأساس وقت إنشاء الحجز — طرحه هنا
+        // يفصل "الباقة الأساسية" عن "التمديد" بدل الاعتماد على total_price مباشرة.
+        const packageTotal = n(b.total_price) - extSale * nights;
         // تكلفة السرير: من تكاليف الرحلة/التاريخ المحدد مباشرة (بدون قسمة)،
         // وإلا الطريقة القديمة (سعر الغرفة ÷ سعة الغرفة).
         const bedCost =
@@ -518,10 +521,13 @@ export function TripSheetTab() {
             .from("trip_occurrences")
             .insert({ trip_id: tripId, departure_date: occDate, ...(payload as object) } as never);
       if (error) throw error;
-      const { error: rpcErr } = await supabase.rpc("recalc_settled_profits" as never, {
-        _trip_id: tripId,
-        _departure_date: occDate,
-      } as never);
+      const { error: rpcErr } = await supabase.rpc(
+        "recalc_settled_profits" as never,
+        {
+          _trip_id: tripId,
+          _departure_date: occDate,
+        } as never,
+      );
       if (rpcErr) throw rpcErr;
       await refetchOcc();
       toast.success("تم اعتماد تكلفة الفنادق وإعادة حساب الأرباح");
@@ -781,7 +787,12 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5 text-center">{r.b.nationality ?? "—"}</td>
                 <td className="border px-2 py-0.5 text-center">{r.count}</td>
                 <td className="border px-2 py-0.5 text-center">
-                  {returnDisplay(r.b.actual_return_day || r.b.trips?.return_day, r.b.extension_nights, "—", r.b.trip_mode)}
+                  {returnDisplay(
+                    r.b.actual_return_day || r.b.trips?.return_day,
+                    r.b.extension_nights,
+                    "—",
+                    r.b.trip_mode,
+                  )}
                 </td>
                 <td className="border px-2 py-0.5 text-center">{r.hotel}</td>
                 <td className="border px-2 py-0.5 text-center">{r.roomLabel}</td>
@@ -957,7 +968,9 @@ export function TripSheetTab() {
               <Input
                 type="number"
                 value={String(ref.transfer[k] ?? 0)}
-                onChange={(e) => setRef((s) => ({ ...s, transfer: { ...s.transfer, [k]: Number(e.target.value) || 0 } }))}
+                onChange={(e) =>
+                  setRef((s) => ({ ...s, transfer: { ...s.transfer, [k]: Number(e.target.value) || 0 } }))
+                }
               />
             </div>
           ))}
@@ -1008,7 +1021,6 @@ export function TripSheetTab() {
                           if (occDate) {
                             bedDirty.current = true;
                             setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
-
                           } else {
                             setRef((s) => ({
                               ...s,
@@ -1081,9 +1093,7 @@ export function TripSheetTab() {
                     max="100"
                     className="pl-8"
                     value={String(Math.round(((repRates[p.id] ?? 0) as number) * 10000) / 100)}
-                    onChange={(e) =>
-                      setRepRates((s) => ({ ...s, [p.id]: (Number(e.target.value) || 0) / 100 }))
-                    }
+                    onChange={(e) => setRepRates((s) => ({ ...s, [p.id]: (Number(e.target.value) || 0) / 100 }))}
                     onBlur={(e) => void saveRepRate(p.id, (Number(e.target.value) || 0) / 100)}
                   />
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">٪</span>
