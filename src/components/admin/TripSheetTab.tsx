@@ -621,7 +621,10 @@ export function TripSheetTab() {
         round(r.extensionTotal),
         round(r.grandTotal),
         r.b.notes ?? "",
+        round(r.seatCost),
+        round(r.bedCost),
         round(r.costPerPerson),
+
         round(r.groupCost),
         round(r.extensionCost),
         round(r.extensionProfit),
@@ -646,6 +649,9 @@ export function TripSheetTab() {
         round(totals.grandTotal),
         "",
         "",
+        "",
+        "",
+
         round(totals.groupCost),
         round(totals.extensionCost),
         round(totals.extensionProfit),
