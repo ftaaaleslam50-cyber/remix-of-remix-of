@@ -829,7 +829,7 @@ export function TripSheetTab() {
               <td className="border px-2 py-0.5" />
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionTotal)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.grandTotal)}</td>
-              <td className="border px-2 py-0.5" colSpan={2} />
+              <td className="border px-2 py-0.5" colSpan={4} />
               <td className="border px-2 py-0.5 text-center">{round(totals.groupCost)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionCost)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionProfit)}</td>
