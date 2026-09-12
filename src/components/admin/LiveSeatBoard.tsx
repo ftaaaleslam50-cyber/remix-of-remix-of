@@ -201,20 +201,22 @@ export function LiveSeatBoard({
                 if (occ) setPicked(label);
               }}
               title={occ ? `${label} — ${occ.name}` : label}
-              className={`aspect-square rounded-lg border-2 text-[11px] font-bold flex flex-col items-center justify-center gap-0.5 leading-tight px-0.5 overflow-hidden transition ${cls} ${
+              className={`min-h-[70px] sm:min-h-0 sm:aspect-square rounded-lg border-2 text-[11px] font-bold flex flex-col items-center justify-center gap-0 sm:gap-0.5 leading-tight px-0.5 py-1 overflow-hidden transition ${cls} ${
                 isPicked ? "ring-2 ring-primary scale-105" : ""
               } ${isHover ? "ring-2 ring-primary/70" : ""} ${moved ? "outline outline-2 outline-amber-400" : ""} ${
                 occ ? "cursor-grab active:cursor-grabbing" : picked ? "cursor-pointer hover:bg-primary/10" : ""
               }`}
             >
-              {occ?.gender === "male" && <Mars className="h-3.5 w-3.5" />}
-              {occ?.gender === "female" && <Venus className="h-3.5 w-3.5" />}
-              <span className="font-extrabold">{label}</span>
+              <span className="flex items-center gap-0.5">
+                {occ?.gender === "male" && <Mars className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
+                {occ?.gender === "female" && <Venus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
+                <span className="font-extrabold text-[10px] sm:text-[11px]">{label}</span>
+              </span>
               {occ && (
-                <span className="w-full text-center text-[9px] font-extrabold leading-tight" style={{ overflowWrap: "anywhere" }} dir="rtl">
+                <span className="w-full text-center text-[9px] font-extrabold leading-[1.15]" style={{ overflowWrap: "anywhere" }} dir="rtl">
                   {occ.name}
                   {(occ.rep || occ.bookingType) && (
-                    <span className="block text-[8px] font-bold opacity-90">
+                    <span className="block text-[8px] font-bold opacity-90 leading-[1.15]">
                       {occ.rep && <>· {occ.rep}</>}
                       {occ.rep && occ.bookingType && " "}
                       {occ.bookingType}
@@ -222,6 +224,7 @@ export function LiveSeatBoard({
                   )}
                 </span>
               )}
+
             </button>
           );
         })}
