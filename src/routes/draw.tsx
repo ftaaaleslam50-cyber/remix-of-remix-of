@@ -18,8 +18,20 @@ export const Route = createFileRoute("/draw")({
   head: () => ({
     meta: [
       { title: `عجلة السحب | ${BRAND.name}` },
-      { name: "description", content: "جرّب حظك واحصل على خصومات مميزة على رحلات العمرة." },
+      {
+        name: "description",
+        content:
+          "جرّب حظك في عجلة السحب واحصل على كوبونات خصم على رحلات العمرة من المدينة المنورة إلى مكة المكرمة مع مؤسسة زهرة طيبة: خصومات نسبية وقيم ثابتة تُطبّق عند الحجز.",
+      },
+      { property: "og:title", content: `عجلة السحب والجوائز | ${BRAND.name}` },
+      {
+        property: "og:description",
+        content: "لفّة واحدة قد تمنحك خصماً على رحلة عمرتك القادمة مع زهرة طيبة.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://zt-travel.sa/draw" },
     ],
+    links: [{ rel: "canonical", href: "https://zt-travel.sa/draw" }],
   }),
   component: DrawPage,
 });

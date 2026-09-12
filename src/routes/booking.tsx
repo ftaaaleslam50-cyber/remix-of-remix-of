@@ -56,8 +56,20 @@ export const Route = createFileRoute("/booking")({
   head: () => ({
     meta: [
       { title: `الحجز | ${BRAND.name}` },
-      { name: "description", content: "احجز رحلة العمرة الخاصة بك — باقات مرنة، مقاعد محددة، تأكيد فوري." },
+      {
+        name: "description",
+        content:
+          "احجز رحلة العمرة الخاصة بك مع زهرة طيبة: اختر الرحلة والحافلة والمقاعد والفندق في خطوات بسيطة مع تأكيد فوري وأسعار واضحة.",
+      },
+      { property: "og:title", content: `حجز رحلة عمرة | ${BRAND.name}` },
+      {
+        property: "og:description",
+        content: "اختر رحلتك ومقعدك وفندقك واحجز عمرتك من المدينة المنورة إلى مكة المكرمة في دقائق.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://zt-travel.sa/booking" },
     ],
+    links: [{ rel: "canonical", href: "https://zt-travel.sa/booking" }],
   }),
   component: BookingPage,
 });

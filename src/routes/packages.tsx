@@ -85,7 +85,7 @@ function PackagesPage() {
                 <div className="w-full">
                   <AssetImg
                     src={img.image_url}
-                    alt={img.caption ?? "باقة"}
+                    alt={img.caption ?? "تفاصيل باقة عمرة من زهرة طيبة: السعر والفندق والمواصلات"}
                     className="!w-full !h-auto !max-h-none !object-contain block"
                   />
                 </div>

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /my-bookings
+Disallow: /notifications
+Disallow: /auth
+Disallow: /api/
+
+Sitemap: https://zt-travel.sa/sitemap.xml
