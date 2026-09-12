@@ -471,7 +471,7 @@ export function TripSheetTab() {
           rate,
         });
 
-        return { b, rep, hotel, roomLabel, count, nights, packageTotal, ...r };
+        return { b, rep, hotel, roomLabel, count, nights, packageTotal, bedCost, seatCost, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filtered, hotelRows, ref, seatCost, emptyBedShare, repRates, occ, bedCosts],
@@ -585,7 +585,10 @@ export function TripSheetTab() {
     "اجمالي التمديد",
     "إجمالي",
     "ملاحظات",
+    "ت. المقعد",
+    "ت. السرير",
     "ت. الباقه/للفرد",
+
     "ت. المجموعه بالمرافقين الباقه الاساسية",
     "ت. التمديد",
     "ربح التمديد",
