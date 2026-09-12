@@ -94,6 +94,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: BRAND.logoUrl, type: "image/png" },
       { rel: "apple-touch-icon", href: "/brand-logo.png" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: BRAND.name,
+              alternateName: BRAND.shortName,
+              url: "https://zt-travel.sa",
+              logo: "https://zt-travel.sa/brand-logo.png",
+              email: BRAND.email,
+              telephone: `+${BRAND.whatsapp}`,
+              areaServed: "SA",
+            },
+            {
+              "@type": "WebSite",
+              name: BRAND.name,
+              url: "https://zt-travel.sa",
+              inLanguage: "ar",
+            },
+          ],
+        }),
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
