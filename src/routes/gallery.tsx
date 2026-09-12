@@ -80,7 +80,7 @@ function GalleryPage() {
                 ) : (
                   <AssetImg
                     src={img.image_url}
-                    alt={img.caption || "معرض"}
+                    alt={img.caption || "صورة من رحلات العمرة مع مؤسسة زهرة طيبة"}
                     className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
 
@@ -96,10 +96,17 @@ function GalleryPage() {
 
         <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
           <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black">
-            <button onClick={() => setOpen(null)} className="absolute top-2 left-2 z-10 h-9 w-9 rounded-full bg-white/90 flex items-center justify-center"><X /></button>
+            <button
+              type="button"
+              onClick={() => setOpen(null)}
+              aria-label="إغلاق"
+              className="absolute top-2 left-2 z-10 h-11 w-11 rounded-full bg-white/90 flex items-center justify-center"
+            >
+              <X aria-hidden="true" />
+            </button>
             {open && (open.match(/\.(mp4|webm|mov)(\?|$)/i)
               ? <video src={open} controls autoPlay className="w-full max-h-[85vh]" />
-              : <img src={open} alt="" className="w-full max-h-[85vh] object-contain" />)}
+              : <img src={open} alt="صورة مكبّرة من معرض رحلات زهرة طيبة" className="w-full max-h-[85vh] object-contain" />)}
           </DialogContent>
         </Dialog>
       </section>
