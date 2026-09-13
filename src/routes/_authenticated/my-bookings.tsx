@@ -33,10 +33,38 @@ interface MyBooking {
   trip_mode?: string | null;
   departure_date?: string | null;
   return_date?: string | null;
+  rep_share?: number | null;
   trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
-  buses: { name: string | null; bus_number: number } | null;
+  buses: {
+    name: string | null; bus_number: number; capacity?: number | null;
+    expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null;
+    expense_supervisor?: number | null; expense_supervisor_bed?: number | null;
+    expense_empty_beds?: number | null; expense_extra?: number | null;
+  } | null;
   packages: { name: string } | null;
 }
+
+const n = (v: unknown) => Number(v) || 0;
+
+/** تكلفة المقعد التقديرية = مجموع مصاريف الحافلة ÷ سعتها. */
+function seatCostOf(b: MyBooking) {
+  const bus = b.buses;
+  if (!bus || !bus.capacity) return 0;
+  const total =
+    n(bus.expense_bus_cost) + n(bus.expense_driver_tip) + n(bus.expense_taxi) +
+    n(bus.expense_supervisor) + n(bus.expense_supervisor_bed) + n(bus.expense_empty_beds) +
+    n(bus.expense_extra);
+  return total ? total / bus.capacity : 0;
+}
+
+/** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
+function refTimeOf(b: MyBooking) {
+  const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
+  const t = new Date(s as string).getTime();
+  return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
+}
+
+const dayMonth = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
 
 function isPast(dateStr?: string | null) {
   if (!dateStr) return false;
