@@ -6,7 +6,7 @@ import { ROOM_CAPACITY } from "@/lib/export/rooming";
 const n = (v: unknown) => Number(v) || 0;
 
 export interface ProfitInput {
-  /** إجمالي الباقة كما هو مدفوع في الحجز. */
+  /** إجمالي الباقة الأساسية فقط (بدون التمديد). */
   packageTotal: number;
   /** عدد ليالي التمديد. */
   nights: number;
@@ -47,7 +47,10 @@ export function computeBookingProfit(i: ProfitInput): ProfitResult {
   const groupCost = costPerPerson * i.count;
   const extensionCost = i.nights * i.extNightCost;
   const extensionProfit = extensionTotal - extensionCost;
-  const grossProfit = grandTotal + extensionProfit - (groupCost + extensionCost);
+  // مجمل الربح = (ربح الباقة الأساسية فقط) + (ربح التمديد مرة واحدة).
+  // ملاحظة: لا نستخدم grandTotal هنا لأنه يشمل extensionTotal بالفعل،
+  // واستخدامه هنا كان يجمع ربح التمديد مرتين.
+  const grossProfit = i.packageTotal - groupCost + extensionProfit;
   const repShare = grossProfit * i.rate;
   return {
     extensionTotal,
@@ -91,21 +94,19 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
       )
       .eq("booking_code", bookingCode)
       .maybeSingle();
-    const b = bRaw as unknown as
-      | {
-          id: string;
-          total_price: number | null;
-          passenger_count: number | null;
-          room_type: string | null;
-          booking_type: string | null;
-          extension_nights: number | null;
-          booking_source: string | null;
-          rep_profile_id: string | null;
-          bus_id: string | null;
-          package_id: string | null;
-          packages: { name: string } | null;
-        }
-      | null;
+    const b = bRaw as unknown as {
+      id: string;
+      total_price: number | null;
+      passenger_count: number | null;
+      room_type: string | null;
+      booking_type: string | null;
+      extension_nights: number | null;
+      booking_source: string | null;
+      rep_profile_id: string | null;
+      bus_id: string | null;
+      package_id: string | null;
+      packages: { name: string } | null;
+    } | null;
     if (!b) return;
 
     const [{ data: refRaw }, { data: hotelRaw }] = await Promise.all([
@@ -117,7 +118,10 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     const ref = (refRaw ?? {}) as RefRow;
     const hotel = b.packages?.name ?? "";
     const nightPrice = n(ref.hotel_night_prices?.[hotel]);
-    const extSale = n(ref.extension?.[hotel]?.sale ?? (hotelRaw as { extension_price?: number } | null)?.extension_price ?? 0);
+    const nights = n(b.extension_nights);
+    const extSale = n(
+      ref.extension?.[hotel]?.sale ?? (hotelRaw as { extension_price?: number } | null)?.extension_price ?? 0,
+    );
     const extNightCost = n(ref.extension?.[hotel]?.cost);
 
     const roomLabel = !hotel
@@ -154,9 +158,13 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     }
     if (!rate) rate = n(ref.commissions?.[b.booking_source || "الموقع"]);
 
+    // اجمالي الباقة الأساسية = total_price ناقص قيمة التمديد
+    // (لأن total_price يشمل التمديد من الأساس وقت إنشاء الحجز).
+    const packageTotal = n(b.total_price) - extSale * nights;
+
     const r = computeBookingProfit({
-      packageTotal: n(b.total_price),
-      nights: n(b.extension_nights),
+      packageTotal,
+      nights,
       extSale,
       extNightCost,
       bedCost,
