@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Table2, Loader2 } from "lucide-react";
+import { Download, Table2, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { returnDisplay } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,8 @@ type BusExpenses = {
   driverTip: number;
   taxi: number;
   supervisor: number;
+  supervisorBed: number;
+  emptyBeds: number;
   extra: number;
 };
 
@@ -80,7 +82,16 @@ type RefState = {
   ext: Record<string, { sale: number; cost: number }>;
   commissions: Record<string, number>;
   transfer: Record<string, number>;
-  busExpenses: BusExpenses;
+};
+
+const EMPTY_BUS_EXP: BusExpenses = {
+  busCost: 0,
+  driverTip: 0,
+  taxi: 0,
+  supervisor: 0,
+  supervisorBed: 0,
+  emptyBeds: 0,
+  extra: 0,
 };
 
 const EMPTY_REF: RefState = {
@@ -89,11 +100,51 @@ const EMPTY_REF: RefState = {
   ext: {},
   commissions: {},
   transfer: { "ذهاب فقط": 50, "ذهاب وعوده فقط": 80, "ذهاب وعوده برحلة اخرى": 90 },
-  busExpenses: { busCost: 0, driverTip: 0, taxi: 0, supervisor: 0, extra: 0 },
 };
 
 const n = (v: unknown) => Number(v) || 0;
-const round = (v: number) => Math.round(v);
+/** تقريب لأقرب ربع (0.25 / 0.5 / 0.75) بدل أقرب رقم صحيح. */
+const round = (v: number) => Math.round(v * 4) / 4;
+
+/** تنسيق تاريخ الذهاب لكل صف — من تاريخ الحجز الفعلي، وإلا يوم الذهاب العام للرحلة. */
+function departureCellText(b: SheetBooking): string {
+  if (b.departure_date) {
+    const d = new Date(`${b.departure_date}T00:00:00`);
+    if (!Number.isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { day: "numeric", month: "short" }).format(d);
+    }
+  }
+  return b.trips?.departure_day ?? "—";
+}
+
+type SortDir = "asc" | "desc";
+type SortKey =
+  | "index"
+  | "rep"
+  | "customer"
+  | "id"
+  | "nationality"
+  | "count"
+  | "departure"
+  | "returnDay"
+  | "hotel"
+  | "room"
+  | "roomNumber"
+  | "packageTotal"
+  | "nights"
+  | "extensionTotal"
+  | "grandTotal"
+  | "notes"
+  | "seatCost"
+  | "bedCost"
+  | "costPerPerson"
+  | "groupCost"
+  | "extensionCost"
+  | "extensionProfit"
+  | "grossProfit"
+  | "rate"
+  | "repShare"
+  | "companyShare";
 
 export function TripSheetTab() {
   const [tripId, setTripId] = useState("");
@@ -103,7 +154,16 @@ export function TripSheetTab() {
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [roomNumbers, setRoomNumbers] = useState<Record<string, string>>({});
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
   const { data: logoUrl } = useSheetLogo();
+
+  function toggleSort(key: SortKey) {
+    setSort((s) => {
+      if (!s || s.key !== key) return { key, dir: "asc" };
+      if (s.dir === "asc") return { key, dir: "desc" };
+      return null; // third click clears sort → يرجع للترتيب الطبيعي
+    });
+  }
 
   const { data: trips = [] } = useQuery({
     queryKey: ["ts-trips"],
@@ -121,7 +181,7 @@ export function TripSheetTab() {
         await supabase
           .from("buses")
           .select(
-            "id,name,bus_number,capacity,assigned_date,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_extra,settled_at",
+            "id,name,bus_number,capacity,assigned_date,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra,settled_at",
           )
           .order("bus_number")
       ).data ?? []) as unknown as Array<{
@@ -134,6 +194,8 @@ export function TripSheetTab() {
         expense_driver_tip?: number | null;
         expense_taxi?: number | null;
         expense_supervisor?: number | null;
+        expense_supervisor_bed?: number | null;
+        expense_empty_beds?: number | null;
         expense_extra?: number | null;
         settled_at?: string | null;
       }>,
@@ -156,7 +218,7 @@ export function TripSheetTab() {
         []) as Array<{ id: string; name: string; active: boolean; extension_price: number | null }>,
   });
 
-  /* ------- كل مناسبات الرحلات (تكلفة الأسرّة + اعتمادها)، بدون فلتر تاريخ يدوي -------- */
+  /* ------- كل مناسبات الرحلات (تكلفة الأسرّة + اعتمادها) -------- */
   const { data: occurrences = [], refetch: refetchOcc } = useQuery({
     queryKey: ["ts-occ-all"],
     queryFn: async () =>
@@ -174,7 +236,6 @@ export function TripSheetTab() {
       }>,
   });
 
-  /** فهرسة سريعة لمناسبات الرحلة (رحلة + تاريخ) → تكلفة الأسرّة المعتمدة لها. */
   const occByKey = useMemo(() => {
     const map = new Map<
       string,
@@ -207,7 +268,6 @@ export function TripSheetTab() {
       }>,
   });
 
-  /** نسب العمولة الجديدة المخزّنة في ملف كل مندوب. */
   const [repRates, setRepRates] = useState<Record<string, number>>({});
   useEffect(() => {
     setRepRates((prev) => {
@@ -243,7 +303,7 @@ export function TripSheetTab() {
     },
   });
 
-  /* ------------- reference data, now persisted in the database ----------- */
+  /* ------------- reference data, persisted in the database ----------- */
   const [ref, setRef] = useState<RefState>(EMPTY_REF);
   const [loadedRef, setLoadedRef] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -262,7 +322,6 @@ export function TripSheetTab() {
           ext: (d["extension"] as RefState["ext"]) ?? {},
           commissions: (d["commissions"] as RefState["commissions"]) ?? {},
           transfer: { ...EMPTY_REF.transfer, ...((d["transfer"] as Record<string, number>) ?? {}) },
-          busExpenses: { ...EMPTY_REF.busExpenses, ...((d["bus_expenses"] as Partial<BusExpenses>) ?? {}) },
         });
       }
       setLoadedRef(true);
@@ -284,7 +343,6 @@ export function TripSheetTab() {
         extension: ref.ext,
         commissions: ref.commissions,
         transfer: ref.transfer,
-        bus_expenses: ref.busExpenses,
       } as never);
       setSaving(false);
       if (error) toast.error("تعذر حفظ بيانات الحسابات");
@@ -313,53 +371,6 @@ export function TripSheetTab() {
 
   const bus = buses.find((b) => b.id === busId) ?? null;
 
-  /** مناسبة الرحلة (رحلة + تاريخ) الوحيدة الظاهرة حاليًا في الحجوزات المفلترة — تُستخدم
-   *  لتحرير/اعتماد تكلفة الأسرّة تلقائيًا، بدون اختيار تاريخ يدوي. */
-  const scopedOccKeys = useMemo(() => {
-    const s = new Set<string>();
-    filtered.forEach((b) => {
-      if (b.trip_id && b.departure_date) s.add(`${b.trip_id}__${b.departure_date}`);
-    });
-    return [...s];
-  }, [filtered]);
-  const singleOccKey = scopedOccKeys.length === 1 ? scopedOccKeys[0]! : null;
-  const [singleOccTripId, singleOccDate] = singleOccKey ? singleOccKey.split("__") : [null, null];
-  const singleOcc = singleOccKey ? (occByKey.get(singleOccKey) ?? null) : null;
-
-  /** تكلفة السرير للمناسبة الوحيدة الظاهرة حاليًا — تُحفظ تلقائيًا وتبقى ثابتة حتى تغيّرها. */
-  const [bedCosts, setBedCosts] = useState<Record<string, Record<string, number>>>({});
-  const bedDirty = useRef(false);
-  const bedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    bedDirty.current = false;
-    const stored = singleOcc?.bed_costs ?? null;
-    if (stored && Object.keys(stored).length > 0) setBedCosts(stored);
-    else if (!singleOccKey) setBedCosts({});
-    // لا نمسح القيم المكتوبة عند عدم وجود سجل محفوظ بعد
-  }, [singleOccKey, singleOcc]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /** حفظ تلقائي لتكلفة الأسرّة دون المساس بحالة الاعتماد. */
-  useEffect(() => {
-    if (!bedDirty.current || !singleOccTripId || !singleOccDate) return;
-    if (bedTimer.current) clearTimeout(bedTimer.current);
-    bedTimer.current = setTimeout(async () => {
-      const payload = { bed_costs: bedCosts } as never;
-      const { error } = singleOcc
-        ? await supabase.from("trip_occurrences").update(payload).eq("id", singleOcc.id)
-        : await supabase
-            .from("trip_occurrences")
-            .insert({ trip_id: singleOccTripId, departure_date: singleOccDate, ...(payload as object) } as never);
-      if (error) toast.error("تعذر حفظ تكلفة الأسرّة");
-      else if (!singleOcc) void refetchOcc();
-    }, 800);
-    return () => {
-      if (bedTimer.current) clearTimeout(bedTimer.current);
-    };
-  }, [bedCosts, singleOccTripId, singleOccDate, singleOcc, refetchOcc]);
-
-  const { data: hotelRowsUnused } = { data: undefined } as never; // (no-op — keeps diff minimal)
-  void hotelRowsUnused;
-
   const trip = trips.find((t) => t.id === tripId) ?? null;
   const tripInfo = filtered.find((b) => b.trips)?.trips ?? null;
 
@@ -382,11 +393,13 @@ export function TripSheetTab() {
     return [...new Set([...all, ...used])];
   }, [hotelRows, filtered]);
 
-  /* ------------------ rooming statistics (rooms per hotel) --------------- */
-  const rooming = useMemo(() => {
+  const nightPriceOf = (hotel: string) => n(ref.nightPrices[hotel]);
+
+  /** إحصائيات التسكين + التكلفة المقترحة للأسرّة الفارغة، لركاب هذا النطاق (المفلتر الحالي) بس. */
+  function housingStatsFor(list: SheetBooking[]) {
     const map = new Map<string, Map<string, { people: number; rooms: number }>>();
     const sharedPeople = new Map<string, number>();
-    for (const b of filtered) {
+    for (const b of list) {
       const hotel = b.packages?.name || NO_HOTEL;
       const rt = String(b.room_type ?? "5");
       const inner = map.get(hotel) ?? new Map();
@@ -400,7 +413,6 @@ export function TripSheetTab() {
       inner.set(rt, cur);
       map.set(hotel, inner);
     }
-    // Individuals share 5-bed rooms → convert people into whole rooms.
     sharedPeople.forEach((people, hotel) => {
       const inner = map.get(hotel);
       if (!inner) return;
@@ -408,26 +420,31 @@ export function TripSheetTab() {
       cur.rooms += Math.ceil(people / 5);
       inner.set("5", cur);
     });
-    return map;
-  }, [filtered]);
-
-  const roomsPerHotel = useMemo(() => {
-    const out: Record<string, number> = {};
-    rooming.forEach((inner, hotel) => {
+    const roomsPerHotel: Record<string, number> = {};
+    map.forEach((inner, hotel) => {
       if (hotel === NO_HOTEL) return;
       let t = 0;
       inner.forEach((v) => (t += v.rooms));
-      out[hotel] = t;
+      roomsPerHotel[hotel] = t;
     });
-    return out;
-  }, [rooming]);
+    const totalRooms = Object.values(roomsPerHotel).reduce((s, v) => s + v, 0);
+    const housingCost = Object.entries(roomsPerHotel).reduce((s, [h, r]) => s + r * nightPriceOf(h), 0);
+    const usedBedsCost = list.reduce((s, b) => {
+      const hotel = b.packages?.name;
+      if (!hotel) return s;
+      const cap = ROOM_CAPACITY[roomLabelOf(b)] ?? 5;
+      return s + (b.passenger_count || 0) * (nightPriceOf(hotel) / cap);
+    }, 0);
+    const emptyBedsSuggested = Math.max(0, housingCost - usedBedsCost);
+    return { rooming: map, roomsPerHotel, totalRooms, housingCost, emptyBedsSuggested };
+  }
 
-  const totalRooms = Object.values(roomsPerHotel).reduce((s, v) => s + v, 0);
-  const nightPriceOf = (hotel: string) => n(ref.nightPrices[hotel]);
-  const housingCost = Object.entries(roomsPerHotel).reduce((s, [h, r]) => s + r * nightPriceOf(h), 0);
+  const rooming = useMemo(() => housingStatsFor(filtered).rooming, [filtered, ref]); // eslint-disable-line react-hooks/exhaustive-deps
+  const roomsPerHotel = useMemo(() => housingStatsFor(filtered).roomsPerHotel, [filtered, ref]); // eslint-disable-line react-hooks/exhaustive-deps
+  const totalRooms = useMemo(() => housingStatsFor(filtered).totalRooms, [filtered, ref]); // eslint-disable-line react-hooks/exhaustive-deps
+  const housingCost = useMemo(() => housingStatsFor(filtered).housingCost, [filtered, ref]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* -------------------------- per-bus seat cost --------------------------- */
-  // إجمالي ركاب كل حافلة (بدون أي فلترة حالية) — أساس تكلفة المقعد الخاصة بها.
+  /* -------------------------- per-bus expenses ---------------------------- */
   const busPassengerMap = useMemo(() => {
     const m = new Map<string, number>();
     for (const b of rows) {
@@ -437,58 +454,75 @@ export function TripSheetTab() {
     return m;
   }, [rows]);
 
-  /** مصاريف الحافلة المحددة (تُحفظ عند الاعتماد) — تُستخدم فقط أثناء تعديل حافلة واحدة. */
-  const [busExp, setBusExp] = useState<BusExpenses>(EMPTY_REF.busExpenses);
-  useEffect(() => {
-    setBusExp(
-      bus
-        ? {
-            busCost: n(bus.expense_bus_cost),
-            driverTip: n(bus.expense_driver_tip),
-            taxi: n(bus.expense_taxi),
-            supervisor: n(bus.expense_supervisor),
-            extra: n(bus.expense_extra),
-          }
-        : EMPTY_REF.busExpenses,
-    );
-  }, [bus?.id, buses]); // eslint-disable-line react-hooks/exhaustive-deps
+  const busBookingsMap = useMemo(() => {
+    const m = new Map<string, SheetBooking[]>();
+    for (const b of rows) {
+      if (b.status === "cancelled" || !b.bus_id) continue;
+      const list = m.get(b.bus_id) ?? [];
+      list.push(b);
+      m.set(b.bus_id, list);
+    }
+    return m;
+  }, [rows]);
 
-  /** تكلفة المقعد الفعلية لحافلة معينة — من مصاريفها الخاصة (المعتمدة، أو المسودة الحية
-   *  لو هي الحافلة الوحيدة المحددة حاليًا للتعديل) ÷ إجمالي ركابها هي بس. */
+  /** مصاريف الحافلة المحددة للتعديل الحالي — تُحفظ عند الاعتماد. */
+  const [busExp, setBusExp] = useState<BusExpenses>(EMPTY_BUS_EXP);
+  useEffect(() => {
+    if (!bus) {
+      setBusExp(EMPTY_BUS_EXP);
+      return;
+    }
+    // اقترح تلقائيًا تكلفة الأسرّة الفارغة من حساب التسكين الخاص بركاب هذه الحافلة فقط،
+    // إلا لو كانت محفوظة بالفعل (رقم أكبر من صفر) — وقتها نستخدم المحفوظ.
+    const savedEmpty = n(bus.expense_empty_beds);
+    const busBookings = busBookingsMap.get(bus.id) ?? [];
+    const suggestedEmpty = savedEmpty > 0 ? savedEmpty : housingStatsFor(busBookings).emptyBedsSuggested;
+    setBusExp({
+      busCost: n(bus.expense_bus_cost),
+      driverTip: n(bus.expense_driver_tip),
+      taxi: n(bus.expense_taxi),
+      supervisor: n(bus.expense_supervisor),
+      supervisorBed: n(bus.expense_supervisor_bed),
+      emptyBeds: suggestedEmpty,
+      extra: n(bus.expense_extra),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bus?.id, buses]);
+
+  /** إجمالي مصاريف حافلة معينة (المحفوظة، أو المسودة الحية لو هي المحددة للتعديل الآن). */
+  function busExpensesOf(rowBusId: string | null): BusExpenses {
+    if (!rowBusId) return EMPTY_BUS_EXP;
+    if (busId === rowBusId) return busExp;
+    const busRow = buses.find((x) => x.id === rowBusId);
+    if (!busRow) return EMPTY_BUS_EXP;
+    return {
+      busCost: n(busRow.expense_bus_cost),
+      driverTip: n(busRow.expense_driver_tip),
+      taxi: n(busRow.expense_taxi),
+      supervisor: n(busRow.expense_supervisor),
+      supervisorBed: n(busRow.expense_supervisor_bed),
+      emptyBeds: n(busRow.expense_empty_beds),
+      extra: n(busRow.expense_extra),
+    };
+  }
+
+  function busTotalOf(rowBusId: string | null): number {
+    const e = busExpensesOf(rowBusId);
+    return e.busCost + e.driverTip + e.taxi + e.supervisor + e.supervisorBed + e.emptyBeds + e.extra;
+  }
+
+  /** تكلفة المقعد الفعلية لحافلة معينة — إجمالي مصاريفها (شاملة سرير المشرف والأسرّة
+   *  الفارغة الخاصة بها) ÷ إجمالي ركابها هي بس. */
   function seatCostForBus(rowBusId: string | null): number {
     if (!rowBusId) return 0;
-    const busRow = buses.find((x) => x.id === rowBusId);
-    if (!busRow) return 0;
-    const exp =
-      busId === rowBusId
-        ? busExp
-        : {
-            busCost: n(busRow.expense_bus_cost),
-            driverTip: n(busRow.expense_driver_tip),
-            taxi: n(busRow.expense_taxi),
-            supervisor: n(busRow.expense_supervisor),
-            extra: n(busRow.expense_extra),
-          };
-    const total = exp.busCost + exp.driverTip + exp.taxi + exp.supervisor + exp.extra;
+    const total = busTotalOf(rowBusId);
     const pax = busPassengerMap.get(rowBusId) ?? 0;
     return pax > 0 ? total / pax : 0;
   }
 
-  // ملخص أعلى الصفحة: تكلفة مقعد واحدة واضحة فقط عند تحديد حافلة واحدة بالتحديد.
   const headlineSeatCost = busId ? seatCostForBus(busId) : 0;
 
-  /* --------------- empty-bed cost shared across all passengers ----------- */
-  const usedBedsCost = filtered.reduce((s, b) => {
-    const hotel = b.packages?.name;
-    if (!hotel) return s;
-    const cap = ROOM_CAPACITY[roomLabelOf(b)] ?? 5;
-    return s + (b.passenger_count || 0) * (nightPriceOf(hotel) / cap);
-  }, 0);
-  const emptyBedsCost = Math.max(0, housingCost - usedBedsCost);
-  const emptyBedShare = passengers > 0 ? emptyBedsCost / passengers : 0;
-
-  /** تكلفة السرير الفعلية لحجز معيّن: من المناسبة (رحلة+تاريخ) الخاصة بحجزه هو بالذات
-   *  لو موجودة ومعتمدة/محفوظة، وإلا القيمة العامة الاحتياطية (سعر الليلة ÷ سعة الغرفة). */
+  /** تكلفة سرير راكب معيّن (فردي/عائلي) — من مناسبة رحلته إن وُجدت، وإلا القيمة العامة. */
   function bedCostFor(b: SheetBooking, hotel: string, roomLabel: string): number {
     if (hotel === NO_HOTEL) return 0;
     const key = b.trip_id && b.departure_date ? `${b.trip_id}__${b.departure_date}` : "";
@@ -503,23 +537,22 @@ export function TripSheetTab() {
 
   const computed = useMemo(
     () =>
-      filtered.map((b) => {
+      filtered.map((b, idx) => {
         const hotel = b.packages?.name ?? NO_HOTEL;
         const roomLabel = roomLabelOf(b);
         const count = b.passenger_count || 0;
         const nights = n(b.extension_nights);
         const rep = b.booking_source || "الموقع";
 
-        // سعر بيع ليلة التمديد لهذا الفندق — يُحسب أولاً لأن "اجمالي الباقة" يعتمد عليه.
         const extSale = n(ref.ext[hotel]?.sale ?? hotelRows.find((h) => h.id === b.package_id)?.extension_price ?? 0);
-        // اجمالي الباقة = المبلغ الكلي المحفوظ (total_price) ناقص قيمة التمديد،
-        // لأن total_price يشمل التمديد من الأساس وقت إنشاء الحجز.
+        // اجمالي الباقة = المبلغ الكلي المحفوظ ناقص قيمة التمديد (total_price يشمل التمديد من الأساس).
         const packageTotal = n(b.total_price) - extSale * nights;
-        // تكلفة المقعد: من مصاريف حافلة هذا الحجز بالذات ÷ ركاب هذه الحافلة فقط.
+        // تكلفة المقعد: من مصاريف حافلة هذا الحجز بالذات (شاملة سرير المشرف والأسرّة
+        // الفارغة الخاصة بها) ÷ ركاب هذه الحافلة فقط.
         const seatCost = seatCostForBus(b.bus_id);
-        // تكلفة السرير: من مناسبة رحلة هذا الحجز بالذات (رحلته + تاريخه).
+        // تكلفة السرير الخاص بهذا الراكب فقط (غير سرير المشرف والأسرّة الفارغة، دول
+        // بقوا جزء من تكلفة المقعد أعلاه).
         const bedCost = bedCostFor(b, hotel, roomLabel);
-        // النسبة الجديدة من ملف المندوب إن وُجدت، وإلا النظام القديم بالاسم.
         const profileRate = b.rep_profile_id ? Number(repRates[b.rep_profile_id] ?? 0) || 0 : 0;
         const rate = profileRate || repRate(rep);
 
@@ -530,16 +563,112 @@ export function TripSheetTab() {
           extNightCost: n(ref.ext[hotel]?.cost),
           bedCost,
           seatCost,
-          emptyBedShare,
+          emptyBedShare: 0, // بقت متضمنة داخل seatCost (على مستوى كل حافلة)
           count,
           rate,
         });
 
-        return { b, rep, hotel, roomLabel, count, nights, packageTotal, bedCost, seatCost, ...r };
+        return { idx, b, rep, hotel, roomLabel, count, nights, packageTotal, bedCost, seatCost, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filtered, hotelRows, ref, busPassengerMap, buses, busId, busExp, occByKey, emptyBedShare, repRates],
+    [filtered, hotelRows, ref, busPassengerMap, buses, busId, busExp, occByKey, repRates],
   );
+
+  /** ترتيب الجدول بالنقر على أي عنوان عمود. */
+  const sortedComputed = useMemo(() => {
+    if (!sort) return computed;
+    const arr = [...computed];
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const textVal = (r: (typeof computed)[number]): string => {
+      switch (sort.key) {
+        case "rep":
+          return r.rep;
+        case "customer":
+          return r.b.customer_name ?? "";
+        case "id":
+          return r.b.id_number ?? "";
+        case "nationality":
+          return r.b.nationality ?? "";
+        case "departure":
+          return departureCellText(r.b);
+        case "returnDay":
+          return returnDisplay(r.b.actual_return_day || r.b.trips?.return_day, r.b.extension_nights, "", r.b.trip_mode);
+        case "hotel":
+          return r.hotel;
+        case "room":
+          return r.roomLabel;
+        case "roomNumber":
+          return roomNumbers[r.b.id] ?? "";
+        case "notes":
+          return r.b.notes ?? "";
+        default:
+          return "";
+      }
+    };
+    const numVal = (r: (typeof computed)[number]): number => {
+      switch (sort.key) {
+        case "index":
+          return r.idx;
+        case "count":
+          return r.count;
+        case "packageTotal":
+          return r.packageTotal;
+        case "nights":
+          return r.nights;
+        case "extensionTotal":
+          return r.extensionTotal;
+        case "grandTotal":
+          return r.grandTotal;
+        case "seatCost":
+          return r.seatCost;
+        case "bedCost":
+          return r.bedCost;
+        case "costPerPerson":
+          return r.costPerPerson;
+        case "groupCost":
+          return r.groupCost;
+        case "extensionCost":
+          return r.extensionCost;
+        case "extensionProfit":
+          return r.extensionProfit;
+        case "grossProfit":
+          return r.grossProfit;
+        case "rate":
+          return r.rate;
+        case "repShare":
+          return r.repShare;
+        case "companyShare":
+          return r.companyShare;
+        default:
+          return 0;
+      }
+    };
+    const isNumericKey: SortKey[] = [
+      "index",
+      "count",
+      "packageTotal",
+      "nights",
+      "extensionTotal",
+      "grandTotal",
+      "seatCost",
+      "bedCost",
+      "costPerPerson",
+      "groupCost",
+      "extensionCost",
+      "extensionProfit",
+      "grossProfit",
+      "rate",
+      "repShare",
+      "companyShare",
+    ];
+    if (isNumericKey.includes(sort.key)) {
+      arr.sort((a, z) => (numVal(a) - numVal(z)) * dir);
+    } else {
+      arr.sort((a, z) => textVal(a).localeCompare(textVal(z), "ar") * dir);
+    }
+    return arr;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [computed, sort, roomNumbers]);
 
   /* ------------------------ settlement approvals ------------------------- */
   const [approving, setApproving] = useState(false);
@@ -555,6 +684,8 @@ export function TripSheetTab() {
           expense_driver_tip: busExp.driverTip,
           expense_taxi: busExp.taxi,
           expense_supervisor: busExp.supervisor,
+          expense_supervisor_bed: busExp.supervisorBed,
+          expense_empty_beds: busExp.emptyBeds,
           expense_extra: busExp.extra,
           settled_at: new Date().toISOString(),
         } as never)
@@ -564,34 +695,6 @@ export function TripSheetTab() {
       if (rpcErr) throw rpcErr;
       await refetchBuses();
       toast.success("تم اعتماد مصاريف الحافلة وإعادة حساب الأرباح");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "تعذر الاعتماد");
-    } finally {
-      setApproving(false);
-    }
-  }
-
-  async function approveOccurrence() {
-    if (!singleOccTripId || !singleOccDate) return;
-    setApproving(true);
-    try {
-      const payload = { bed_costs: bedCosts, settled_at: new Date().toISOString() } as never;
-      const { error } = singleOcc
-        ? await supabase.from("trip_occurrences").update(payload).eq("id", singleOcc.id)
-        : await supabase
-            .from("trip_occurrences")
-            .insert({ trip_id: singleOccTripId, departure_date: singleOccDate, ...(payload as object) } as never);
-      if (error) throw error;
-      const { error: rpcErr } = await supabase.rpc(
-        "recalc_settled_profits" as never,
-        {
-          _trip_id: singleOccTripId,
-          _departure_date: singleOccDate,
-        } as never,
-      );
-      if (rpcErr) throw rpcErr;
-      await refetchOcc();
-      toast.success("تم اعتماد تكلفة الفنادق وإعادة حساب الأرباح");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر الاعتماد");
     } finally {
@@ -637,32 +740,33 @@ export function TripSheetTab() {
     [computed],
   );
 
-  const COLUMNS = [
-    "المندوب",
-    "العميل",
-    "الهوية",
-    "جنسية",
-    "العدد",
-    "العوده",
-    "الفندق",
-    "نوع الغرفه",
-    "رقم الغرفه",
-    "اجمالي الباقه",
-    "ليالي التمديد",
-    "اجمالي التمديد",
-    "إجمالي",
-    "ملاحظات",
-    "ت. المقعد",
-    "ت. السرير",
-    "ت. الباقه/للفرد",
-
-    "ت. المجموعه بالمرافقين الباقه الاساسية",
-    "ت. التمديد",
-    "ربح التمديد",
-    "مجمل ربح",
-    "نسبة المندوب",
-    "حصة المندوب",
-    "حصة المؤسسه",
+  /** تعريف الأعمدة: مفتاح الترتيب + العنوان — يستخدم للعرض وللترتيب معًا. */
+  const COLUMN_DEFS: Array<{ key: SortKey; label: string }> = [
+    { key: "rep", label: "المندوب" },
+    { key: "customer", label: "العميل" },
+    { key: "id", label: "الهوية" },
+    { key: "nationality", label: "جنسية" },
+    { key: "count", label: "العدد" },
+    { key: "departure", label: "الذهاب" },
+    { key: "returnDay", label: "العوده" },
+    { key: "hotel", label: "الفندق" },
+    { key: "room", label: "نوع الغرفه" },
+    { key: "roomNumber", label: "رقم الغرفه" },
+    { key: "packageTotal", label: "اجمالي الباقه" },
+    { key: "nights", label: "ليالي التمديد" },
+    { key: "extensionTotal", label: "اجمالي التمديد" },
+    { key: "grandTotal", label: "إجمالي" },
+    { key: "notes", label: "ملاحظات" },
+    { key: "seatCost", label: "ت. المقعد" },
+    { key: "bedCost", label: "ت. السرير" },
+    { key: "costPerPerson", label: "ت. الباقه/للفرد" },
+    { key: "groupCost", label: "ت. المجموعه بالمرافقين الباقه الاساسية" },
+    { key: "extensionCost", label: "ت. التمديد" },
+    { key: "extensionProfit", label: "ربح التمديد" },
+    { key: "grossProfit", label: "مجمل ربح" },
+    { key: "rate", label: "نسبة المندوب" },
+    { key: "repShare", label: "حصة المندوب" },
+    { key: "companyShare", label: "حصة المؤسسه" },
   ];
 
   const title = `كشف الحسابات والتصفية — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}${
@@ -672,13 +776,15 @@ export function TripSheetTab() {
   function exportData(): SettlementExport {
     return {
       title,
-      columns: COLUMNS,
-      rows: computed.map((r) => [
+      columns: ["م", ...COLUMN_DEFS.map((c) => c.label)],
+      rows: sortedComputed.map((r, i) => [
+        i + 1,
         r.rep,
         r.b.customer_name ?? "",
         r.b.id_number ?? "",
         r.b.nationality ?? "",
         r.count,
+        departureCellText(r.b),
         returnDisplay(r.b.actual_return_day || r.b.trips?.return_day, r.b.extension_nights, "", r.b.trip_mode),
         r.hotel,
         r.roomLabel,
@@ -691,7 +797,6 @@ export function TripSheetTab() {
         round(r.seatCost),
         round(r.bedCost),
         round(r.costPerPerson),
-
         round(r.groupCost),
         round(r.extensionCost),
         round(r.extensionProfit),
@@ -705,7 +810,9 @@ export function TripSheetTab() {
         "",
         "",
         "",
+        "",
         totals.count,
+        "",
         "",
         "",
         "",
@@ -718,7 +825,6 @@ export function TripSheetTab() {
         "",
         "",
         "",
-
         round(totals.groupCost),
         round(totals.extensionCost),
         round(totals.extensionProfit),
@@ -745,6 +851,22 @@ export function TripSheetTab() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function SortHeader({ col }: { col: (typeof COLUMN_DEFS)[number] }) {
+    const active = sort?.key === col.key;
+    const Icon = !active ? ArrowUpDown : sort!.dir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(col.key)}
+        className={`flex items-center gap-1 w-full justify-center ${active ? "text-primary" : ""}`}
+        title="ترتيب"
+      >
+        {col.label}
+        <Icon className="h-3 w-3 shrink-0 opacity-70" />
+      </button>
+    );
   }
 
   return (
@@ -814,16 +936,18 @@ export function TripSheetTab() {
         <table className="w-full text-xs border-collapse">
           <thead className="bg-muted">
             <tr>
-              <th className="border px-2 py-0.5 font-bold">م</th>
-              {COLUMNS.map((h) => (
-                <th key={h} className="border px-2 py-0.5 leading-tight whitespace-nowrap font-bold">
-                  {h}
+              <th className="border px-2 py-0.5 font-bold">
+                <SortHeader col={{ key: "index", label: "م" }} />
+              </th>
+              {COLUMN_DEFS.map((c) => (
+                <th key={c.key} className="border px-2 py-0.5 leading-tight whitespace-nowrap font-bold">
+                  <SortHeader col={c} />
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {computed.map((r, i) => (
+            {sortedComputed.map((r, i) => (
               <tr key={r.b.id} className="odd:bg-white even:bg-muted/30">
                 <td className="border px-2 py-0.5 text-center">{i + 1}</td>
                 <td className="border px-2 py-0.5 text-center">{r.rep}</td>
@@ -831,6 +955,7 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5 text-center font-mono">{r.b.id_number}</td>
                 <td className="border px-2 py-0.5 text-center">{r.b.nationality ?? "—"}</td>
                 <td className="border px-2 py-0.5 text-center">{r.count}</td>
+                <td className="border px-2 py-0.5 text-center">{departureCellText(r.b)}</td>
                 <td className="border px-2 py-0.5 text-center">
                   {returnDisplay(
                     r.b.actual_return_day || r.b.trips?.return_day,
@@ -855,7 +980,6 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5">{r.b.notes ?? ""}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.seatCost)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.bedCost)}</td>
-
                 <td className="border px-2 py-0.5 text-center">{round(r.costPerPerson)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.groupCost)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.extensionCost)}</td>
@@ -868,7 +992,7 @@ export function TripSheetTab() {
             ))}
             {computed.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length + 1} className="p-6 text-center text-muted-foreground">
+                <td colSpan={COLUMN_DEFS.length + 1} className="p-6 text-center text-muted-foreground">
                   لا توجد بيانات
                 </td>
               </tr>
@@ -880,7 +1004,7 @@ export function TripSheetTab() {
                 الإجمالي
               </td>
               <td className="border px-2 py-0.5 text-center">{totals.count}</td>
-              <td className="border px-2 py-0.5" colSpan={4} />
+              <td className="border px-2 py-0.5" colSpan={5} />
               <td className="border px-2 py-0.5 text-center">{round(totals.packageTotal)}</td>
               <td className="border px-2 py-0.5" />
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionTotal)}</td>
@@ -940,7 +1064,6 @@ export function TripSheetTab() {
           <p className="font-bold">
             إجمالي التسكين ({totalRooms} غرفة): {sar(round(housingCost))}
           </p>
-          <p className="text-xs text-muted-foreground">تكلفة الأسرّة الفارغة: {sar(round(emptyBedsCost))}</p>
         </div>
 
         {/* Bus expenses — per selected bus, else a summary of every selected bus */}
@@ -963,7 +1086,9 @@ export function TripSheetTab() {
                     ["تكلفة الباص", "busCost"],
                     ["إكرامية السائق", "driverTip"],
                     ["تاكسي", "taxi"],
-                    ["المشرف", "supervisor"],
+                    ["المشرف (إكرامية/أجرة)", "supervisor"],
+                    ["سرير المشرف", "supervisorBed"],
+                    ["الأسرة الفارغة", "emptyBeds"],
                     ["مصاريف إضافية", "extra"],
                   ] as Array<[string, keyof BusExpenses]>
                 ).map(([label, key]) => (
@@ -979,10 +1104,7 @@ export function TripSheetTab() {
                   <Input readOnly className="bg-muted" value={round(headlineSeatCost)} />
                 </div>
               </div>
-              <p className="font-bold">
-                إجمالي مصاريف الباص:{" "}
-                {sar(round(busExp.busCost + busExp.driverTip + busExp.taxi + busExp.supervisor + busExp.extra))}
-              </p>
+              <p className="font-bold">إجمالي مصاريف الباص: {sar(round(busTotalOf(busId)))}</p>
               <p className="text-xs text-muted-foreground">المقاعد المشغولة: {busPassengerMap.get(busId) ?? 0}</p>
               <Button className="rounded-full" disabled={approving} onClick={() => void approveBus()}>
                 اعتماد مصاريف الحافلة
@@ -1041,23 +1163,6 @@ export function TripSheetTab() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs text-muted-foreground">
-            {singleOccKey
-              ? `تكلفة السرير لرحلة ${trips.find((t) => t.id === singleOccTripId)?.name ?? ""} بتاريخ ${singleOccDate}${
-                  singleOcc?.settled_at ? " — معتمدة" : " — غير معتمدة"
-                }`
-              : scopedOccKeys.length > 1
-                ? "الحجوزات الظاهرة حاليًا من أكثر من رحلة/تاريخ — ضيّق الفلتر (رحلة أو حافلة واحدة) لتعديل تكلفة الأسرّة الخاصة بمناسبة معينة."
-                : "لا توجد رحلة/تاريخ محدد حاليًا — القيم العامة تحت تُستخدم كإعداد احتياطي فقط."}
-          </p>
-          {singleOccKey ? (
-            <Button className="rounded-full" disabled={approving} onClick={() => void approveOccurrence()}>
-              اعتماد تكلفة الفنادق
-            </Button>
-          ) : null}
-        </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead className="bg-muted">
@@ -1066,9 +1171,7 @@ export function TripSheetTab() {
                 {ROOM_ROWS.map((r) => (
                   <th key={r} className="border px-2 py-0.5 whitespace-nowrap">
                     تكلفة {r}
-                    <span className="block text-[10px] font-normal text-muted-foreground">
-                      {singleOccKey ? "سرير واحد" : `÷ ${ROOM_CAPACITY[r]}`}
-                    </span>
+                    <span className="block text-[10px] font-normal text-muted-foreground">÷ {ROOM_CAPACITY[r]}</span>
                   </th>
                 ))}
                 <th className="border px-2 py-0.5">سعر ليلة التمديد</th>
@@ -1084,19 +1187,13 @@ export function TripSheetTab() {
                       <Input
                         type="number"
                         className="h-8 text-xs"
-                        disabled={!singleOccKey && scopedOccKeys.length > 1}
-                        value={String((singleOccKey ? bedCosts[hotel]?.[r] : ref.costs[hotel]?.[r]) ?? 0)}
+                        value={String(ref.costs[hotel]?.[r] ?? 0)}
                         onChange={(e) => {
                           const v = Number(e.target.value) || 0;
-                          if (singleOccKey) {
-                            bedDirty.current = true;
-                            setBedCosts((s) => ({ ...s, [hotel]: { ...(s[hotel] ?? {}), [r]: v } }));
-                          } else {
-                            setRef((s) => ({
-                              ...s,
-                              costs: { ...s.costs, [hotel]: { ...(s.costs[hotel] ?? {}), [r]: v } },
-                            }));
-                          }
+                          setRef((s) => ({
+                            ...s,
+                            costs: { ...s.costs, [hotel]: { ...(s.costs[hotel] ?? {}), [r]: v } },
+                          }));
                         }}
                       />
                     </td>
