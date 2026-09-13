@@ -694,8 +694,10 @@ export type Database = {
           driver_phone: string | null
           expense_bus_cost: number | null
           expense_driver_tip: number | null
+          expense_empty_beds: number | null
           expense_extra: number | null
           expense_supervisor: number | null
+          expense_supervisor_bed: number | null
           expense_taxi: number | null
           expenses: number
           id: string
@@ -734,8 +736,10 @@ export type Database = {
           driver_phone?: string | null
           expense_bus_cost?: number | null
           expense_driver_tip?: number | null
+          expense_empty_beds?: number | null
           expense_extra?: number | null
           expense_supervisor?: number | null
+          expense_supervisor_bed?: number | null
           expense_taxi?: number | null
           expenses?: number
           id?: string
@@ -774,8 +778,10 @@ export type Database = {
           driver_phone?: string | null
           expense_bus_cost?: number | null
           expense_driver_tip?: number | null
+          expense_empty_beds?: number | null
           expense_extra?: number | null
           expense_supervisor?: number | null
+          expense_supervisor_bed?: number | null
           expense_taxi?: number | null
           expenses?: number
           id?: string
