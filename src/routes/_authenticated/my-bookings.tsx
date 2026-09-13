@@ -452,6 +452,12 @@ function MyBookingsPage() {
                     </div>
                     <div className="text-left">
                       <p className="text-2xl font-extrabold text-primary">{sar(b.total_price)}</p>
+                      {isRep && (
+                        <>
+                          <p className="mt-1 text-sm font-extrabold text-emerald-600">الربح: {sar(n(b.rep_share))}</p>
+                          <p className="text-[10px] text-muted-foreground">تكلفة المقعد: {sar(seatCostOf(b))}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="mt-4 flex gap-2 flex-wrap">
