@@ -107,41 +107,23 @@ function MyBookingsPage() {
 
 
 
-  // ------------------------- أرباحي (المناديب) -------------------------
+  // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
   const [weekBack, setWeekBack] = useState(0);
-  const { data: earnings = [] } = useQuery({
-    queryKey: ["my-earnings", uid],
-    enabled: !!uid && isRep,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id,booking_code,customer_name,created_at,total_price,rep_share,status")
-        .eq("rep_profile_id", uid)
-        .neq("status", "cancelled")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as {
-        id: string; booking_code: string; customer_name: string | null;
-        created_at: string; total_price: number | null; rep_share: number | null; status: string;
-      }[];
-    },
-  });
 
-  const weekEarnings = useMemo(() => {
-    const start = startOfWeek(new Date());
-    start.setDate(start.getDate() - weekBack * 7);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
-    const items = earnings.filter((e) => {
-      const t = new Date(e.created_at).getTime();
-      return t >= start.getTime() && t < end.getTime();
+  /** آخر 12 أسبوعًا كخيارات تاريخية: «1 سبتمبر - 7 سبتمبر». */
+  const weekOptions = useMemo(() => {
+    const base = startOfWeek(new Date());
+    return Array.from({ length: 12 }, (_, i) => {
+      const start = new Date(base);
+      start.setDate(base.getDate() - i * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 7);
+      const endLabel = new Date(end);
+      endLabel.setDate(end.getDate() - 1);
+      return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}` };
     });
-    const total = items.reduce((s, e) => s + (Number(e.rep_share) || 0), 0);
-    const fmt = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
-    const endLabel = new Date(end);
-    endLabel.setDate(end.getDate() - 1);
-    return { items, total, label: `${fmt(start)} - ${fmt(endLabel)}` };
-  }, [earnings, weekBack]);
+  }, []);
+  const activeWeek = weekOptions[weekBack] ?? weekOptions[0];
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -149,7 +131,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
         .eq("created_by", uid)
         .or("deleted_at.is.null,no_show.is.true")
         .order("created_at", { ascending: false });
@@ -169,50 +151,63 @@ function MyBookingsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return sorted;
-    return sorted.filter((b) =>
+    let list = sorted;
+    // للمناديب: الفلتر الزمني يشمل قائمة الحجوزات نفسها (وكل حجز يظهر ربحه).
+    if (isRep && activeWeek) {
+      list = list.filter((b) => {
+        const t = refTimeOf(b);
+        return t >= activeWeek.start && t < activeWeek.end;
+      });
+    }
+    if (!q) return list;
+    return list.filter((b) =>
       (b.customer_name || "").toLowerCase().includes(q) ||
       (b.booking_code || "").toLowerCase().includes(q) ||
       (b.contact_phone || "").includes(q)
     );
-  }, [sorted, search]);
+  }, [sorted, search, isRep, activeWeek]);
+
+  const tripLabelOf = (b: MyBooking) =>
+    b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
 
   const groups = useMemo(() => {
-    const thisWeekStart = startOfWeek(new Date()).getTime();
-    const lastWeekStart = thisWeekStart - 7 * 86400000;
-
-    const refTime = (b: MyBooking) => {
-      const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
-      const t = new Date(s as string).getTime();
-      return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
-    };
-    const tripLabel = (b: MyBooking) =>
-      b.trips ? tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day) : "بدون رحلة";
-
-    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
-    for (const b of filtered) {
-      const t = refTime(b);
-      if (t >= thisWeekStart) buckets.current.push(b);
-      else if (t >= lastWeekStart) buckets.last.push(b);
-      else buckets.older.push(b);
-    }
-
     const out: { title: string; items: MyBooking[] }[] = [];
     const push = (title: string, items: MyBooking[], forceByTrip = false) => {
       if (!items.length) return;
       if (!forceByTrip && items.length < 10) { out.push({ title, items }); return; }
       const byTrip = new Map<string, MyBooking[]>();
       for (const b of items) {
-        const k = String(tripLabel(b));
+        const k = tripLabelOf(b);
         byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
       }
       for (const [k, v] of byTrip) out.push({ title: `${title} — ${k}`, items: v });
     };
+
+    if (isRep) {
+      // أسبوع محدد بالتاريخ: التجميع حسب الرحلة فقط.
+      const byTrip = new Map<string, MyBooking[]>();
+      for (const b of filtered) {
+        const k = tripLabelOf(b);
+        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
+      }
+      for (const [k, v] of byTrip) out.push({ title: k, items: v });
+      return out;
+    }
+
+    const thisWeekStart = startOfWeek(new Date()).getTime();
+    const lastWeekStart = thisWeekStart - 7 * 86400000;
+    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
+    for (const b of filtered) {
+      const t = refTimeOf(b);
+      if (t >= thisWeekStart) buckets.current.push(b);
+      else if (t >= lastWeekStart) buckets.last.push(b);
+      else buckets.older.push(b);
+    }
     push("حجوزات الأسبوع الحالي", buckets.current);
     push("حجوزات الأسبوع الماضي", buckets.last);
     push("حجوزات سابقة", buckets.older, true);
     return out;
-  }, [filtered]);
+  }, [filtered, isRep]);
 
   /** Mini dashboard: bookings / passengers / rooms per trip (active bookings only). */
   const tripStats = useMemo(() => {
@@ -220,7 +215,7 @@ function MyBookingsPage() {
     const map = new Map<string, { label: string; bookings: number; passengers: number; rooms: number; time: number }>();
     for (const b of active) {
       const key = `${b.trip_id ?? "none"}-${b.departure_date ?? b.trips?.departure_date ?? ""}`;
-      const label = b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
+      const label = tripLabelOf(b);
       const cur = map.get(key) ?? { label, bookings: 0, passengers: 0, rooms: 0, time: new Date((b.departure_date ?? b.trips?.departure_date ?? b.created_at) as string).getTime() || 0 };
       cur.bookings += 1;
       cur.passengers += b.passenger_count || 0;
@@ -234,6 +229,26 @@ function MyBookingsPage() {
     const totals = rows.reduce((t, r) => ({ bookings: t.bookings + r.bookings, passengers: t.passengers + r.passengers, rooms: t.rooms + r.rooms }), { bookings: 0, passengers: 0, rooms: 0 });
     return { rows, totals };
   }, [bookings]);
+
+  /** داشبورد أرباح المندوب للأسبوع المختار: الإجمالي + كل رحلة وعددها. */
+  const earningsStats = useMemo(() => {
+    const rows = new Map<string, { label: string; profit: number; count: number; passengers: number; time: number }>();
+    let total = 0, count = 0, seatCost = 0;
+    for (const b of filtered) {
+      if (b.status === "cancelled") continue;
+      const profit = n(b.rep_share);
+      total += profit;
+      count += 1;
+      seatCost += seatCostOf(b) * (b.passenger_count || 0);
+      const key = tripLabelOf(b);
+      const cur = rows.get(key) ?? { label: key, profit: 0, count: 0, passengers: 0, time: refTimeOf(b) };
+      cur.profit += profit;
+      cur.count += 1;
+      cur.passengers += b.passenger_count || 0;
+      rows.set(key, cur);
+    }
+    return { total, count, seatCost, rows: [...rows.values()].sort((a, b) => b.time - a.time) };
+  }, [filtered]);
 
 
 
