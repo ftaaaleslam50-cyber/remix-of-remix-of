@@ -275,7 +275,7 @@ function MyBookingsPage() {
       <div className="container-luxe py-10 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl md:text-3xl font-extrabold flex items-center gap-2">
-            <Ticket className="h-6 w-6 text-primary" /> حجوزاتي
+            <Ticket className="h-6 w-6 text-primary" /> {isRep ? "حجوزاتي وأرباحي" : "حجوزاتي"}
           </h1>
           <div className="flex gap-2 flex-wrap">
             <Link to="/booking"><Button className="btn-primary-glow rounded-xl">حجز جديد</Button></Link>
