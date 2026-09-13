@@ -33,10 +33,38 @@ interface MyBooking {
   trip_mode?: string | null;
   departure_date?: string | null;
   return_date?: string | null;
+  rep_share?: number | null;
   trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
-  buses: { name: string | null; bus_number: number } | null;
+  buses: {
+    name: string | null; bus_number: number; capacity?: number | null;
+    expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null;
+    expense_supervisor?: number | null; expense_supervisor_bed?: number | null;
+    expense_empty_beds?: number | null; expense_extra?: number | null;
+  } | null;
   packages: { name: string } | null;
 }
+
+const n = (v: unknown) => Number(v) || 0;
+
+/** تكلفة المقعد التقديرية = مجموع مصاريف الحافلة ÷ سعتها. */
+function seatCostOf(b: MyBooking) {
+  const bus = b.buses;
+  if (!bus || !bus.capacity) return 0;
+  const total =
+    n(bus.expense_bus_cost) + n(bus.expense_driver_tip) + n(bus.expense_taxi) +
+    n(bus.expense_supervisor) + n(bus.expense_supervisor_bed) + n(bus.expense_empty_beds) +
+    n(bus.expense_extra);
+  return total ? total / bus.capacity : 0;
+}
+
+/** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
+function refTimeOf(b: MyBooking) {
+  const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
+  const t = new Date(s as string).getTime();
+  return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
+}
+
+const dayMonth = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
 
 function isPast(dateStr?: string | null) {
   if (!dateStr) return false;
@@ -79,41 +107,23 @@ function MyBookingsPage() {
 
 
 
-  // ------------------------- أرباحي (المناديب) -------------------------
+  // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
   const [weekBack, setWeekBack] = useState(0);
-  const { data: earnings = [] } = useQuery({
-    queryKey: ["my-earnings", uid],
-    enabled: !!uid && isRep,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id,booking_code,customer_name,created_at,total_price,rep_share,status")
-        .eq("rep_profile_id", uid)
-        .neq("status", "cancelled")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as {
-        id: string; booking_code: string; customer_name: string | null;
-        created_at: string; total_price: number | null; rep_share: number | null; status: string;
-      }[];
-    },
-  });
 
-  const weekEarnings = useMemo(() => {
-    const start = startOfWeek(new Date());
-    start.setDate(start.getDate() - weekBack * 7);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
-    const items = earnings.filter((e) => {
-      const t = new Date(e.created_at).getTime();
-      return t >= start.getTime() && t < end.getTime();
+  /** آخر 12 أسبوعًا كخيارات تاريخية: «1 سبتمبر - 7 سبتمبر». */
+  const weekOptions = useMemo(() => {
+    const base = startOfWeek(new Date());
+    return Array.from({ length: 12 }, (_, i) => {
+      const start = new Date(base);
+      start.setDate(base.getDate() - i * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 7);
+      const endLabel = new Date(end);
+      endLabel.setDate(end.getDate() - 1);
+      return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}` };
     });
-    const total = items.reduce((s, e) => s + (Number(e.rep_share) || 0), 0);
-    const fmt = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
-    const endLabel = new Date(end);
-    endLabel.setDate(end.getDate() - 1);
-    return { items, total, label: `${fmt(start)} - ${fmt(endLabel)}` };
-  }, [earnings, weekBack]);
+  }, []);
+  const activeWeek = weekOptions[weekBack] ?? weekOptions[0];
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -121,7 +131,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
         .eq("created_by", uid)
         .or("deleted_at.is.null,no_show.is.true")
         .order("created_at", { ascending: false });
@@ -141,50 +151,63 @@ function MyBookingsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return sorted;
-    return sorted.filter((b) =>
+    let list = sorted;
+    // للمناديب: الفلتر الزمني يشمل قائمة الحجوزات نفسها (وكل حجز يظهر ربحه).
+    if (isRep && activeWeek) {
+      list = list.filter((b) => {
+        const t = refTimeOf(b);
+        return t >= activeWeek.start && t < activeWeek.end;
+      });
+    }
+    if (!q) return list;
+    return list.filter((b) =>
       (b.customer_name || "").toLowerCase().includes(q) ||
       (b.booking_code || "").toLowerCase().includes(q) ||
       (b.contact_phone || "").includes(q)
     );
-  }, [sorted, search]);
+  }, [sorted, search, isRep, activeWeek]);
+
+  const tripLabelOf = (b: MyBooking) =>
+    b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
 
   const groups = useMemo(() => {
-    const thisWeekStart = startOfWeek(new Date()).getTime();
-    const lastWeekStart = thisWeekStart - 7 * 86400000;
-
-    const refTime = (b: MyBooking) => {
-      const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
-      const t = new Date(s as string).getTime();
-      return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
-    };
-    const tripLabel = (b: MyBooking) =>
-      b.trips ? tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day) : "بدون رحلة";
-
-    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
-    for (const b of filtered) {
-      const t = refTime(b);
-      if (t >= thisWeekStart) buckets.current.push(b);
-      else if (t >= lastWeekStart) buckets.last.push(b);
-      else buckets.older.push(b);
-    }
-
     const out: { title: string; items: MyBooking[] }[] = [];
     const push = (title: string, items: MyBooking[], forceByTrip = false) => {
       if (!items.length) return;
       if (!forceByTrip && items.length < 10) { out.push({ title, items }); return; }
       const byTrip = new Map<string, MyBooking[]>();
       for (const b of items) {
-        const k = String(tripLabel(b));
+        const k = tripLabelOf(b);
         byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
       }
       for (const [k, v] of byTrip) out.push({ title: `${title} — ${k}`, items: v });
     };
+
+    if (isRep) {
+      // أسبوع محدد بالتاريخ: التجميع حسب الرحلة فقط.
+      const byTrip = new Map<string, MyBooking[]>();
+      for (const b of filtered) {
+        const k = tripLabelOf(b);
+        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
+      }
+      for (const [k, v] of byTrip) out.push({ title: k, items: v });
+      return out;
+    }
+
+    const thisWeekStart = startOfWeek(new Date()).getTime();
+    const lastWeekStart = thisWeekStart - 7 * 86400000;
+    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
+    for (const b of filtered) {
+      const t = refTimeOf(b);
+      if (t >= thisWeekStart) buckets.current.push(b);
+      else if (t >= lastWeekStart) buckets.last.push(b);
+      else buckets.older.push(b);
+    }
     push("حجوزات الأسبوع الحالي", buckets.current);
     push("حجوزات الأسبوع الماضي", buckets.last);
     push("حجوزات سابقة", buckets.older, true);
     return out;
-  }, [filtered]);
+  }, [filtered, isRep]);
 
   /** Mini dashboard: bookings / passengers / rooms per trip (active bookings only). */
   const tripStats = useMemo(() => {
@@ -192,7 +215,7 @@ function MyBookingsPage() {
     const map = new Map<string, { label: string; bookings: number; passengers: number; rooms: number; time: number }>();
     for (const b of active) {
       const key = `${b.trip_id ?? "none"}-${b.departure_date ?? b.trips?.departure_date ?? ""}`;
-      const label = b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
+      const label = tripLabelOf(b);
       const cur = map.get(key) ?? { label, bookings: 0, passengers: 0, rooms: 0, time: new Date((b.departure_date ?? b.trips?.departure_date ?? b.created_at) as string).getTime() || 0 };
       cur.bookings += 1;
       cur.passengers += b.passenger_count || 0;
@@ -206,6 +229,26 @@ function MyBookingsPage() {
     const totals = rows.reduce((t, r) => ({ bookings: t.bookings + r.bookings, passengers: t.passengers + r.passengers, rooms: t.rooms + r.rooms }), { bookings: 0, passengers: 0, rooms: 0 });
     return { rows, totals };
   }, [bookings]);
+
+  /** داشبورد أرباح المندوب للأسبوع المختار: الإجمالي + كل رحلة وعددها. */
+  const earningsStats = useMemo(() => {
+    const rows = new Map<string, { label: string; profit: number; count: number; passengers: number; time: number }>();
+    let total = 0, count = 0, seatCost = 0;
+    for (const b of filtered) {
+      if (b.status === "cancelled") continue;
+      const profit = n(b.rep_share);
+      total += profit;
+      count += 1;
+      seatCost += seatCostOf(b) * (b.passenger_count || 0);
+      const key = tripLabelOf(b);
+      const cur = rows.get(key) ?? { label: key, profit: 0, count: 0, passengers: 0, time: refTimeOf(b) };
+      cur.profit += profit;
+      cur.count += 1;
+      cur.passengers += b.passenger_count || 0;
+      rows.set(key, cur);
+    }
+    return { total, count, seatCost, rows: [...rows.values()].sort((a, b) => b.time - a.time) };
+  }, [filtered]);
 
 
 
@@ -232,7 +275,7 @@ function MyBookingsPage() {
       <div className="container-luxe py-10 max-w-5xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl md:text-3xl font-extrabold flex items-center gap-2">
-            <Ticket className="h-6 w-6 text-primary" /> حجوزاتي
+            <Ticket className="h-6 w-6 text-primary" /> {isRep ? "حجوزاتي وأرباحي" : "حجوزاتي"}
           </h1>
           <div className="flex gap-2 flex-wrap">
             <Link to="/booking"><Button className="btn-primary-glow rounded-xl">حجز جديد</Button></Link>
@@ -302,45 +345,40 @@ function MyBookingsPage() {
                 value={weekBack}
                 onChange={(e) => setWeekBack(Number(e.target.value))}
               >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {i === 0 ? "الأسبوع الحالي" : i === 1 ? "الأسبوع الماضي" : `قبل ${i} أسابيع`}
-                  </option>
+                {weekOptions.map((w) => (
+                  <option key={w.value} value={w.value}>{w.label}</option>
                 ))}
               </select>
             </div>
 
-            <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center mb-3">
-              <p className="text-2xl font-extrabold text-primary">{sar(weekEarnings.total)}</p>
-              <p className="text-[11px] text-muted-foreground font-semibold mt-1">
-                {weekBack === 0 ? "أرباح الأسبوع الحالي" : "أرباح الأسبوع المختار"} ({weekEarnings.label})
-              </p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
+                <p className="text-2xl font-extrabold text-primary">{sar(earningsStats.total)}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">أرباح الأسبوع ({activeWeek?.label})</p>
+                <p className="text-[10px] text-muted-foreground mt-1">تكلفة المقعد: {sar(earningsStats.seatCost)}</p>
+              </div>
+              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
+                <p className="text-2xl font-extrabold text-primary">{earningsStats.count}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">عدد الحجوزات</p>
+              </div>
             </div>
 
-            {weekEarnings.items.length === 0 ? (
+            {earningsStats.rows.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-3">لا توجد حجوزات في هذا الأسبوع.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-muted-foreground text-xs">
-                      <th className="text-right py-2">رقم الحجز</th>
-                      <th className="text-right py-2">العميل</th>
-                      <th className="text-right py-2">التاريخ</th>
-                      <th className="text-left py-2">حصتي</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {weekEarnings.items.map((e) => (
-                      <tr key={e.id}>
-                        <td className="py-2 font-mono text-primary">{e.booking_code}</td>
-                        <td className="py-2 font-semibold">{e.customer_name || "—"}</td>
-                        <td className="py-2 text-muted-foreground text-xs">{formatDateTime(e.created_at)}</td>
-                        <td className="py-2 text-left font-bold">{sar(Number(e.rep_share) || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-border/60 text-sm">
+                {earningsStats.rows.map((r) => (
+                  <div key={r.label} className="flex items-center justify-between gap-3 py-2">
+                    <span className="font-semibold truncate flex items-center gap-1.5 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 shrink-0 text-xs">
+                      <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.count}</Badge>
+                      <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
+                      <b className="text-primary">{sar(r.profit)}</b>
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </section>
@@ -414,6 +452,12 @@ function MyBookingsPage() {
                     </div>
                     <div className="text-left">
                       <p className="text-2xl font-extrabold text-primary">{sar(b.total_price)}</p>
+                      {isRep && (
+                        <>
+                          <p className="mt-1 text-sm font-extrabold text-emerald-600">الربح: {sar(n(b.rep_share))}</p>
+                          <p className="text-[10px] text-muted-foreground">تكلفة المقعد: {sar(seatCostOf(b))}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="mt-4 flex gap-2 flex-wrap">
