@@ -345,45 +345,40 @@ function MyBookingsPage() {
                 value={weekBack}
                 onChange={(e) => setWeekBack(Number(e.target.value))}
               >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i} value={i}>
-                    {i === 0 ? "الأسبوع الحالي" : i === 1 ? "الأسبوع الماضي" : `قبل ${i} أسابيع`}
-                  </option>
+                {weekOptions.map((w) => (
+                  <option key={w.value} value={w.value}>{w.label}</option>
                 ))}
               </select>
             </div>
 
-            <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center mb-3">
-              <p className="text-2xl font-extrabold text-primary">{sar(weekEarnings.total)}</p>
-              <p className="text-[11px] text-muted-foreground font-semibold mt-1">
-                {weekBack === 0 ? "أرباح الأسبوع الحالي" : "أرباح الأسبوع المختار"} ({weekEarnings.label})
-              </p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
+                <p className="text-2xl font-extrabold text-primary">{sar(earningsStats.total)}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">أرباح الأسبوع ({activeWeek?.label})</p>
+                <p className="text-[10px] text-muted-foreground mt-1">تكلفة المقعد: {sar(earningsStats.seatCost)}</p>
+              </div>
+              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
+                <p className="text-2xl font-extrabold text-primary">{earningsStats.count}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">عدد الحجوزات</p>
+              </div>
             </div>
 
-            {weekEarnings.items.length === 0 ? (
+            {earningsStats.rows.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-3">لا توجد حجوزات في هذا الأسبوع.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-muted-foreground text-xs">
-                      <th className="text-right py-2">رقم الحجز</th>
-                      <th className="text-right py-2">العميل</th>
-                      <th className="text-right py-2">التاريخ</th>
-                      <th className="text-left py-2">حصتي</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {weekEarnings.items.map((e) => (
-                      <tr key={e.id}>
-                        <td className="py-2 font-mono text-primary">{e.booking_code}</td>
-                        <td className="py-2 font-semibold">{e.customer_name || "—"}</td>
-                        <td className="py-2 text-muted-foreground text-xs">{formatDateTime(e.created_at)}</td>
-                        <td className="py-2 text-left font-bold">{sar(Number(e.rep_share) || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-border/60 text-sm">
+                {earningsStats.rows.map((r) => (
+                  <div key={r.label} className="flex items-center justify-between gap-3 py-2">
+                    <span className="font-semibold truncate flex items-center gap-1.5 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 shrink-0 text-xs">
+                      <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.count}</Badge>
+                      <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
+                      <b className="text-primary">{sar(r.profit)}</b>
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </section>
