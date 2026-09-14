@@ -28,6 +28,7 @@ export interface OfficialSheetHeader {
   busNumber?: string | number;
   plate?: string;
   driverName?: string;
+  supervisorName?: string;
   driverId?: string;
   driverPhone?: string;
   passengersTotal?: number;
