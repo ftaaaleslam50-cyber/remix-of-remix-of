@@ -249,8 +249,14 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   }
 
   // Title block
-  ws.mergeCells(1, 1, 6, 2);
+  ws.mergeCells(1, 1, 4, 2);
   put(ws, 1, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
+  ws.mergeCells(5, 1, 6, 2);
+  put(ws, 5, 1, h.supervisorName ? `المشرف: ${h.supervisorName}` : "المشرف: —", {
+    fill: C.cream,
+    color: C.darkRed,
+    size: 16,
+  });
 
   const merge2 = (r: number, c1: number, c2: number) => ws.mergeCells(r, c1, r, c2);
 
