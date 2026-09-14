@@ -28,6 +28,7 @@ export interface OfficialSheetHeader {
   busNumber?: string | number;
   plate?: string;
   driverName?: string;
+  supervisorName?: string;
   driverId?: string;
   driverPhone?: string;
   passengersTotal?: number;
@@ -248,8 +249,14 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
   }
 
   // Title block
-  ws.mergeCells(1, 1, 6, 2);
+  ws.mergeCells(1, 1, 4, 2);
   put(ws, 1, 1, "كشف رحله", { fill: C.cream, color: C.darkRed, size: 28 });
+  ws.mergeCells(5, 1, 6, 2);
+  put(ws, 5, 1, h.supervisorName ? `المشرف: ${h.supervisorName}` : "المشرف: —", {
+    fill: C.cream,
+    color: C.darkRed,
+    size: 16,
+  });
 
   const merge2 = (r: number, c1: number, c2: number) => ws.mergeCells(r, c1, r, c2);
 
@@ -434,7 +441,16 @@ export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | 
   const COLS = TABLE_COLUMNS.length; // 15
 
   const cells: GridCell[] = [
-    { r: 1, c: 1, rs: 6, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
+    { r: 1, c: 1, rs: 4, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
+    {
+      r: 5,
+      c: 1,
+      rs: 2,
+      cs: 2,
+      v: esc(h.supervisorName ? `المشرف: ${h.supervisorName}` : "المشرف: —"),
+      cls: "cream red",
+      style: "font-size:14px",
+    },
     { r: 1, c: 3, cs: 2, v: "ذهاب", cls: "cream red", style: "font-size:17px" },
     { r: 2, c: 3, cs: 2, v: esc(h.departureDate), cls: "cream val", style: "font-size:17px" },
     { r: 3, c: 3, cs: 2, v: "عوده", cls: "cream red", style: "font-size:17px" },

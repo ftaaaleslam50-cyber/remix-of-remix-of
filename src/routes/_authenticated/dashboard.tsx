@@ -1013,6 +1013,7 @@ function UnifiedBookingsTab(props: {
         capacity: bus?.capacity,
         busNumber: bus ? bus.bus_number : "",
         driverName: bus?.driver_name ?? "",
+        supervisorName: bus?.supervisor_name ?? "",
         plate: bus?.plate ?? "",
         driverId: bus?.driver_id_number ?? "",
         driverPhone: bus?.driver_phone ?? "",
