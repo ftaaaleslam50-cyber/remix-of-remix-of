@@ -244,85 +244,34 @@ function MyBookingsPage() {
           </div>
         )}
 
-        {!isLoading && tripStats.rows.length > 0 && (
-          <section className="surface-card p-4 mb-5" aria-label="ملخص الحجوزات">
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {[
-                { label: "الحجوزات", value: tripStats.totals.bookings, icon: Ticket },
-                { label: "الأفراد", value: tripStats.totals.passengers, icon: Users },
-                { label: "الغرف", value: tripStats.totals.rooms, icon: Hotel },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl bg-primary/5 border border-primary/15 p-3 text-center">
-                  <s.icon className="h-4 w-4 mx-auto text-primary" />
-                  <p className="text-xl font-extrabold text-primary mt-1">{s.value}</p>
-                  <p className="text-[11px] text-muted-foreground font-semibold">{s.label}</p>
-                </div>
+        <section className="surface-card p-4 mb-5" aria-label="ملخص الأسبوع">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+            <h2 className="font-extrabold text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" /> ملخص الأسبوع
+            </h2>
+            <select
+              className="h-9 rounded-xl border bg-background px-3 text-sm"
+              value={weekBack}
+              onChange={(e) => setWeekBack(Number(e.target.value))}
+            >
+              {weekOptions.map((w) => (
+                <option key={w.value} value={w.value}>{w.label}</option>
               ))}
-            </div>
-            <div className="divide-y divide-border/60 text-sm">
-              {tripStats.rows.map((r) => (
-                <div key={r.label} className="flex items-center justify-between gap-3 py-2">
-                  <span className="font-semibold truncate flex items-center gap-1.5 min-w-0"><MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span></span>
-                  <span className="flex items-center gap-1.5 shrink-0 text-xs">
-                    <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.bookings}</Badge>
-                    <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
-                    <Badge variant="secondary" className="rounded-full gap-1"><Hotel className="h-3 w-3" />{r.rooms}</Badge>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {isRep && (
-          <section className="surface-card p-4 mb-5" aria-label="أرباحي">
-            <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-              <h2 className="font-extrabold text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" /> أرباحي
-              </h2>
-              <select
-                className="h-9 rounded-xl border bg-background px-3 text-sm"
-                value={weekBack}
-                onChange={(e) => setWeekBack(Number(e.target.value))}
-              >
-                {weekOptions.map((w) => (
-                  <option key={w.value} value={w.value}>{w.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {isRep && (
               <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
-                <p className="text-2xl font-extrabold text-primary">{sar(earningsStats.total)}</p>
+                <p className="text-2xl font-extrabold text-emerald-600">{sar(summary.total)}</p>
                 <p className="text-[11px] text-muted-foreground font-semibold mt-1">أرباح الأسبوع ({activeWeek?.label})</p>
-                <p className="text-[10px] text-muted-foreground mt-1">تكلفة المقعد: {sar(earningsStats.seatCost)}</p>
-              </div>
-              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
-                <p className="text-2xl font-extrabold text-primary">{earningsStats.count}</p>
-                <p className="text-[11px] text-muted-foreground font-semibold mt-1">عدد الحجوزات</p>
-              </div>
-            </div>
-
-            {earningsStats.rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-3">لا توجد حجوزات في هذا الأسبوع.</p>
-            ) : (
-              <div className="divide-y divide-border/60 text-sm">
-                {earningsStats.rows.map((r) => (
-                  <div key={r.label} className="flex items-center justify-between gap-3 py-2">
-                    <span className="font-semibold truncate flex items-center gap-1.5 min-w-0">
-                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5 shrink-0 text-xs">
-                      <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.count}</Badge>
-                      <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
-                      <b className="text-primary">{sar(r.profit)}</b>
-                    </span>
-                  </div>
-                ))}
               </div>
             )}
-          </section>
-        )}
+            <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
+              <p className="text-2xl font-extrabold text-primary">{summary.count}</p>
+              <p className="text-[11px] text-muted-foreground font-semibold mt-1">الحجوزات</p>
+            </div>
+          </div>
+        </section>
 
         <div className="relative mb-5">
           <Search className="h-4 w-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
