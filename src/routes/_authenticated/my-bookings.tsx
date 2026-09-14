@@ -319,38 +319,38 @@ function MyBookingsPage() {
                 eff === "completed" ? { cls: "bg-gray-500 text-white", label: "مكتمل" } :
                 { cls: "bg-green-600 text-white", label: "نشط" };
               return (
-                <div key={b.id} className={`surface-card p-4 border-2 ${cardStyle}`}>
+                <div key={b.id} className={`surface-card p-3 sm:p-4 border-2 ${cardStyle}`}>
                   {/* السطر الأول: الاسم + الحالة، والسعر على اليسار */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <User className="h-4 w-4 text-primary shrink-0" />
-                      <span className="font-bold break-words">{b.customer_name || "—"}</span>
-                      <Badge className={`${badge.cls} shrink-0`}>{badge.label}</Badge>
+                      <span className="font-bold text-sm sm:text-base min-w-0 break-words">{b.customer_name || "—"}</span>
+                      <Badge className={`${badge.cls} shrink-0 text-[10px] px-1.5 py-0`}>{badge.label}</Badge>
                     </div>
-                    <p className="text-lg font-extrabold text-red-600 shrink-0">{sar(b.total_price)}</p>
+                    <p className="text-base sm:text-lg font-extrabold text-red-600 shrink-0">{sar(b.total_price)}</p>
                   </div>
 
-                  {/* السطر الثاني: تفاصيل قابلة للسحب أفقيًا */}
-                  <div className="mt-2 flex items-center gap-4 overflow-x-auto whitespace-nowrap text-sm pb-1">
+                  {/* السطر الثاني: تفاصيل تلتف على الجوال */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] sm:text-sm">
                     {isRep && (
-                      <span className="flex items-center gap-1.5 font-extrabold text-emerald-600 shrink-0">
-                        <TrendingUp className="h-4 w-4" /> {sar(n(b.rep_share))}
+                      <span className="flex items-center gap-1 font-extrabold text-emerald-600 shrink-0">
+                        <TrendingUp className="h-3.5 w-3.5" /> {sar(n(b.rep_share))}
                       </span>
                     )}
-                    <span className="flex items-center gap-1.5 font-bold shrink-0">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex items-center gap-1 font-bold shrink-0">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                       {b.trips
                         ? departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)
                         : formatDateTime(b.created_at)}
                     </span>
-                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-                      <Hotel className="h-4 w-4" /> {b.packages?.name || "بدون فندق"}
+                    <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+                      <Hotel className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{b.packages?.name || "بدون فندق"}</span>
                     </span>
-                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-                      <Bus className="h-4 w-4" /> {b.buses ? (b.buses.name || `حافلة ${b.buses.bus_number}`) : "بدون حافلة"}
+                    <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+                      <Bus className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{b.buses ? (b.buses.name || `حافلة ${b.buses.bus_number}`) : "بدون حافلة"}</span>
                     </span>
-                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-                      <Users className="h-4 w-4" /> {b.passenger_count}
+                    <span className="flex items-center gap-1 text-muted-foreground shrink-0">
+                      <Users className="h-3.5 w-3.5" /> {b.passenger_count}
                     </span>
                   </div>
 
