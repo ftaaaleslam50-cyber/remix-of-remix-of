@@ -98,11 +98,39 @@ export function LiveSeatBoard({
       (seatsByBooking[occ.bookingId] ??= []).push(seat);
       if (occ.gender) (gendersByBooking[occ.bookingId] ??= {})[seat] = occ.gender;
     }
+    const sortSeats = (a: string[]) => [...a].sort((x, y) => x.localeCompare(y, "en", { numeric: true }));
+    // الحجوزات المتغيرة فقط
+    const changedList = bookings
+      .map((b) => ({
+        b,
+        before: sortSeats(b.seat_numbers ?? []),
+        after: sortSeats(seatsByBooking[b.id] ?? []),
+      }))
+      .filter((x) => x.before.join("|") !== x.after.join("|"));
+
+    // المرحلة 1: تحرير المقاعد التي سيتركها كل حجز (يمنع خطأ "المقاعد محجوزة بالفعل" عند التبديل)
+    for (const { b, before, after } of changedList) {
+      const kept = before.filter((s) => after.includes(s));
+      if (kept.length === before.length) continue;
+      const keptGenders: Record<string, SeatGender> = {};
+      for (const s of kept) {
+        const g = gendersByBooking[b.id]?.[s];
+        if (g) keptGenders[s] = g;
+      }
+      const { error } = await supabase
+        .from("bookings")
+        .update({ seat_numbers: kept, seat_genders: keptGenders } as never)
+        .eq("id", b.id);
+      if (error) {
+        setSaving(false);
+        toast.error(error.message);
+        return;
+      }
+    }
+
+    // المرحلة 2: تعيين المقاعد النهائية
     let changed = 0;
-    for (const b of bookings) {
-      const before = [...(b.seat_numbers ?? [])].sort((x, y) => x.localeCompare(y, "en", { numeric: true }));
-      const after = (seatsByBooking[b.id] ?? []).sort((x, y) => x.localeCompare(y, "en", { numeric: true }));
-      if (before.join("|") === after.join("|")) continue;
+    for (const { b, after } of changedList) {
       const { error } = await supabase
         .from("bookings")
         .update({ seat_numbers: after, seat_genders: gendersByBooking[b.id] ?? {} } as never)
