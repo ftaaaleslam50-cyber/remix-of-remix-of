@@ -152,8 +152,8 @@ function MyBookingsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = sorted;
-    // للمناديب: الفلتر الزمني يشمل قائمة الحجوزات نفسها (وكل حجز يظهر ربحه).
-    if (isRep && activeWeek) {
+    // فلتر الأسبوع يتحكم في الصفحة كلها (الملخص + القائمة).
+    if (activeWeek) {
       list = list.filter((b) => {
         const t = refTimeOf(b);
         return t >= activeWeek.start && t < activeWeek.end;
@@ -165,89 +165,29 @@ function MyBookingsPage() {
       (b.booking_code || "").toLowerCase().includes(q) ||
       (b.contact_phone || "").includes(q)
     );
-  }, [sorted, search, isRep, activeWeek]);
+  }, [sorted, search, activeWeek]);
 
   const tripLabelOf = (b: MyBooking) =>
     b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
 
+  /** تجميع الحجوزات تحت كل رحلة مع إجمالي ربحها. */
   const groups = useMemo(() => {
-    const out: { title: string; items: MyBooking[] }[] = [];
-    const push = (title: string, items: MyBooking[], forceByTrip = false) => {
-      if (!items.length) return;
-      if (!forceByTrip && items.length < 10) { out.push({ title, items }); return; }
-      const byTrip = new Map<string, MyBooking[]>();
-      for (const b of items) {
-        const k = tripLabelOf(b);
-        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
-      }
-      for (const [k, v] of byTrip) out.push({ title: `${title} — ${k}`, items: v });
-    };
-
-    if (isRep) {
-      // أسبوع محدد بالتاريخ: التجميع حسب الرحلة فقط.
-      const byTrip = new Map<string, MyBooking[]>();
-      for (const b of filtered) {
-        const k = tripLabelOf(b);
-        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
-      }
-      for (const [k, v] of byTrip) out.push({ title: k, items: v });
-      return out;
-    }
-
-    const thisWeekStart = startOfWeek(new Date()).getTime();
-    const lastWeekStart = thisWeekStart - 7 * 86400000;
-    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
+    const map = new Map<string, { title: string; items: MyBooking[]; profit: number; time: number }>();
     for (const b of filtered) {
-      const t = refTimeOf(b);
-      if (t >= thisWeekStart) buckets.current.push(b);
-      else if (t >= lastWeekStart) buckets.last.push(b);
-      else buckets.older.push(b);
+      const k = tripLabelOf(b);
+      const cur = map.get(k) ?? { title: k, items: [], profit: 0, time: refTimeOf(b) };
+      cur.items.push(b);
+      if (b.status !== "cancelled") cur.profit += n(b.rep_share);
+      map.set(k, cur);
     }
-    push("حجوزات الأسبوع الحالي", buckets.current);
-    push("حجوزات الأسبوع الماضي", buckets.last);
-    push("حجوزات سابقة", buckets.older, true);
-    return out;
-  }, [filtered, isRep]);
+    return [...map.values()].sort((a, b) => b.time - a.time);
+  }, [filtered]);
 
-  /** Mini dashboard: bookings / passengers / rooms per trip (active bookings only). */
-  const tripStats = useMemo(() => {
-    const active = bookings.filter((b) => effectiveStatus(b) === "active");
-    const map = new Map<string, { label: string; bookings: number; passengers: number; rooms: number; time: number }>();
-    for (const b of active) {
-      const key = `${b.trip_id ?? "none"}-${b.departure_date ?? b.trips?.departure_date ?? ""}`;
-      const label = tripLabelOf(b);
-      const cur = map.get(key) ?? { label, bookings: 0, passengers: 0, rooms: 0, time: new Date((b.departure_date ?? b.trips?.departure_date ?? b.created_at) as string).getTime() || 0 };
-      cur.bookings += 1;
-      cur.passengers += b.passenger_count || 0;
-      if (!b.no_hotel) {
-        const cap = Number(b.room_type) || 0;
-        cur.rooms += cap > 0 ? Math.ceil((b.passenger_count || 0) / cap) : 0;
-      }
-      map.set(key, cur);
-    }
-    const rows = [...map.values()].sort((a, b) => b.time - a.time);
-    const totals = rows.reduce((t, r) => ({ bookings: t.bookings + r.bookings, passengers: t.passengers + r.passengers, rooms: t.rooms + r.rooms }), { bookings: 0, passengers: 0, rooms: 0 });
-    return { rows, totals };
-  }, [bookings]);
-
-  /** داشبورد أرباح المندوب للأسبوع المختار: الإجمالي + كل رحلة وعددها. */
-  const earningsStats = useMemo(() => {
-    const rows = new Map<string, { label: string; profit: number; count: number; passengers: number; time: number }>();
-    let total = 0, count = 0, seatCost = 0;
-    for (const b of filtered) {
-      if (b.status === "cancelled") continue;
-      const profit = n(b.rep_share);
-      total += profit;
-      count += 1;
-      seatCost += seatCostOf(b) * (b.passenger_count || 0);
-      const key = tripLabelOf(b);
-      const cur = rows.get(key) ?? { label: key, profit: 0, count: 0, passengers: 0, time: refTimeOf(b) };
-      cur.profit += profit;
-      cur.count += 1;
-      cur.passengers += b.passenger_count || 0;
-      rows.set(key, cur);
-    }
-    return { total, count, seatCost, rows: [...rows.values()].sort((a, b) => b.time - a.time) };
+  /** ملخص الأسبوع المختار: إجمالي الربح + عدد الحجوزات. */
+  const summary = useMemo(() => {
+    let total = 0;
+    for (const b of filtered) if (b.status !== "cancelled") total += n(b.rep_share);
+    return { total, count: filtered.length };
   }, [filtered]);
 
 
