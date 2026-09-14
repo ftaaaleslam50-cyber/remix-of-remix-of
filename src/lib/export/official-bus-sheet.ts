@@ -441,7 +441,16 @@ export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | 
   const COLS = TABLE_COLUMNS.length; // 15
 
   const cells: GridCell[] = [
-    { r: 1, c: 1, rs: 6, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
+    { r: 1, c: 1, rs: 4, cs: 2, v: "كشف رحله", cls: "cream red", style: "font-size:26px" },
+    {
+      r: 5,
+      c: 1,
+      rs: 2,
+      cs: 2,
+      v: esc(h.supervisorName ? `المشرف: ${h.supervisorName}` : "المشرف: —"),
+      cls: "cream red",
+      style: "font-size:14px",
+    },
     { r: 1, c: 3, cs: 2, v: "ذهاب", cls: "cream red", style: "font-size:17px" },
     { r: 2, c: 3, cs: 2, v: esc(h.departureDate), cls: "cream val", style: "font-size:17px" },
     { r: 3, c: 3, cs: 2, v: "عوده", cls: "cream red", style: "font-size:17px" },
