@@ -348,9 +348,12 @@ function MyBookingsPage() {
           <div className="space-y-8">
             {groups.map((g) => (
               <section key={g.title}>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="font-extrabold text-lg">{g.title}</h2>
-                  <Badge variant="secondary" className="rounded-full">{g.items.length}</Badge>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h2 className="font-extrabold text-lg truncate">{g.title}</h2>
+                    <span className="rounded-full bg-green-600 text-white text-xs font-bold px-2 py-0.5 shrink-0">{g.items.length}</span>
+                  </div>
+                  {isRep && <b className="text-emerald-600 shrink-0">{sar(g.profit)}</b>}
                 </div>
                 <div className="grid gap-4">
             {g.items.map((b) => {
