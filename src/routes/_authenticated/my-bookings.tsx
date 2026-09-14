@@ -219,7 +219,8 @@ function MyBookingsPage() {
           </h1>
           <div className="flex gap-2 flex-wrap">
             <Link to="/booking"><Button className="btn-primary-glow rounded-xl">حجز جديد</Button></Link>
-            {isRep && (
+            {/* زر الحجز اليدوي مخفي مؤقتًا (الكود محفوظ) */}
+            {false && isRep && (
               <Button variant="secondary" className="rounded-xl gap-1" onClick={() => setManualOpen((v) => !v)}>
                 <PlusCircle className="h-4 w-4" /> حجز يدوي
               </Button>
