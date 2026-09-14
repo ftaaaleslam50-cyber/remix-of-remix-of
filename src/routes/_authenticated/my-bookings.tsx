@@ -367,50 +367,53 @@ function MyBookingsPage() {
                 eff === "completed" ? { cls: "bg-gray-500 text-white", label: "مكتمل" } :
                 { cls: "bg-green-600 text-white", label: "نشط" };
               return (
-                <div key={b.id} className={`surface-card p-5 border-2 ${cardStyle}`}>
-                  <div className="flex items-start justify-between flex-wrap gap-3">
-                    <div className="flex-1 min-w-[240px]">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-primary text-lg">{b.booking_code}</span>
-                        <Badge className={badge.cls}>{badge.label}</Badge>
-                        {b.no_hotel && <Badge variant="outline">بدون فندق</Badge>}
-                        {b.no_bus && <Badge variant="outline">بدون حافلة</Badge>}
-                      </div>
-                      <p className="mt-2 flex items-start gap-2 font-bold text-base">
-                        <User className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        <span className="break-words whitespace-normal">{b.customer_name || "—"}</span>
-                      </p>
-
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{formatDateTime(b.created_at)}</b></span>
-                        {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)}</b></span>}
-                        {b.packages && <span className="flex items-center gap-2 text-muted-foreground"><Hotel className="h-4 w-4" /> الفندق: <b className="text-foreground">{b.packages.name}</b></span>}
-                        {b.buses && <span className="flex items-center gap-2 text-muted-foreground"><Bus className="h-4 w-4" /> الحافلة: <b className="text-foreground">{b.buses.name || `حافلة ${b.buses.bus_number}`}</b></span>}
-                        {b.seat_numbers && b.seat_numbers.length > 0 && <span className="flex items-center gap-2 text-muted-foreground col-span-full">🎫 المقاعد: <b className="text-foreground font-mono">{b.seat_numbers.join(", ")}</b></span>}
-                        <span className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /> عدد الأفراد: <b className="text-foreground">{b.passenger_count}</b></span>
-                      </div>
+                <div key={b.id} className={`surface-card p-4 border-2 ${cardStyle}`}>
+                  {/* السطر الأول: الاسم + الحالة، والسعر على اليسار */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <User className="h-4 w-4 text-primary shrink-0" />
+                      <span className="font-bold break-words">{b.customer_name || "—"}</span>
+                      <Badge className={`${badge.cls} shrink-0`}>{badge.label}</Badge>
                     </div>
-                    <div className="text-left">
-                      <p className="text-2xl font-extrabold text-primary">{sar(b.total_price)}</p>
-                      {isRep && (
-                        <>
-                          <p className="mt-1 text-sm font-extrabold text-emerald-600">الربح: {sar(n(b.rep_share))}</p>
-                          <p className="text-[10px] text-muted-foreground">تكلفة المقعد: {sar(seatCostOf(b))}</p>
-                        </>
-                      )}
-                    </div>
+                    <p className="text-lg font-extrabold text-red-600 shrink-0">{sar(b.total_price)}</p>
                   </div>
-                  <div className="mt-4 flex gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" className="rounded-xl gap-1" onClick={() => setDetails(b)}>
-                      <Eye className="h-3 w-3" /> عرض التفاصيل
+
+                  {/* السطر الثاني: تفاصيل قابلة للسحب أفقيًا */}
+                  <div className="mt-2 flex items-center gap-4 overflow-x-auto whitespace-nowrap text-sm pb-1">
+                    {isRep && (
+                      <span className="flex items-center gap-1.5 font-extrabold text-emerald-600 shrink-0">
+                        <TrendingUp className="h-4 w-4" /> {sar(n(b.rep_share))}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5 font-bold shrink-0">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      {b.trips
+                        ? departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)
+                        : formatDateTime(b.created_at)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Hotel className="h-4 w-4" /> {b.packages?.name || "بدون فندق"}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Bus className="h-4 w-4" /> {b.buses ? (b.buses.name || `حافلة ${b.buses.bus_number}`) : "بدون حافلة"}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Users className="h-4 w-4" /> {b.passenger_count}
+                    </span>
+                  </div>
+
+                  {/* السطر الثالث: الأزرار */}
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 rounded-xl gap-1" onClick={() => setDetails(b)}>
+                      <Eye className="h-3 w-3" /> تفاصيل
                     </Button>
                     {canModify && (
                       <>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1" onClick={() => editBooking(b.booking_code)}>
-                          <Edit className="h-3 w-3" /> تعديل الحجز
+                        <Button size="sm" variant="outline" className="flex-1 rounded-xl gap-1" onClick={() => editBooking(b.booking_code)}>
+                          <Edit className="h-3 w-3" /> تعديل
                         </Button>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1 text-destructive hover:bg-destructive/10" onClick={() => deleteBooking(b)}>
-                          <XCircle className="h-3 w-3" /> حذف الحجز
+                        <Button size="sm" variant="outline" className="flex-1 rounded-xl gap-1 border-destructive text-destructive hover:bg-destructive/10" onClick={() => deleteBooking(b)}>
+                          <XCircle className="h-3 w-3" /> حذف
                         </Button>
                       </>
                     )}
