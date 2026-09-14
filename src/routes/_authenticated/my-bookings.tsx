@@ -152,8 +152,8 @@ function MyBookingsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = sorted;
-    // للمناديب: الفلتر الزمني يشمل قائمة الحجوزات نفسها (وكل حجز يظهر ربحه).
-    if (isRep && activeWeek) {
+    // فلتر الأسبوع يتحكم في الصفحة كلها (الملخص + القائمة).
+    if (activeWeek) {
       list = list.filter((b) => {
         const t = refTimeOf(b);
         return t >= activeWeek.start && t < activeWeek.end;
@@ -165,89 +165,29 @@ function MyBookingsPage() {
       (b.booking_code || "").toLowerCase().includes(q) ||
       (b.contact_phone || "").includes(q)
     );
-  }, [sorted, search, isRep, activeWeek]);
+  }, [sorted, search, activeWeek]);
 
   const tripLabelOf = (b: MyBooking) =>
     b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
 
+  /** تجميع الحجوزات تحت كل رحلة مع إجمالي ربحها. */
   const groups = useMemo(() => {
-    const out: { title: string; items: MyBooking[] }[] = [];
-    const push = (title: string, items: MyBooking[], forceByTrip = false) => {
-      if (!items.length) return;
-      if (!forceByTrip && items.length < 10) { out.push({ title, items }); return; }
-      const byTrip = new Map<string, MyBooking[]>();
-      for (const b of items) {
-        const k = tripLabelOf(b);
-        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
-      }
-      for (const [k, v] of byTrip) out.push({ title: `${title} — ${k}`, items: v });
-    };
-
-    if (isRep) {
-      // أسبوع محدد بالتاريخ: التجميع حسب الرحلة فقط.
-      const byTrip = new Map<string, MyBooking[]>();
-      for (const b of filtered) {
-        const k = tripLabelOf(b);
-        byTrip.set(k, [...(byTrip.get(k) ?? []), b]);
-      }
-      for (const [k, v] of byTrip) out.push({ title: k, items: v });
-      return out;
-    }
-
-    const thisWeekStart = startOfWeek(new Date()).getTime();
-    const lastWeekStart = thisWeekStart - 7 * 86400000;
-    const buckets: Record<string, MyBooking[]> = { current: [], last: [], older: [] };
+    const map = new Map<string, { title: string; items: MyBooking[]; profit: number; time: number }>();
     for (const b of filtered) {
-      const t = refTimeOf(b);
-      if (t >= thisWeekStart) buckets.current.push(b);
-      else if (t >= lastWeekStart) buckets.last.push(b);
-      else buckets.older.push(b);
+      const k = tripLabelOf(b);
+      const cur = map.get(k) ?? { title: k, items: [], profit: 0, time: refTimeOf(b) };
+      cur.items.push(b);
+      if (b.status !== "cancelled") cur.profit += n(b.rep_share);
+      map.set(k, cur);
     }
-    push("حجوزات الأسبوع الحالي", buckets.current);
-    push("حجوزات الأسبوع الماضي", buckets.last);
-    push("حجوزات سابقة", buckets.older, true);
-    return out;
-  }, [filtered, isRep]);
+    return [...map.values()].sort((a, b) => b.time - a.time);
+  }, [filtered]);
 
-  /** Mini dashboard: bookings / passengers / rooms per trip (active bookings only). */
-  const tripStats = useMemo(() => {
-    const active = bookings.filter((b) => effectiveStatus(b) === "active");
-    const map = new Map<string, { label: string; bookings: number; passengers: number; rooms: number; time: number }>();
-    for (const b of active) {
-      const key = `${b.trip_id ?? "none"}-${b.departure_date ?? b.trips?.departure_date ?? ""}`;
-      const label = tripLabelOf(b);
-      const cur = map.get(key) ?? { label, bookings: 0, passengers: 0, rooms: 0, time: new Date((b.departure_date ?? b.trips?.departure_date ?? b.created_at) as string).getTime() || 0 };
-      cur.bookings += 1;
-      cur.passengers += b.passenger_count || 0;
-      if (!b.no_hotel) {
-        const cap = Number(b.room_type) || 0;
-        cur.rooms += cap > 0 ? Math.ceil((b.passenger_count || 0) / cap) : 0;
-      }
-      map.set(key, cur);
-    }
-    const rows = [...map.values()].sort((a, b) => b.time - a.time);
-    const totals = rows.reduce((t, r) => ({ bookings: t.bookings + r.bookings, passengers: t.passengers + r.passengers, rooms: t.rooms + r.rooms }), { bookings: 0, passengers: 0, rooms: 0 });
-    return { rows, totals };
-  }, [bookings]);
-
-  /** داشبورد أرباح المندوب للأسبوع المختار: الإجمالي + كل رحلة وعددها. */
-  const earningsStats = useMemo(() => {
-    const rows = new Map<string, { label: string; profit: number; count: number; passengers: number; time: number }>();
-    let total = 0, count = 0, seatCost = 0;
-    for (const b of filtered) {
-      if (b.status === "cancelled") continue;
-      const profit = n(b.rep_share);
-      total += profit;
-      count += 1;
-      seatCost += seatCostOf(b) * (b.passenger_count || 0);
-      const key = tripLabelOf(b);
-      const cur = rows.get(key) ?? { label: key, profit: 0, count: 0, passengers: 0, time: refTimeOf(b) };
-      cur.profit += profit;
-      cur.count += 1;
-      cur.passengers += b.passenger_count || 0;
-      rows.set(key, cur);
-    }
-    return { total, count, seatCost, rows: [...rows.values()].sort((a, b) => b.time - a.time) };
+  /** ملخص الأسبوع المختار: إجمالي الربح + عدد الحجوزات. */
+  const summary = useMemo(() => {
+    let total = 0;
+    for (const b of filtered) if (b.status !== "cancelled") total += n(b.rep_share);
+    return { total, count: filtered.length };
   }, [filtered]);
 
 
@@ -304,85 +244,34 @@ function MyBookingsPage() {
           </div>
         )}
 
-        {!isLoading && tripStats.rows.length > 0 && (
-          <section className="surface-card p-4 mb-5" aria-label="ملخص الحجوزات">
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {[
-                { label: "الحجوزات", value: tripStats.totals.bookings, icon: Ticket },
-                { label: "الأفراد", value: tripStats.totals.passengers, icon: Users },
-                { label: "الغرف", value: tripStats.totals.rooms, icon: Hotel },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl bg-primary/5 border border-primary/15 p-3 text-center">
-                  <s.icon className="h-4 w-4 mx-auto text-primary" />
-                  <p className="text-xl font-extrabold text-primary mt-1">{s.value}</p>
-                  <p className="text-[11px] text-muted-foreground font-semibold">{s.label}</p>
-                </div>
+        <section className="surface-card p-4 mb-5" aria-label="ملخص الأسبوع">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+            <h2 className="font-extrabold text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" /> ملخص الأسبوع
+            </h2>
+            <select
+              className="h-9 rounded-xl border bg-background px-3 text-sm"
+              value={weekBack}
+              onChange={(e) => setWeekBack(Number(e.target.value))}
+            >
+              {weekOptions.map((w) => (
+                <option key={w.value} value={w.value}>{w.label}</option>
               ))}
-            </div>
-            <div className="divide-y divide-border/60 text-sm">
-              {tripStats.rows.map((r) => (
-                <div key={r.label} className="flex items-center justify-between gap-3 py-2">
-                  <span className="font-semibold truncate flex items-center gap-1.5 min-w-0"><MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span></span>
-                  <span className="flex items-center gap-1.5 shrink-0 text-xs">
-                    <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.bookings}</Badge>
-                    <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
-                    <Badge variant="secondary" className="rounded-full gap-1"><Hotel className="h-3 w-3" />{r.rooms}</Badge>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {isRep && (
-          <section className="surface-card p-4 mb-5" aria-label="أرباحي">
-            <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-              <h2 className="font-extrabold text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" /> أرباحي
-              </h2>
-              <select
-                className="h-9 rounded-xl border bg-background px-3 text-sm"
-                value={weekBack}
-                onChange={(e) => setWeekBack(Number(e.target.value))}
-              >
-                {weekOptions.map((w) => (
-                  <option key={w.value} value={w.value}>{w.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {isRep && (
               <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
-                <p className="text-2xl font-extrabold text-primary">{sar(earningsStats.total)}</p>
+                <p className="text-2xl font-extrabold text-emerald-600">{sar(summary.total)}</p>
                 <p className="text-[11px] text-muted-foreground font-semibold mt-1">أرباح الأسبوع ({activeWeek?.label})</p>
-                <p className="text-[10px] text-muted-foreground mt-1">تكلفة المقعد: {sar(earningsStats.seatCost)}</p>
-              </div>
-              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
-                <p className="text-2xl font-extrabold text-primary">{earningsStats.count}</p>
-                <p className="text-[11px] text-muted-foreground font-semibold mt-1">عدد الحجوزات</p>
-              </div>
-            </div>
-
-            {earningsStats.rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-3">لا توجد حجوزات في هذا الأسبوع.</p>
-            ) : (
-              <div className="divide-y divide-border/60 text-sm">
-                {earningsStats.rows.map((r) => (
-                  <div key={r.label} className="flex items-center justify-between gap-3 py-2">
-                    <span className="font-semibold truncate flex items-center gap-1.5 min-w-0">
-                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{r.label}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5 shrink-0 text-xs">
-                      <Badge variant="secondary" className="rounded-full gap-1"><Ticket className="h-3 w-3" />{r.count}</Badge>
-                      <Badge variant="secondary" className="rounded-full gap-1"><Users className="h-3 w-3" />{r.passengers}</Badge>
-                      <b className="text-primary">{sar(r.profit)}</b>
-                    </span>
-                  </div>
-                ))}
               </div>
             )}
-          </section>
-        )}
+            <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
+              <p className="text-2xl font-extrabold text-primary">{summary.count}</p>
+              <p className="text-[11px] text-muted-foreground font-semibold mt-1">الحجوزات</p>
+            </div>
+          </div>
+        </section>
 
         <div className="relative mb-5">
           <Search className="h-4 w-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
@@ -408,9 +297,12 @@ function MyBookingsPage() {
           <div className="space-y-8">
             {groups.map((g) => (
               <section key={g.title}>
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="font-extrabold text-lg">{g.title}</h2>
-                  <Badge variant="secondary" className="rounded-full">{g.items.length}</Badge>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h2 className="font-extrabold text-lg truncate">{g.title}</h2>
+                    <span className="rounded-full bg-green-600 text-white text-xs font-bold px-2 py-0.5 shrink-0">{g.items.length}</span>
+                  </div>
+                  {isRep && <b className="text-emerald-600 shrink-0">{sar(g.profit)}</b>}
                 </div>
                 <div className="grid gap-4">
             {g.items.map((b) => {
@@ -427,50 +319,53 @@ function MyBookingsPage() {
                 eff === "completed" ? { cls: "bg-gray-500 text-white", label: "مكتمل" } :
                 { cls: "bg-green-600 text-white", label: "نشط" };
               return (
-                <div key={b.id} className={`surface-card p-5 border-2 ${cardStyle}`}>
-                  <div className="flex items-start justify-between flex-wrap gap-3">
-                    <div className="flex-1 min-w-[240px]">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-primary text-lg">{b.booking_code}</span>
-                        <Badge className={badge.cls}>{badge.label}</Badge>
-                        {b.no_hotel && <Badge variant="outline">بدون فندق</Badge>}
-                        {b.no_bus && <Badge variant="outline">بدون حافلة</Badge>}
-                      </div>
-                      <p className="mt-2 flex items-start gap-2 font-bold text-base">
-                        <User className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        <span className="break-words whitespace-normal">{b.customer_name || "—"}</span>
-                      </p>
-
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> تاريخ الحجز: <b className="text-foreground">{formatDateTime(b.created_at)}</b></span>
-                        {b.trips && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> تاريخ الرحلة: <b className="text-foreground">{departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)}</b></span>}
-                        {b.packages && <span className="flex items-center gap-2 text-muted-foreground"><Hotel className="h-4 w-4" /> الفندق: <b className="text-foreground">{b.packages.name}</b></span>}
-                        {b.buses && <span className="flex items-center gap-2 text-muted-foreground"><Bus className="h-4 w-4" /> الحافلة: <b className="text-foreground">{b.buses.name || `حافلة ${b.buses.bus_number}`}</b></span>}
-                        {b.seat_numbers && b.seat_numbers.length > 0 && <span className="flex items-center gap-2 text-muted-foreground col-span-full">🎫 المقاعد: <b className="text-foreground font-mono">{b.seat_numbers.join(", ")}</b></span>}
-                        <span className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /> عدد الأفراد: <b className="text-foreground">{b.passenger_count}</b></span>
-                      </div>
+                <div key={b.id} className={`surface-card p-4 border-2 ${cardStyle}`}>
+                  {/* السطر الأول: الاسم + الحالة، والسعر على اليسار */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <User className="h-4 w-4 text-primary shrink-0" />
+                      <span className="font-bold break-words">{b.customer_name || "—"}</span>
+                      <Badge className={`${badge.cls} shrink-0`}>{badge.label}</Badge>
                     </div>
-                    <div className="text-left">
-                      <p className="text-2xl font-extrabold text-primary">{sar(b.total_price)}</p>
-                      {isRep && (
-                        <>
-                          <p className="mt-1 text-sm font-extrabold text-emerald-600">الربح: {sar(n(b.rep_share))}</p>
-                          <p className="text-[10px] text-muted-foreground">تكلفة المقعد: {sar(seatCostOf(b))}</p>
-                        </>
-                      )}
-                    </div>
+                    <p className="text-lg font-extrabold text-red-600 shrink-0">{sar(b.total_price)}</p>
                   </div>
-                  <div className="mt-4 flex gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" className="rounded-xl gap-1" onClick={() => setDetails(b)}>
-                      <Eye className="h-3 w-3" /> عرض التفاصيل
+
+                  {/* السطر الثاني: تفاصيل قابلة للسحب أفقيًا */}
+                  <div className="mt-2 flex items-center gap-4 overflow-x-auto whitespace-nowrap text-sm pb-1">
+                    {isRep && (
+                      <span className="flex items-center gap-1.5 font-extrabold text-emerald-600 shrink-0">
+                        <TrendingUp className="h-4 w-4" /> {sar(n(b.rep_share))}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5 font-bold shrink-0">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      {b.trips
+                        ? departureDisplay(b.departure_date ?? b.trips.departure_date, b.trips.departure_day, "-", b.trip_mode)
+                        : formatDateTime(b.created_at)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Hotel className="h-4 w-4" /> {b.packages?.name || "بدون فندق"}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Bus className="h-4 w-4" /> {b.buses ? (b.buses.name || `حافلة ${b.buses.bus_number}`) : "بدون حافلة"}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Users className="h-4 w-4" /> {b.passenger_count}
+                    </span>
+                  </div>
+
+                  {/* السطر الثالث: الأزرار */}
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 rounded-xl gap-1" onClick={() => setDetails(b)}>
+                      <Eye className="h-3 w-3" /> تفاصيل
                     </Button>
                     {canModify && (
                       <>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1" onClick={() => editBooking(b.booking_code)}>
-                          <Edit className="h-3 w-3" /> تعديل الحجز
+                        <Button size="sm" variant="outline" className="flex-1 rounded-xl gap-1" onClick={() => editBooking(b.booking_code)}>
+                          <Edit className="h-3 w-3" /> تعديل
                         </Button>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1 text-destructive hover:bg-destructive/10" onClick={() => deleteBooking(b)}>
-                          <XCircle className="h-3 w-3" /> حذف الحجز
+                        <Button size="sm" variant="outline" className="flex-1 rounded-xl gap-1 border-destructive text-destructive hover:bg-destructive/10" onClick={() => deleteBooking(b)}>
+                          <XCircle className="h-3 w-3" /> حذف
                         </Button>
                       </>
                     )}
