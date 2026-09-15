@@ -184,11 +184,18 @@ export function renderSeatChartPages(
     ctx.textAlign = "center";
     if (cell.kind !== "seat") {
       if (cell.kind === "supervisor") {
+        const centerX = x + CELL_W / 2;
+        ctx.strokeStyle = COLORS.navy;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(centerX, y + 29, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX, y + 67, 24, Math.PI, Math.PI * 2);
+        ctx.stroke();
         ctx.fillStyle = COLORS.navy;
-        ctx.font = F(32, true);
-        ctx.fillText("👤", x + CELL_W / 2, y + 37);
         ctx.font = F(16, true);
-        ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + 75);
+        ctx.fillText(cell.label || kindLabel(cell.kind), centerX, y + 92);
       } else {
         ctx.font = F(18, true);
         ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + CELL_H / 2);
