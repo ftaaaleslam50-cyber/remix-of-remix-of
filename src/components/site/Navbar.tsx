@@ -39,13 +39,13 @@ export function Navbar() {
       setUserId(uid);
        if (!uid) { setDisplayName(""); setAvatarUrl(""); setIsAdmin(false); setIsRepresentative(false); return; }
        const [{ data: prof }, { data: role }, { data: representativeRole }] = await Promise.all([
-        supabase.from("profiles").select("full_name,avatar_url,mobile_phone").eq("id", uid).maybeSingle(),
+         supabase.from("profiles").select("full_name,avatar_url,mobile_phone,account_type").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid).in("role", ["admin", "manager", "supervisor"]).maybeSingle(),
          supabase.from("user_roles").select("role").eq("user_id", uid).eq("role", "representative").maybeSingle(),
       ]);
       setDisplayName(prof?.full_name || prof?.mobile_phone || "حسابي");
       setIsAdmin(!!role);
-       setIsRepresentative(!!representativeRole);
+       setIsRepresentative(!!representativeRole || prof?.account_type === "representative");
       if (prof?.avatar_url) {
         const { data } = await supabase.storage.from("avatars").createSignedUrl(prof.avatar_url, 3600);
         if (data?.signedUrl) setAvatarUrl(data.signedUrl);
