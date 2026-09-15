@@ -1265,7 +1265,7 @@ function UnifiedBookingsTab(props: {
             total: Object.values(e.rooms).reduce((s, n) => s + n, 0),
             lines: Object.entries(e.rooms)
               .sort((a, z) => Number(a[0]) - Number(z[0]))
-              .map(([k, n]) => `${n} ${roomLabels[k] ?? k}`),
+              .map(([k, n]) => `${roomLabels[k] ?? k}:${n}`),
           }))
           .sort((a, z) => z.total - a.total);
         const rooms = hotelStats.reduce((s, h) => s + h.total, 0);
@@ -1291,10 +1291,14 @@ function UnifiedBookingsTab(props: {
                     `حجوزات اليوم: ${todayCount}`,
                     ...(tripId ? [`مواعيد العودة: ${returnCount}`] : []),
                     `${tripId ? "حافلات الرحلة" : "إجمالي الحافلات"}: ${busesInScope}`,
-                    `الغرف: ${rooms}${sharedPeople > 0 ? ` (+ ${sharedPeople} أفراد مشترك)` : ""}`,
+                     `اجمالي الغرف في كل الفنادق: ${rooms}${sharedPeople > 0 ? ` (+ ${sharedPeople} أفراد مشترك)` : ""}`,
                     ...hotelStats.map(
-                      (h) =>
-                        `${h.hotel}: ${h.total} غرفة — ${h.lines.join("، ")}${h.shared > 0 ? ` — + ${h.shared} أفراد مشترك` : ""}`,
+                       (h) => [
+                         `اجمالي غرف فندق ${h.hotel}= ${h.total} غرفة`,
+                         "بيانها:",
+                         ...h.lines,
+                         ...(h.shared > 0 ? [`+ أفراد مشترك: ${h.shared}`] : []),
+                       ].join("\n"),
                     ),
                     `بدون فندق: ${noHotelPeople} فرد (${noHotelBookings} حجز)`,
                   ];
@@ -1370,14 +1374,18 @@ function UnifiedBookingsTab(props: {
                     className="rounded-full h-7 px-3 text-xs"
                     onClick={() => {
                       const lines = [
-                        `الغرف: ${rooms}${sharedPeople > 0 ? ` (+ ${sharedPeople} أفراد مشترك)` : ""}`,
+                        `اجمالي الغرف في كل الفنادق: ${rooms}${sharedPeople > 0 ? ` (+ ${sharedPeople} أفراد مشترك)` : ""}`,
                         ...hotelStats.map(
-                          (h) =>
-                            `${h.hotel}: ${h.total} غرفة — ${h.lines.join("، ")}${h.shared > 0 ? ` — + ${h.shared} أفراد مشترك` : ""}`,
+                          (h) => [
+                            `اجمالي غرف فندق ${h.hotel}= ${h.total} غرفة`,
+                            "بيانها:",
+                            ...h.lines,
+                            ...(h.shared > 0 ? [`+ أفراد مشترك: ${h.shared}`] : []),
+                          ].join("\n"),
                         ),
                       ];
                       navigator.clipboard
-                        .writeText(lines.join("\n"))
+                        .writeText(lines.join("\n\n"))
                         .then(() => toast.success("تم نسخ بيان الغرف"))
                         .catch(() => toast.error("تعذر النسخ"));
                     }}

@@ -212,20 +212,20 @@ function MyBookingsPage() {
 
   return (
     <SiteLayout>
-      <div className="container-luxe py-10 max-w-5xl">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl md:text-3xl font-extrabold flex items-center gap-2">
-            <Ticket className="h-6 w-6 text-primary" /> {isRep ? "حجوزاتي وأرباحي" : "حجوزاتي"}
+      <div className="container-luxe py-5 sm:py-10 max-w-5xl">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="flex items-center gap-2 whitespace-nowrap text-xl font-extrabold sm:text-3xl">
+            <Ticket className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" /> {isRep ? "حجوزاتي وأرباحي" : "حجوزاتي"}
           </h1>
-          <div className="flex gap-2 flex-wrap">
-            <Link to="/booking"><Button className="btn-primary-glow rounded-xl">حجز جديد</Button></Link>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Link to="/booking" className="min-w-0"><Button className="btn-primary-glow w-full rounded-xl">حجز جديد</Button></Link>
             {/* زر الحجز اليدوي مخفي مؤقتًا (الكود محفوظ) */}
             {false && isRep && (
               <Button variant="secondary" className="rounded-xl gap-1" onClick={() => setManualOpen((v) => !v)}>
                 <PlusCircle className="h-4 w-4" /> حجز يدوي
               </Button>
             )}
-            <Link to="/"><Button variant="outline" className="rounded-xl gap-1"><ArrowRight className="h-4 w-4" /> الرئيسية</Button></Link>
+            <Link to="/" className="min-w-0"><Button variant="outline" className="w-full rounded-xl gap-1"><ArrowRight className="h-4 w-4" /> الرئيسية</Button></Link>
           </div>
         </div>
 
@@ -245,13 +245,13 @@ function MyBookingsPage() {
           </div>
         )}
 
-        <section className="surface-card p-4 mb-5" aria-label="ملخص الأسبوع">
-          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-            <h2 className="font-extrabold text-lg flex items-center gap-2">
+        <section className="surface-card mb-4 p-3 sm:mb-5 sm:p-4" aria-label="ملخص الأسبوع">
+          <div className="mb-3 grid gap-2 sm:flex sm:items-center sm:justify-between">
+            <h2 className="flex items-center gap-2 text-base font-extrabold sm:text-lg">
               <TrendingUp className="h-5 w-5 text-primary" /> ملخص الأسبوع
             </h2>
             <select
-              className="h-9 rounded-xl border bg-background px-3 text-sm"
+              className="h-9 w-full rounded-xl border bg-background px-3 text-sm sm:w-auto"
               value={weekBack}
               onChange={(e) => setWeekBack(Number(e.target.value))}
             >
@@ -262,13 +262,13 @@ function MyBookingsPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             {isRep && (
-              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
-                <p className="text-2xl font-extrabold text-emerald-600">{sar(summary.total)}</p>
+               <div className="rounded-xl bg-primary/5 border border-primary/15 p-2.5 text-center sm:p-4">
+                 <p className="text-lg font-extrabold text-emerald-600 sm:text-2xl">{sar(summary.total)}</p>
                 <p className="text-[11px] text-muted-foreground font-semibold mt-1">أرباح الأسبوع ({activeWeek?.label})</p>
               </div>
             )}
-            <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 text-center">
-              <p className="text-2xl font-extrabold text-primary">{summary.count}</p>
+             <div className="rounded-xl bg-primary/5 border border-primary/15 p-2.5 text-center sm:p-4">
+               <p className="text-lg font-extrabold text-primary sm:text-2xl">{summary.count}</p>
               <p className="text-[11px] text-muted-foreground font-semibold mt-1">الحجوزات</p>
             </div>
           </div>

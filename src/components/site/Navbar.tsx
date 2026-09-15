@@ -21,6 +21,7 @@ export function Navbar() {
   const [displayName, setDisplayName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isRepresentative, setIsRepresentative] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading: authLoading } = useAuth();
 
@@ -36,13 +37,15 @@ export function Navbar() {
   useEffect(() => {
     async function hydrate(uid: string | null) {
       setUserId(uid);
-      if (!uid) { setDisplayName(""); setAvatarUrl(""); setIsAdmin(false); return; }
-      const [{ data: prof }, { data: role }] = await Promise.all([
-        supabase.from("profiles").select("full_name,avatar_url,mobile_phone").eq("id", uid).maybeSingle(),
+       if (!uid) { setDisplayName(""); setAvatarUrl(""); setIsAdmin(false); setIsRepresentative(false); return; }
+       const [{ data: prof }, { data: role }, { data: representativeRole }] = await Promise.all([
+         supabase.from("profiles").select("full_name,avatar_url,mobile_phone,account_type").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid).in("role", ["admin", "manager", "supervisor"]).maybeSingle(),
+         supabase.from("user_roles").select("role").eq("user_id", uid).eq("role", "representative").maybeSingle(),
       ]);
       setDisplayName(prof?.full_name || prof?.mobile_phone || "حسابي");
       setIsAdmin(!!role);
+       setIsRepresentative(!!representativeRole || prof?.account_type === "representative");
       if (prof?.avatar_url) {
         const { data } = await supabase.storage.from("avatars").createSignedUrl(prof.avatar_url, 3600);
         if (data?.signedUrl) setAvatarUrl(data.signedUrl);
@@ -96,7 +99,7 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild><Link to="/profile" className="cursor-pointer"><UserIcon className="h-4 w-4 ml-2" /> الملف الشخصي</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/my-bookings" className="cursor-pointer">🎫 حجوزاتي</Link></DropdownMenuItem>
+                 <DropdownMenuItem asChild><Link to="/my-bookings" className="cursor-pointer">🎫 {isRepresentative ? "حجوزاتي وأرباحي" : "حجوزاتي"}</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/notifications" className="cursor-pointer">🔔 الإشعارات</Link></DropdownMenuItem>
 
                 {isAdmin && (
@@ -131,7 +134,7 @@ export function Navbar() {
             {userId ? (
               <>
                 <Link to="/profile" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الملف الشخصي</Link>
-                <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">حجوزاتي</Link>
+                 <Link to="/my-bookings" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">{isRepresentative ? "حجوزاتي وأرباحي" : "حجوزاتي"}</Link>
                 <Link to="/notifications" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">الإشعارات</Link>
 
                 {isAdmin && <Link to="/dashboard" className="px-4 py-3 rounded-xl text-base font-semibold hover:bg-muted">لوحة التحكم</Link>}

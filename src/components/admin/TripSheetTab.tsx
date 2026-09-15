@@ -763,7 +763,7 @@ export function TripSheetTab() {
     { key: "groupCost", label: "ت. المجموعه بالمرافقين الباقه الاساسية" },
     { key: "extensionCost", label: "ت. التمديد" },
     { key: "extensionProfit", label: "ربح التمديد" },
-    { key: "grossProfit", label: "مجمل ربح" },
+    { key: "grossProfit", label: "مجمل الربح" },
     { key: "rate", label: "نسبة المندوب" },
     { key: "repShare", label: "حصة المندوب" },
     { key: "companyShare", label: "حصة المؤسسه" },
@@ -856,11 +856,12 @@ export function TripSheetTab() {
   function SortHeader({ col }: { col: (typeof COLUMN_DEFS)[number] }) {
     const active = sort?.key === col.key;
     const Icon = !active ? ArrowUpDown : sort!.dir === "asc" ? ArrowUp : ArrowDown;
+    const activeColor = col.key === "grossProfit" ? "text-destructive-foreground" : "text-primary";
     return (
       <button
         type="button"
         onClick={() => toggleSort(col.key)}
-        className={`flex items-center gap-1 w-full justify-center ${active ? "text-primary" : ""}`}
+        className={`flex items-center gap-1 w-full justify-center ${active ? activeColor : ""}`}
         title="ترتيب"
       >
         {col.label}
@@ -940,7 +941,12 @@ export function TripSheetTab() {
                 <SortHeader col={{ key: "index", label: "م" }} />
               </th>
               {COLUMN_DEFS.map((c) => (
-                <th key={c.key} className="border px-2 py-0.5 leading-tight whitespace-nowrap font-bold">
+                <th
+                  key={c.key}
+                  className={`border px-2 py-0.5 leading-tight whitespace-nowrap font-bold ${
+                    c.key === "grossProfit" ? "bg-destructive text-destructive-foreground" : ""
+                  }`}
+                >
                   <SortHeader col={c} />
                 </th>
               ))}
@@ -984,7 +990,7 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5 text-center">{round(r.groupCost)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.extensionCost)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.extensionProfit)}</td>
-                <td className="border px-2 py-0.5 text-center font-bold">{round(r.grossProfit)}</td>
+                <td className="border border-destructive px-2 py-0.5 text-center font-bold bg-destructive text-destructive-foreground">{round(r.grossProfit)}</td>
                 <td className="border px-2 py-0.5 text-center">{r.rate}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.repShare)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.companyShare)}</td>
@@ -1013,7 +1019,7 @@ export function TripSheetTab() {
               <td className="border px-2 py-0.5 text-center">{round(totals.groupCost)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionCost)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.extensionProfit)}</td>
-              <td className="border px-2 py-0.5 text-center">{round(totals.grossProfit)}</td>
+              <td className="border border-destructive px-2 py-0.5 text-center bg-destructive text-destructive-foreground">{round(totals.grossProfit)}</td>
               <td className="border px-2 py-0.5" />
               <td className="border px-2 py-0.5 text-center">{round(totals.repShare)}</td>
               <td className="border px-2 py-0.5 text-center">{round(totals.companyShare)}</td>
