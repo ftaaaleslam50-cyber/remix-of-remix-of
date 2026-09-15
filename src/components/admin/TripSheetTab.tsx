@@ -763,7 +763,7 @@ export function TripSheetTab() {
     { key: "groupCost", label: "ت. المجموعه بالمرافقين الباقه الاساسية" },
     { key: "extensionCost", label: "ت. التمديد" },
     { key: "extensionProfit", label: "ربح التمديد" },
-    { key: "grossProfit", label: "مجمل ربح" },
+    { key: "grossProfit", label: "مجمل الربح" },
     { key: "rate", label: "نسبة المندوب" },
     { key: "repShare", label: "حصة المندوب" },
     { key: "companyShare", label: "حصة المؤسسه" },
