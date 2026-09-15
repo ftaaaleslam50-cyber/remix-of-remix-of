@@ -183,8 +183,16 @@ export function renderSeatChartPages(
     ctx.direction = "rtl";
     ctx.textAlign = "center";
     if (cell.kind !== "seat") {
-      ctx.font = F(18, true);
-      ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + CELL_H / 2);
+      if (cell.kind === "supervisor") {
+        ctx.fillStyle = COLORS.navy;
+        ctx.font = F(32, true);
+        ctx.fillText("👤", x + CELL_W / 2, y + 37);
+        ctx.font = F(16, true);
+        ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + 75);
+      } else {
+        ctx.font = F(18, true);
+        ctx.fillText(cell.label || kindLabel(cell.kind), x + CELL_W / 2, y + CELL_H / 2);
+      }
       continue;
     }
     ctx.font = F(22, true);
@@ -267,7 +275,7 @@ export function renderSeatChartPages(
 }
 
 function kindLabel(kind: string) {
-  return kind === "driver" ? "السائق" : kind === "door" ? "باب" : kind === "restroom" ? "دورة مياه" : "";
+  return kind === "driver" ? "السائق" : kind === "supervisor" ? "مقعد المشرف" : kind === "door" ? "باب" : kind === "restroom" ? "دورة مياه" : "";
 }
 
 function shorten(s: string, max: number) {
