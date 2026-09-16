@@ -152,6 +152,7 @@ export function TripSheetTab() {
   const busId = busIds.length === 1 ? busIds[0]! : "";
   const setBusId = (id: string) => setBusIds(id ? [id] : []);
   const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [roomNumbers, setRoomNumbers] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
