@@ -131,8 +131,9 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
-        .eq("created_by", uid)
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
+        // الحجوزات التي أنشأها المستخدم + الحجوزات المسجّلة باسمه كمندوب (ولو أدخلها موظف آخر).
+        .or(`created_by.eq.${uid},rep_profile_id.eq.${uid}`)
         .or("deleted_at.is.null,no_show.is.true")
         .order("created_at", { ascending: false });
       if (error) throw error;
