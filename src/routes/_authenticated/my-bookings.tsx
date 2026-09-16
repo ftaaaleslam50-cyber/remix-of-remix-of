@@ -36,7 +36,7 @@ interface MyBooking {
   rep_share?: number | null;
   trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses: {
-    name: string | null; bus_number: number; capacity?: number | null;
+    name: string | null; bus_number: number; capacity?: number | null; settled_at?: string | null;
     expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null;
     expense_supervisor?: number | null; expense_supervisor_bed?: number | null;
     expense_empty_beds?: number | null; expense_extra?: number | null;
@@ -55,6 +55,15 @@ function seatCostOf(b: MyBooking) {
     n(bus.expense_supervisor) + n(bus.expense_supervisor_bed) + n(bus.expense_empty_beds) +
     n(bus.expense_extra);
   return total ? total / bus.capacity : 0;
+}
+
+/** الربح لا يُحتسب ولا يُعرض إلا بعد اعتماد حسابات حافلة الحجز. */
+function profitSettled(b: MyBooking) {
+  return !!b.buses?.settled_at;
+}
+/** ربح المندوب المعتمد فقط (غير المعتمد = 0 حتى لا يظهر رقم غير نهائي). */
+function repProfitOf(b: MyBooking) {
+  return profitSettled(b) && b.status !== "cancelled" ? n(b.rep_share) : 0;
 }
 
 /** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
@@ -131,8 +140,9 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
-        .eq("created_by", uid)
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
+        // الحجوزات التي أنشأها المستخدم + الحجوزات المسجّلة باسمه كمندوب (ولو أدخلها موظف آخر).
+        .or(`created_by.eq.${uid},rep_profile_id.eq.${uid}`)
         .or("deleted_at.is.null,no_show.is.true")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -177,7 +187,7 @@ function MyBookingsPage() {
       const k = tripLabelOf(b);
       const cur = map.get(k) ?? { title: k, items: [], profit: 0, time: refTimeOf(b) };
       cur.items.push(b);
-      if (b.status !== "cancelled") cur.profit += n(b.rep_share);
+      cur.profit += repProfitOf(b);
       map.set(k, cur);
     }
     return [...map.values()].sort((a, b) => b.time - a.time);
@@ -186,7 +196,7 @@ function MyBookingsPage() {
   /** ملخص الأسبوع المختار: إجمالي الربح + عدد الحجوزات. */
   const summary = useMemo(() => {
     let total = 0;
-    for (const b of filtered) if (b.status !== "cancelled") total += n(b.rep_share);
+    for (const b of filtered) total += repProfitOf(b);
     return { total, count: filtered.length };
   }, [filtered]);
 
@@ -334,9 +344,15 @@ function MyBookingsPage() {
                   {/* السطر الثاني: تفاصيل تلتف على الجوال */}
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] sm:text-sm">
                     {isRep && (
-                      <span className="flex items-center gap-1 font-extrabold text-emerald-600 shrink-0">
-                        <TrendingUp className="h-3.5 w-3.5" /> {sar(n(b.rep_share))}
-                      </span>
+                      profitSettled(b) ? (
+                        <span className="flex items-center gap-1 font-extrabold text-emerald-600 shrink-0">
+                          <TrendingUp className="h-3.5 w-3.5" /> {sar(repProfitOf(b))}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 font-bold text-amber-600 shrink-0">
+                          <TrendingUp className="h-3.5 w-3.5" /> بانتظار اعتماد الحسابات
+                        </span>
+                      )
                     )}
                     <span className="flex items-center gap-1 font-bold shrink-0">
                       <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
