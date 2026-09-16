@@ -187,7 +187,7 @@ function MyBookingsPage() {
       const k = tripLabelOf(b);
       const cur = map.get(k) ?? { title: k, items: [], profit: 0, time: refTimeOf(b) };
       cur.items.push(b);
-      if (b.status !== "cancelled") cur.profit += n(b.rep_share);
+      cur.profit += repProfitOf(b);
       map.set(k, cur);
     }
     return [...map.values()].sort((a, b) => b.time - a.time);
@@ -196,7 +196,7 @@ function MyBookingsPage() {
   /** ملخص الأسبوع المختار: إجمالي الربح + عدد الحجوزات. */
   const summary = useMemo(() => {
     let total = 0;
-    for (const b of filtered) if (b.status !== "cancelled") total += n(b.rep_share);
+    for (const b of filtered) total += repProfitOf(b);
     return { total, count: filtered.length };
   }, [filtered]);
 
@@ -344,9 +344,15 @@ function MyBookingsPage() {
                   {/* السطر الثاني: تفاصيل تلتف على الجوال */}
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] sm:text-sm">
                     {isRep && (
-                      <span className="flex items-center gap-1 font-extrabold text-emerald-600 shrink-0">
-                        <TrendingUp className="h-3.5 w-3.5" /> {sar(n(b.rep_share))}
-                      </span>
+                      profitSettled(b) ? (
+                        <span className="flex items-center gap-1 font-extrabold text-emerald-600 shrink-0">
+                          <TrendingUp className="h-3.5 w-3.5" /> {sar(repProfitOf(b))}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 font-bold text-amber-600 shrink-0">
+                          <TrendingUp className="h-3.5 w-3.5" /> بانتظار اعتماد الحسابات
+                        </span>
+                      )
                     )}
                     <span className="flex items-center gap-1 font-bold shrink-0">
                       <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
