@@ -152,6 +152,7 @@ export function TripSheetTab() {
   const busId = busIds.length === 1 ? busIds[0]! : "";
   const setBusId = (id: string) => setBusIds(id ? [id] : []);
   const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [roomNumbers, setRoomNumbers] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir } | null>(null);
@@ -359,6 +360,7 @@ export function TripSheetTab() {
         if (b.status === "cancelled") return false;
         if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
         if (busIds.length === 0 && tripId && b.trip_id !== tripId) return false;
+        if (sourceFilter && (b.booking_source || "الموقع") !== sourceFilter) return false;
         if (search) {
           const q = search.trim().toLowerCase();
           const hay = `${b.booking_code} ${b.customer_name ?? ""} ${b.id_number ?? ""} ${b.contact_phone ?? ""}`;
@@ -366,8 +368,20 @@ export function TripSheetTab() {
         }
         return true;
       }),
-    [rows, tripId, busIds, search],
+    [rows, tripId, busIds, search, sourceFilter],
   );
+
+  /** كل مصادر الحجز المتاحة (قبل فلتر المصدر نفسه). */
+  const sourceOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((b) => {
+      if (b.status === "cancelled") return;
+      if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return;
+      if (busIds.length === 0 && tripId && b.trip_id !== tripId) return;
+      set.add(b.booking_source || "الموقع");
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, "ar"));
+  }, [rows, tripId, busIds]);
 
   const bus = buses.find((b) => b.id === busId) ?? null;
 
@@ -892,7 +906,7 @@ export function TripSheetTab() {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-3 md:grid-cols-3 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
+      <div className="grid gap-3 md:grid-cols-4 rounded-2xl border-2 border-dashed border-border p-3 bg-muted/40">
         <div>
           <Label className="text-xs mb-1 block">الرحلة</Label>
           <select
@@ -916,6 +930,21 @@ export function TripSheetTab() {
             الحافلة (اختيار متعدد — الحالة معتمدة/غير معتمدة موضّحة جنب كل اسم)
           </Label>
           <BusMultiSelect buses={busesForSelect} value={busIds} onChange={setBusIds} />
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">مصدر الحجز</Label>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— كل المصادر —</option>
+            {sourceOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <Label className="text-xs mb-1 block">بحث</Label>
