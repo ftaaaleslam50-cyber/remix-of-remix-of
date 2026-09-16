@@ -57,6 +57,15 @@ function seatCostOf(b: MyBooking) {
   return total ? total / bus.capacity : 0;
 }
 
+/** الربح لا يُحتسب ولا يُعرض إلا بعد اعتماد حسابات حافلة الحجز. */
+function profitSettled(b: MyBooking) {
+  return !!b.buses?.settled_at;
+}
+/** ربح المندوب المعتمد فقط (غير المعتمد = 0 حتى لا يظهر رقم غير نهائي). */
+function repProfitOf(b: MyBooking) {
+  return profitSettled(b) && b.status !== "cancelled" ? n(b.rep_share) : 0;
+}
+
 /** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
 function refTimeOf(b: MyBooking) {
   const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
