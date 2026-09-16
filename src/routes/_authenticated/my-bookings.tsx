@@ -36,7 +36,7 @@ interface MyBooking {
   rep_share?: number | null;
   trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses: {
-    name: string | null; bus_number: number; capacity?: number | null;
+    name: string | null; bus_number: number; capacity?: number | null; settled_at?: string | null;
     expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null;
     expense_supervisor?: number | null; expense_supervisor_bed?: number | null;
     expense_empty_beds?: number | null; expense_extra?: number | null;
