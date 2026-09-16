@@ -360,6 +360,7 @@ export function TripSheetTab() {
         if (b.status === "cancelled") return false;
         if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
         if (busIds.length === 0 && tripId && b.trip_id !== tripId) return false;
+        if (sourceFilter && (b.booking_source || "الموقع") !== sourceFilter) return false;
         if (search) {
           const q = search.trim().toLowerCase();
           const hay = `${b.booking_code} ${b.customer_name ?? ""} ${b.id_number ?? ""} ${b.contact_phone ?? ""}`;
@@ -367,8 +368,20 @@ export function TripSheetTab() {
         }
         return true;
       }),
-    [rows, tripId, busIds, search],
+    [rows, tripId, busIds, search, sourceFilter],
   );
+
+  /** كل مصادر الحجز المتاحة (قبل فلتر المصدر نفسه). */
+  const sourceOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((b) => {
+      if (b.status === "cancelled") return;
+      if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return;
+      if (busIds.length === 0 && tripId && b.trip_id !== tripId) return;
+      set.add(b.booking_source || "الموقع");
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, "ar"));
+  }, [rows, tripId, busIds]);
 
   const bus = buses.find((b) => b.id === busId) ?? null;
 
