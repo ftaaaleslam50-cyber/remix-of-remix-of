@@ -932,22 +932,40 @@ function BookingPage() {
                     const removed = seats.filter((s) => !next.includes(s));
                     const g = { ...seatGenders };
                     for (const r of removed) delete g[r];
+                    // التوزيع يتكيّف تلقائيًا مع اختيار المستخدم بدل منعه.
+                    let male = maleCount;
+                    let female = femaleCount;
+                    let rebalanced = false;
                     for (const a of added) {
                       const usedMale = Object.values(g).filter((v) => v === "male").length;
                       const usedFemale = Object.values(g).filter((v) => v === "female").length;
-                      let pick: "male" | "female" | null = null;
-                      if (activeGender === "male" && usedMale < maleCount) pick = "male";
-                      else if (activeGender === "female" && usedFemale < femaleCount) pick = "female";
-                      else if (usedMale < maleCount) pick = "male";
-                      else if (usedFemale < femaleCount) pick = "female";
-                      if (!pick) {
-                        toast.warning("اكتمل عدد المقاعد لهذا الجنس. عدّل التوزيع في خطوة عدد الأفراد.");
-                        return;
+                      const want = activeGender;
+                      const usedWant = want === "male" ? usedMale : usedFemale;
+                      const cntWant = want === "male" ? male : female;
+                      const usedOther = want === "male" ? usedFemale : usedMale;
+                      const cntOther = want === "male" ? female : male;
+                      if (usedWant >= cntWant) {
+                        if (usedOther < cntOther) {
+                          // انقل حصة واحدة من الجنس الآخر للجنس المختار.
+                          if (want === "male") {
+                            male += 1;
+                            female -= 1;
+                          } else {
+                            female += 1;
+                            male -= 1;
+                          }
+                          rebalanced = true;
+                        } else {
+                          continue;
+                        }
                       }
-                      g[a] = pick;
+                      g[a] = want;
                     }
+                    if (male !== maleCount) setMaleCount(male);
+                    if (female !== femaleCount) setFemaleCount(female);
+                    if (rebalanced) toast.info(`تم تحديث التوزيع تلقائيًا: ${male} ذكور / ${female} إناث`);
                     setSeatGenders(g);
-                    setSeats(next);
+                    setSeats(next.filter((s) => g[s]));
                   }}
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
@@ -1338,7 +1356,13 @@ function StepPackage({
             </div>
           )}
         </button>
-        {packages.map((p) => {
+        {[...packages]
+          .sort((a, b) => {
+            const da = hotelUnavailableReason(a, { bookingType, passengerCount, tripId }) ? 1 : 0;
+            const db = hotelUnavailableReason(b, { bookingType, passengerCount, tripId }) ? 1 : 0;
+            return da - db;
+          })
+          .map((p) => {
           const active = value === p.id;
           const price = getPackagePrice(p, roomType, passengerCount, pricing);
           const reason = hotelUnavailableReason(p, { bookingType, passengerCount, tripId });
