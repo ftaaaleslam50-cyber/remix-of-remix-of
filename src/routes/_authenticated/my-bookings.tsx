@@ -57,13 +57,21 @@ function seatCostOf(b: MyBooking) {
   return total ? total / bus.capacity : 0;
 }
 
-/** الربح لا يُحتسب ولا يُعرض إلا بعد اعتماد حسابات حافلة الحجز. */
+/** دالة إعادة الحساب لا تكتب الحصة إلا بعد اعتماد الحافلة والفندق معًا. */
 function profitSettled(b: MyBooking) {
-  return !!b.buses?.settled_at;
+  return !!b.buses?.settled_at && b.rep_share != null;
 }
 /** ربح المندوب المعتمد فقط (غير المعتمد = 0 حتى لا يظهر رقم غير نهائي). */
 function repProfitOf(b: MyBooking) {
   return profitSettled(b) && b.status !== "cancelled" ? n(b.rep_share) : 0;
+}
+
+/** هل انتهى موعد الرحلة؟ نستخدم العودة أولًا، ثم الذهاب عند عدم وجودها. */
+function tripEnded(b: MyBooking) {
+  const value = b.return_date ?? b.trips?.return_date ?? b.departure_date ?? b.trips?.departure_date;
+  if (!value) return false;
+  const end = new Date(`${value.slice(0, 10)}T23:59:59`);
+  return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
 }
 
 /** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
@@ -350,7 +358,7 @@ function MyBookingsPage() {
                         </span>
                       ) : (
                         <span className="flex items-center gap-1 font-bold text-amber-600 shrink-0">
-                          <TrendingUp className="h-3.5 w-3.5" /> بانتظار اعتماد الحسابات
+                          <TrendingUp className="h-3.5 w-3.5" /> {tripEnded(b) ? "لم تعتمد الحسابات" : "بانتظار اعتماد الحسابات"}
                         </span>
                       )
                     )}

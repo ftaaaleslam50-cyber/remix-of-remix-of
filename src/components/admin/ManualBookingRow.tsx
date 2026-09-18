@@ -353,7 +353,6 @@ export function ManualBookingRow({
 
   async function save() {
     if (!d.customer_name.trim()) return toast.error("أدخل اسم العميل");
-    if (!d.contact_phone.trim()) return toast.error("أدخل رقم الجوال");
     if (d.male_count + d.female_count !== d.passenger_count) {
       return toast.error("مجموع الذكور والإناث يجب أن يساوي عدد الأفراد");
     }
