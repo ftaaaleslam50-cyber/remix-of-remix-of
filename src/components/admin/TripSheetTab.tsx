@@ -486,11 +486,11 @@ export function TripSheetTab() {
       setBusExp(EMPTY_BUS_EXP);
       return;
     }
-    // اقترح تلقائيًا تكلفة الأسرّة الفارغة من حساب التسكين الخاص بركاب هذه الحافلة فقط،
-    // إلا لو كانت محفوظة بالفعل (رقم أكبر من صفر) — وقتها نستخدم المحفوظ.
-    const savedEmpty = n(bus.expense_empty_beds);
+    // اقترح التكلفة فقط إن لم تُحفظ قيمة من قبل. الصفر قيمة يدوية صحيحة ولا يُستبدل.
     const busBookings = busBookingsMap.get(bus.id) ?? [];
-    const suggestedEmpty = savedEmpty > 0 ? savedEmpty : housingStatsFor(busBookings).emptyBedsSuggested;
+    const suggestedEmpty = bus.expense_empty_beds == null
+      ? housingStatsFor(busBookings).emptyBedsSuggested
+      : n(bus.expense_empty_beds);
     setBusExp({
       busCost: n(bus.expense_bus_cost),
       driverTip: n(bus.expense_driver_tip),
@@ -791,6 +791,7 @@ export function TripSheetTab() {
     return {
       title,
       columns: ["م", ...COLUMN_DEFS.map((c) => c.label)],
+      highlightColumn: "مجمل الربح",
       rows: sortedComputed.map((r, i) => [
         i + 1,
         r.rep,

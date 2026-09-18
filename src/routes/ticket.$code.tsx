@@ -233,6 +233,7 @@ function TicketPage() {
     if (b.coupon_code) lines.push(`كود الخصم: ${b.coupon_code}`);
     lines.push(`الإجمالي: ${sar(Number(b.total_price))}`);
     lines.push("——————————————");
+    lines.push("( يستحسن تنزيل التذكرة قبل الرحلة بساعة لمعاينة آخر تحديث)");
     lines.push(`رابط تحميل التذكرة PDF: ${pdfLink(b.booking_code)}`);
     lines.push("يرجى إبراز التذكرة عند الصعود للباص.");
     return lines.join("\n");

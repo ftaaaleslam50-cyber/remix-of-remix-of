@@ -70,7 +70,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
     const body = [
       "▪️*إشعار رحله الذهاب*",
       "",
-      `* اليوم : ${dateIso ? `عشاء ${arabicDay(dateIso)}` : "—"}`,
+      `* اليوم : ${dateIso ? arabicDay(dateIso) : "—"}`,
       `* التاريخ : ${dateIso ? slashDate(dateIso) : "—"}.`,
       tripName?.trim() ? `* الرحلة : ${tripName.trim()}` : null,
       `* الباص : ${bus?.name || "—"}`,

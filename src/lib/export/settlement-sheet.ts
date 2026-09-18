@@ -8,6 +8,7 @@ export interface SettlementExport {
   columns: string[];
   rows: (string | number)[][];
   totals?: (string | number)[];
+  highlightColumn?: string;
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
@@ -43,6 +44,12 @@ export async function buildSettlementWorkbook(input: SettlementExport): Promise<
       bottom: { style: "thin" },
     };
   });
+  const highlightIndex = input.highlightColumn ? input.columns.indexOf(input.highlightColumn) + 1 : 0;
+  const applyHighlight = (cell: ExcelJS.Cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDC2626" } };
+    cell.font = { ...(cell.font ?? {}), bold: true, color: { argb: "FFFFFFFF" } };
+  };
+  if (highlightIndex > 0) applyHighlight(head.getCell(highlightIndex));
 
   for (const r of input.rows) {
     const row = ws.addRow(r);
@@ -55,12 +62,14 @@ export async function buildSettlementWorkbook(input: SettlementExport): Promise<
         bottom: { style: "thin" },
       };
     });
+    if (highlightIndex > 0) applyHighlight(row.getCell(highlightIndex));
   }
 
   if (input.totals) {
     const row = ws.addRow(input.totals);
     row.font = { bold: true };
     row.alignment = { horizontal: "center", vertical: "middle" };
+    if (highlightIndex > 0) applyHighlight(row.getCell(highlightIndex));
   }
 
   input.columns.forEach((c, i) => {
@@ -77,6 +86,10 @@ const esc = (v: unknown) =>
 export function printSettlementSheet(input: SettlementExport): boolean {
   const w = window.open("", "_blank");
   if (!w) return false;
+  const highlightIndex = input.highlightColumn ? input.columns.indexOf(input.highlightColumn) + 1 : 0;
+  const highlightCss = highlightIndex > 0
+    ? `th:nth-child(${highlightIndex}), td:nth-child(${highlightIndex}) { background: #dc2626 !important; color: #fff !important; font-weight: bold; }`
+    : "";
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <title>${esc(input.title)}</title>
 <style>
@@ -87,6 +100,7 @@ export function printSettlementSheet(input: SettlementExport): boolean {
   th, td { border: 1px solid #444; padding: 3px 4px; text-align: center; }
   thead th { background: #e8eef7; }
   tfoot td { font-weight: bold; background: #f3f4f6; }
+  ${highlightCss}
 </style></head><body>
 <h1>${esc(input.title)}</h1>
 <table><thead><tr>${input.columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
