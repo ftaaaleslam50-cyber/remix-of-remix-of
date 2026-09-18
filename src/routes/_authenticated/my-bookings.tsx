@@ -57,9 +57,9 @@ function seatCostOf(b: MyBooking) {
   return total ? total / bus.capacity : 0;
 }
 
-/** الربح لا يُحتسب ولا يُعرض إلا بعد اعتماد حسابات حافلة الحجز. */
+/** دالة إعادة الحساب لا تكتب الحصة إلا بعد اعتماد الحافلة والفندق معًا. */
 function profitSettled(b: MyBooking) {
-  return !!b.buses?.settled_at;
+  return !!b.buses?.settled_at && b.rep_share != null;
 }
 /** ربح المندوب المعتمد فقط (غير المعتمد = 0 حتى لا يظهر رقم غير نهائي). */
 function repProfitOf(b: MyBooking) {
