@@ -46,9 +46,26 @@ interface Booking {
   return_date?: string | null;
   actual_return_date?: string | null;
   return_seat_numbers?: string[] | null;
-  trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
-  buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
-  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; supervisor_name?: string | null } | null;
+  trips?: {
+    name: string;
+    departure_day: string;
+    return_day: string;
+    departure_date?: string | null;
+    return_date?: string | null;
+  } | null;
+  buses?: {
+    bus_number: number;
+    name?: string | null;
+    plate?: string | null;
+    layout_id?: string | null;
+    supervisor_name?: string | null;
+  } | null;
+  return_buses?: {
+    bus_number: number;
+    name?: string | null;
+    plate?: string | null;
+    supervisor_name?: string | null;
+  } | null;
 }
 
 function busLabel(bus?: { bus_number: number; name?: string | null } | null): string {
@@ -75,7 +92,6 @@ function pdfLink(code: string) {
 }
 
 function TicketPage() {
-
   const { code } = useParams({ from: "/ticket/$code" });
   const navigate = useNavigate();
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -93,7 +109,6 @@ function TicketPage() {
       setHideSeatsOpt(Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual));
     })();
   }, []);
-
 
   useEffect(() => {
     (async () => {
@@ -148,11 +163,7 @@ function TicketPage() {
         setLayout((prev) => prev ?? defaultTicketLayout());
         return;
       }
-      const { data } = await supabase
-        .from("bus_layouts")
-        .select("layout_json")
-        .eq("id", layoutId)
-        .maybeSingle();
+      const { data } = await supabase.from("bus_layouts").select("layout_json").eq("id", layoutId).maybeSingle();
       const lj = (data as { layout_json: LayoutJson } | null)?.layout_json;
       setLayout((prev) => lj ?? prev ?? defaultTicketLayout());
     })();
@@ -171,8 +182,6 @@ function TicketPage() {
       document.title = prevTitle;
     };
   }, [booking, layout]);
-
-
 
   if (loading)
     return (
@@ -194,7 +203,6 @@ function TicketPage() {
 
   const hideSeats = hideSeatsOpt && booking.booking_type === "individual";
 
-
   /** Full booking summary used for both WhatsApp sharing and clipboard copy. */
   function summaryText() {
     const b = booking!;
@@ -207,11 +215,15 @@ function TicketPage() {
     if (b.contact_phone) lines.push(`جوال التواصل: ${b.contact_phone}`);
     if (b.whatsapp_phone) lines.push(`جوال الواتساب: ${b.whatsapp_phone}`);
     lines.push("——————————————");
-    lines.push(`الرحلة: ${tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)}`);
+    lines.push(
+      `الرحلة: ${tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)}`,
+    );
     lines.push(`الفندق: ${b.packages?.name ?? b.hotels?.name ?? "-"}`);
     if (Number(b.extension_nights ?? 0) > 0) lines.push(`عدد ليال التمديد: ${b.extension_nights}`);
     lines.push(`نوع الحجز: ${b.booking_type === "individual" ? "أفراد" : "عوائل"}`);
-    lines.push(`نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`);
+    lines.push(
+      `نوع الغرفة: ${roomDisplayLabel(b.room_type as RoomType, b.booking_type, !!(b.packages?.name ?? b.hotels?.name))}`,
+    );
     lines.push(`عدد الأفراد: ${b.passenger_count}`);
     lines.push(`رقم الباص: ${busLabel(b.buses)}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`);
     if (b.buses?.supervisor_name) lines.push(`اسم المشرف: ${b.buses.supervisor_name}`);
@@ -223,7 +235,9 @@ function TicketPage() {
         lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
     }
 
-    lines.push(`الذهاب: ${departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode)}`);
+    lines.push(
+      `الذهاب: ${departureDisplay(b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day, "-", b.trip_mode)}`,
+    );
     lines.push(`العودة الفعلية: ${returnValue(b)}`);
     lines.push(`تاريخ الحجز: ${formatDate(b.created_at)}`);
     if (b.notes) lines.push(`ملاحظات: ${b.notes}`);
@@ -233,7 +247,7 @@ function TicketPage() {
     if (b.coupon_code) lines.push(`كود الخصم: ${b.coupon_code}`);
     lines.push(`الإجمالي: ${sar(Number(b.total_price))}`);
     lines.push("——————————————");
-    lines.push("( يستحسن تنزيل التذكرة قبل الرحلة بساعة لمعاينة آخر تحديث)");
+    lines.push("( يستحسن تنزيل التذكرة مرة أخرى قبل الرحلة بساعة لمعاينة آخر تحديث)");
     lines.push(`رابط تحميل التذكرة PDF: ${pdfLink(b.booking_code)}`);
     lines.push("يرجى إبراز التذكرة عند الصعود للباص.");
     return lines.join("\n");
@@ -260,7 +274,6 @@ function TicketPage() {
     toast.success("تم نسخ بيانات الحجز كاملة");
     setTimeout(() => setCopied(false), 2000);
   }
-
 
   return (
     <div className="min-h-screen bg-muted py-10 print:bg-white print:py-0">
@@ -302,17 +315,17 @@ function TicketPage() {
 
       <div ref={printRef} className="container-luxe max-w-3xl print-sheet print-compact">
         <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
-
           <div className="px-8 py-6 text-white flex items-center gap-4" style={{ background: "var(--gradient-navy)" }}>
             <div className="flex-1">
               <h2 className="text-xl font-extrabold">تذكرة حجز</h2>
-              <p className="text-xs text-white/70">رقم الحجز: <span dir="ltr">{booking.booking_code}</span></p>
+              <p className="text-xs text-white/70">
+                رقم الحجز: <span dir="ltr">{booking.booking_code}</span>
+              </p>
             </div>
             <div className="rounded-full bg-[color:var(--color-gold)]/90 text-[color:var(--color-navy)] text-xs font-extrabold px-3 py-1.5">
               مؤكَّد
             </div>
           </div>
-
 
           <div className="px-8 py-6 border-b border-dashed border-border flex items-center justify-between">
             <div>
@@ -329,25 +342,49 @@ function TicketPage() {
             <TicketRow label="رقم الهوية" value={booking.id_number} />
             <TicketRow label="جوال التواصل" value={booking.contact_phone} ltr />
             <TicketRow label="جوال الواتساب" value={booking.whatsapp_phone} ltr />
-            <TicketRow label="الرحلة" value={tripWithDate(booking.trips?.name, booking.departure_date ?? booking.trips?.departure_date, booking.trips?.departure_day)} />
+            <TicketRow
+              label="الرحلة"
+              value={tripWithDate(
+                booking.trips?.name,
+                booking.departure_date ?? booking.trips?.departure_date,
+                booking.trips?.departure_day,
+              )}
+            />
             <TicketRow label="الفندق" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />
             {Number(booking.extension_nights ?? 0) > 0 && (
               <TicketRow label="عدد ليال التمديد" value={String(booking.extension_nights)} />
             )}
             <TicketRow label="نوع الحجز" value={booking.booking_type === "individual" ? "أفراد" : "عوائل"} />
-            <TicketRow label="نوع الغرفة" value={roomDisplayLabel(booking.room_type as RoomType, booking.booking_type, !!(booking.packages?.name ?? booking.hotels?.name))} />
+            <TicketRow
+              label="نوع الغرفة"
+              value={roomDisplayLabel(
+                booking.room_type as RoomType,
+                booking.booking_type,
+                !!(booking.packages?.name ?? booking.hotels?.name),
+              )}
+            />
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
             <TicketRow label="رقم الباص" value={busLabel(booking.buses)} />
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             {booking.buses?.supervisor_name && <TicketRow label="اسم المشرف" value={booking.buses.supervisor_name} />}
             {!hideSeats && <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />}
             {booking.return_buses && <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />}
-            {booking.return_buses?.supervisor_name && <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />}
+            {booking.return_buses?.supervisor_name && (
+              <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />
+            )}
             {!hideSeats && booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 && (
               <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />
             )}
 
-            <TicketRow label="الذهاب" value={departureDisplay(booking.departure_date ?? booking.trips?.departure_date, booking.trips?.departure_day, "-", booking.trip_mode)} />
+            <TicketRow
+              label="الذهاب"
+              value={departureDisplay(
+                booking.departure_date ?? booking.trips?.departure_date,
+                booking.trips?.departure_day,
+                "-",
+                booking.trip_mode,
+              )}
+            />
             <TicketRow label="العودة الفعلية" value={returnValue(booking)} />
             <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
           </div>
@@ -396,8 +433,10 @@ function TicketPage() {
       {layout && !hideSeats && (
         <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
           <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
-            <div className="px-8 py-5 text-white flex items-center gap-3" style={{ background: "var(--gradient-navy)" }}>
-
+            <div
+              className="px-8 py-5 text-white flex items-center gap-3"
+              style={{ background: "var(--gradient-navy)" }}
+            >
               <div>
                 <h2 className="text-lg font-extrabold">مخطط الحافلة</h2>
                 <p className="text-xs text-white/70">
@@ -420,7 +459,6 @@ function TicketPage() {
     </div>
   );
 }
-
 
 function defaultTicketLayout(): LayoutJson {
   const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
