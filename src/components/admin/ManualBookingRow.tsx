@@ -402,6 +402,7 @@ export function ManualBookingRow({
       ...(d.trip_mode === "round_open" && /^\d{4}-\d{2}-\d{2}$/.test(d.actual_return_day)
         ? { return_date: d.actual_return_day }
         : {}),
+      ...(extraPayload ?? {}),
     };
 
     const linkedRepresentative = reps.find((r) => r.name === d.rep_name.trim() && r.user_id);
