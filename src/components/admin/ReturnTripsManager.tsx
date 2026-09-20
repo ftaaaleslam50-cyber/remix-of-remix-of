@@ -494,7 +494,7 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
               <ManualBookingRow
                 colSpan={1}
                 ownerId={ownerId}
-                initial={{ trip_mode: "return", actual_return_day: date }}
+                initial={{ trip_mode: "return" }}
                 extraPayload={{
                   actual_return_date: date,
                   return_date: date,
