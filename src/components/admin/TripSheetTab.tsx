@@ -787,11 +787,104 @@ export function TripSheetTab() {
     selectedBuses.length ? ` — ${selectedBuses.map((b) => b.name || `حافلة ${b.bus_number}`).join("، ")}` : ""
   }`;
 
+  /** الصفحة الثانية: مصاريف كل حافلة + ملخص مصاريف الرحلة. */
+  function expenseSections() {
+    const usedBusIds = [...new Set(computed.map((r) => r.b.bus_id).filter(Boolean) as string[])];
+    const busList = usedBusIds
+      .map((id) => buses.find((x) => x.id === id))
+      .filter(Boolean) as typeof buses;
+
+    const busRows = busList.map((bx, i) => {
+      const e = busExpensesOf(bx.id);
+      const pax = busPassengerMap.get(bx.id) ?? 0;
+      return [
+        i + 1,
+        bx.name || `حافلة ${bx.bus_number}`,
+        bx.bus_number ?? "",
+        pax,
+        round(e.busCost),
+        round(e.driverTip),
+        round(e.taxi),
+        round(e.supervisor),
+        round(e.supervisorBed),
+        round(e.emptyBeds),
+        round(e.extra),
+        round(busTotalOf(bx.id)),
+        round(seatCostForBus(bx.id)),
+        bx.settled_at ? "معتمد" : "غير معتمد",
+      ];
+    });
+
+    const sum = (idx: number) => round(busRows.reduce((s, r) => s + (Number(r[idx]) || 0), 0));
+    const busExpensesTotal = busRows.reduce((s, r) => s + (Number(r[11]) || 0), 0);
+    const bedTotal = computed.reduce((s, r) => s + r.bedCost * r.count, 0);
+
+    const busSection = {
+      title: `كشف مصاريف الباص — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}`,
+      columns: [
+        "م",
+        "الحافلة",
+        "رقم الحافلة",
+        "عدد الركاب",
+        "أجرة الباص",
+        "إكرامية السائق",
+        "التاكسي",
+        "المشرف",
+        "سرير المشرف",
+        "الأسرّة الفارغة",
+        "مصاريف أخرى",
+        "إجمالي المصاريف",
+        "تكلفة المقعد",
+        "الاعتماد",
+      ],
+      rows: busRows,
+      totals: [
+        "الإجمالي",
+        "",
+        "",
+        sum(3),
+        sum(4),
+        sum(5),
+        sum(6),
+        sum(7),
+        sum(8),
+        sum(9),
+        sum(10),
+        round(busExpensesTotal),
+        "",
+        "",
+      ],
+    };
+
+    const tripSection = {
+      title: `كشف مصاريف الرحلة — ${trip?.name ?? tripInfo?.name ?? "كل الرحلات"}`,
+      columns: ["البند", "القيمة"],
+      rows: [
+        ["عدد الحجوزات", computed.length],
+        ["عدد الركاب", totals.count],
+        ["إجمالي الباقات", round(totals.packageTotal)],
+        ["إجمالي التمديد", round(totals.extensionTotal)],
+        ["الإجمالي العام", round(totals.grandTotal)],
+        ["إجمالي مصاريف الباصات", round(busExpensesTotal)],
+        ["إجمالي تكلفة الأسرّة (الفنادق)", round(bedTotal)],
+        ["تكلفة المجموعة (الباقة الأساسية)", round(totals.groupCost)],
+        ["تكلفة التمديد", round(totals.extensionCost)],
+        ["ربح التمديد", round(totals.extensionProfit)],
+        ["مجمل الربح", round(totals.grossProfit)],
+        ["حصص المناديب", round(totals.repShare)],
+        ["حصة المؤسسة", round(totals.companyShare)],
+      ] as (string | number)[][],
+    };
+
+    return [busSection, tripSection];
+  }
+
   function exportData(): SettlementExport {
     return {
       title,
       columns: ["م", ...COLUMN_DEFS.map((c) => c.label)],
       highlightColumn: "مجمل الربح",
+      sections: expenseSections(),
       rows: sortedComputed.map((r, i) => [
         i + 1,
         r.rep,
