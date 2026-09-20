@@ -143,6 +143,7 @@ export function ManualBookingRow({
   defaultTripId,
   defaultBusId,
   ownerId,
+  extraPayload,
   onClose,
   onSaved,
 }: {
@@ -152,6 +153,8 @@ export function ManualBookingRow({
   defaultBusId?: string;
   /** ربط الحجز الجديد بحساب المُنشئ (المندوب) ليظهر في "حجوزاتي". */
   ownerId?: string;
+  /** حقول إضافية تُحفظ مع الحجز (مثل ربط رحلة العودة وتاريخها). */
+  extraPayload?: Record<string, unknown>;
   onClose: () => void;
   onSaved: () => void;
 }) {
