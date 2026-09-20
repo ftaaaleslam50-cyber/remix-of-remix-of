@@ -494,7 +494,12 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
               <ManualBookingRow
                 colSpan={1}
                 ownerId={ownerId}
-                initial={{ trip_mode: "return" }}
+                initial={{ trip_mode: "return", actual_return_day: date }}
+                extraPayload={{
+                  actual_return_date: date,
+                  return_date: date,
+                  return_trip_id: template.id,
+                }}
                 onClose={() => setNewBooking(false)}
                 onSaved={() => { setNewBooking(false); refresh(); }}
               />
