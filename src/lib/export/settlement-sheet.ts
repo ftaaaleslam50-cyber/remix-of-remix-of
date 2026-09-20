@@ -3,12 +3,21 @@
 // it simply mirrors the table currently rendered on screen.
 import ExcelJS from "exceljs";
 
+export interface SettlementSection {
+  title: string;
+  columns: string[];
+  rows: (string | number)[][];
+  totals?: (string | number)[];
+}
+
 export interface SettlementExport {
   title: string;
   columns: string[];
   rows: (string | number)[][];
   totals?: (string | number)[];
   highlightColumn?: string;
+  /** صفحات/أوراق إضافية (مثل كشف مصاريف الباص والرحلة). */
+  sections?: SettlementSection[];
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
