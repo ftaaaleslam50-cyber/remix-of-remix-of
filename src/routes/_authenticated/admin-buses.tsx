@@ -497,14 +497,29 @@ function AdminBuses() {
       </header>
 
       <main className="container-luxe py-8 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-extrabold">الأسطول ({buses.length})</h2>
 
-          <Button onClick={addBus} className="rounded-full">
-            <Plus className="h-4 w-4 ml-1" />
-            إضافة حافلة
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.length > 0 && (
+              <>
+                <Button variant="outline" className="rounded-full" onClick={() => setSelectedIds([])}>
+                  إلغاء التحديد ({selectedIds.length})
+                </Button>
+                <Button variant="destructive" className="rounded-full" onClick={() => void delSelected()}>
+                  <Trash2 className="h-4 w-4 ml-1" />
+                  حذف المحدد ({selectedIds.length})
+                </Button>
+              </>
+            )}
+
+            <Button onClick={addBus} className="rounded-full">
+              <Plus className="h-4 w-4 ml-1" />
+              إضافة حافلة
+            </Button>
+          </div>
         </div>
+
 
         {([
           { key: "outbound", title: "حافلات الذهاب" },
