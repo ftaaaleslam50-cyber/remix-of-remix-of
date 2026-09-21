@@ -16,9 +16,12 @@ export interface SettlementExport {
   rows: (string | number)[][];
   totals?: (string | number)[];
   highlightColumn?: string;
+  /** أرقام صفوف حجوزات «عودة فقط» (0-based) — تُلوّن بالأزرق. */
+  returnRows?: number[];
   /** صفحات/أوراق إضافية (مثل كشف مصاريف الباص والرحلة). */
   sections?: SettlementSection[];
 }
+
 
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
