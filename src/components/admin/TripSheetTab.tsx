@@ -896,6 +896,10 @@ export function TripSheetTab() {
       title,
       columns: ["م", ...COLUMN_DEFS.map((c) => c.label)],
       highlightColumn: "مجمل الربح",
+      returnRows: sortedComputed
+        .map((r, i) => (r.b.trip_mode === "return" ? i : -1))
+        .filter((i) => i >= 0),
+
       sections: expenseSections(),
       rows: sortedComputed.map((r, i) => [
         i + 1,
