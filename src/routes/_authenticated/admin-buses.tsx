@@ -804,7 +804,11 @@ function BusEditRow({
   const free = local.capacity - used;
 
   return (
-    <TableRow>
+    <TableRow className={selected ? "bg-destructive/5" : undefined}>
+      <TableCell className="w-8">
+        <Checkbox checked={selected} onCheckedChange={(v) => onSelectChange(!!v)} />
+      </TableCell>
+
       <TableCell>
         <Input
           inputMode="numeric"
