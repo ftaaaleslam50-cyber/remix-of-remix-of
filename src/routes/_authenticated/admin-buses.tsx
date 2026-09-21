@@ -738,6 +738,8 @@ function BusEditRow({
   used,
   tripLabels,
   layouts,
+  selected,
+  onSelectChange,
   onSave,
   onDelete,
   onDuplicate,
@@ -747,10 +749,13 @@ function BusEditRow({
   used: number;
   tripLabels: string[];
   layouts: LayoutRow[];
+  selected: boolean;
+  onSelectChange: (on: boolean) => void;
   onSave: (b: BusRow) => void;
   onDelete: () => void;
   onDuplicate: () => void;
   onTransfer: () => void;
+
 }) {
   const [local, setLocal] = useState(bus);
   const [notifText, setNotifText] = useState("");
