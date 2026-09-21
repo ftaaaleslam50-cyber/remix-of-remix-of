@@ -574,7 +574,20 @@ function AdminBuses() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-8">
+                          <Checkbox
+                            checked={wg.items.length > 0 && wg.items.every((b) => selectedIds.includes(b.id))}
+                            onCheckedChange={(v) =>
+                              setSelectedIds((s) =>
+                                v
+                                  ? [...new Set([...s, ...wg.items.map((b) => b.id)])]
+                                  : s.filter((id) => !wg.items.some((b) => b.id === id)),
+                              )
+                            }
+                          />
+                        </TableHead>
                         <TableHead>رقم الحافلة</TableHead>
+
                         <TableHead>الاسم</TableHead>
                         <TableHead>الرحلة المرتبطة</TableHead>
                         <TableHead>التاريخ</TableHead>
