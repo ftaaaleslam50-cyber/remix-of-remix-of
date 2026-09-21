@@ -116,6 +116,10 @@ function AdminBuses() {
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [transferFrom, setTransferFrom] = useState<BusRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const toggleSelected = (id: string, on: boolean) =>
+    setSelectedIds((s) => (on ? [...new Set([...s, id])] : s.filter((x) => x !== id)));
+
 
   useEffect(() => {
     (async () => {
