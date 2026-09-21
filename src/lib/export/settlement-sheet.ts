@@ -63,9 +63,11 @@ export async function buildSettlementWorkbook(input: SettlementExport): Promise<
   };
   if (highlightIndex > 0) applyHighlight(head.getCell(highlightIndex));
 
-  for (const r of input.rows) {
+  const returnSet = new Set(input.returnRows ?? []);
+  for (const [ri, r] of input.rows.entries()) {
     const row = ws.addRow(r);
     row.alignment = { horizontal: "center", vertical: "middle" };
+    const isReturn = returnSet.has(ri);
     row.eachCell((c) => {
       c.border = {
         top: { style: "thin" },
@@ -73,9 +75,14 @@ export async function buildSettlementWorkbook(input: SettlementExport): Promise<
         right: { style: "thin" },
         bottom: { style: "thin" },
       };
+      if (isReturn) {
+        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } };
+        c.font = { ...(c.font ?? {}), color: { argb: "FF1D4ED8" }, bold: true };
+      }
     });
     if (highlightIndex > 0) applyHighlight(row.getCell(highlightIndex));
   }
+
 
   if (input.totals) {
     const row = ws.addRow(input.totals);
