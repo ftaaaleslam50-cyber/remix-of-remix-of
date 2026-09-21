@@ -54,6 +54,10 @@ export interface ReturnBookingRow {
   return_seat_numbers: string[] | null;
   contact_phone: string | null;
   status: string;
+  trip_id?: string | null;
+  booking_source?: string | null;
+  rep_name?: string | null;
+
 }
 
 
