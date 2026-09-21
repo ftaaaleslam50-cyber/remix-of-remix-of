@@ -71,7 +71,10 @@ type RefRow = {
   extension?: Record<string, { sale?: number; cost?: number }> | null;
   commissions?: Record<string, number> | null;
   bus_expenses?: Record<string, number> | null;
+  /** تكلفة مقعد حجوزات «عودة فقط» — تُدخل يدويًا في الحسابات والتصفية. */
+  return_seat_cost?: number | null;
 };
+
 
 const ROOM_LABELS: Record<string, string> = {
   "1": "فردي",
