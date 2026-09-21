@@ -350,6 +350,8 @@ export function TripSheetTab() {
         extension: ref.ext,
         commissions: ref.commissions,
         transfer: ref.transfer,
+        return_seat_cost: ref.returnSeatCost,
+
       } as never);
       setSaving(false);
       if (error) toast.error("تعذر حفظ بيانات الحسابات");
