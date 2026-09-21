@@ -93,7 +93,7 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     const { data: bRaw } = await supabase
       .from("bookings")
       .select(
-        "id,total_price,passenger_count,room_type,booking_type,extension_nights,booking_source,rep_profile_id,bus_id,package_id,packages(name)",
+        "id,total_price,passenger_count,room_type,booking_type,extension_nights,booking_source,rep_profile_id,bus_id,package_id,trip_mode,packages(name)",
       )
       .eq("booking_code", bookingCode)
       .maybeSingle();
@@ -108,9 +108,11 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
       rep_profile_id: string | null;
       bus_id: string | null;
       package_id: string | null;
+      trip_mode: string | null;
       packages: { name: string } | null;
     } | null;
     if (!b) return;
+
 
     const [{ data: refRaw }, { data: hotelRaw }] = await Promise.all([
       supabase.from("settlement_reference").select("*").eq("id", 1).maybeSingle(),
