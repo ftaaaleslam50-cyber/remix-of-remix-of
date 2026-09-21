@@ -162,13 +162,15 @@ export function printSettlementSheet(input: SettlementExport): boolean {
   th, td { border: 1px solid #444; padding: 3px 4px; text-align: center; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   thead th { background-color: #e8eef7; }
   tfoot td { font-weight: bold; background-color: #f3f4f6; }
+  tr.ret td { background-color: #dbeafe !important; color: #1d4ed8 !important; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   section.page { break-after: page; page-break-after: always; }
   section.page:last-child { break-after: auto; page-break-after: auto; }
   ${highlightCss}
 </style></head><body>
 <section class="page main"><h1>${esc(input.title)}</h1>
 <table><thead><tr>${input.columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
-<tbody>${input.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody>
+<tbody>${input.rows.map((r, ri) => `<tr${(input.returnRows ?? []).includes(ri) ? ' class="ret"' : ""}>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody>
+
 ${input.totals ? `<tfoot><tr>${input.totals.map((c) => `<td>${esc(c)}</td>`).join("")}</tr></tfoot>` : ""}
 </table></section>
 ${(input.sections ?? []).map(tableHtml).join("")}
