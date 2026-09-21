@@ -627,10 +627,13 @@ function AdminBuses() {
                               : []),
                           ]}
                           layouts={layouts}
+                          selected={selectedIds.includes(b.id)}
+                          onSelectChange={(on) => toggleSelected(b.id, on)}
                           onSave={save}
                           onDelete={() => del(b.id)}
                           onDuplicate={() => duplicateBus(b)}
                           onTransfer={() => setTransferFrom(b)}
+
                         />
                       ))}
                     </TableBody>
