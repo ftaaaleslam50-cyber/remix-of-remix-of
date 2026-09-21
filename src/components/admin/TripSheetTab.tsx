@@ -1093,7 +1093,15 @@ export function TripSheetTab() {
           </thead>
           <tbody>
             {sortedComputed.map((r, i) => (
-              <tr key={r.b.id} className="odd:bg-white even:bg-muted/30">
+              <tr
+                key={r.b.id}
+                className={
+                  r.b.trip_mode === "return"
+                    ? "bg-blue-100 text-blue-800 font-bold"
+                    : "odd:bg-white even:bg-muted/30"
+                }
+              >
+
                 <td className="border px-2 py-0.5 text-center">{i + 1}</td>
                 <td className="border px-2 py-0.5 text-center">{r.rep}</td>
                 <td className="border px-2 py-0.5">{r.b.customer_name}</td>
