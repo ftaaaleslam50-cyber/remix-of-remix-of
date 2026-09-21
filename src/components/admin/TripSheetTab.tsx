@@ -573,7 +573,9 @@ export function TripSheetTab() {
         const packageTotal = n(b.total_price) - extSale * nights;
         // تكلفة المقعد: من مصاريف حافلة هذا الحجز بالذات (شاملة سرير المشرف والأسرّة
         // الفارغة الخاصة بها) ÷ ركاب هذه الحافلة فقط.
-        const seatCost = seatCostForBus(b.bus_id);
+        // أما حجوزات «عودة فقط» فتأخذ القيمة اليدوية «تكلفة مقعد العودة فقط».
+        const seatCost = b.trip_mode === "return" ? n(ref.returnSeatCost) : seatCostForBus(b.bus_id);
+
         // تكلفة السرير الخاص بهذا الراكب فقط (غير سرير المشرف والأسرّة الفارغة، دول
         // بقوا جزء من تكلفة المقعد أعلاه).
         const bedCost = bedCostFor(b, hotel, roomLabel);
