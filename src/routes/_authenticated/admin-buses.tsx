@@ -418,6 +418,41 @@ function AdminBuses() {
     });
   }
 
+  /** حذف جماعي للحافلات المحددة عبر خانات التحديد. */
+  async function delSelected() {
+    const ids = selectedIds;
+    if (ids.length === 0) return;
+
+    const usedTotal = ids.reduce((s, id) => s + (bookingCounts[id] ?? 0), 0);
+    const msg = usedTotal > 0
+      ? `تنبيه: الحافلات المحددة (${ids.length}) تحتوي على ${usedTotal} مقعد محجوز ضمن حجوزات نشطة.\n\nهل تريد حذفها نهائياً مع إلغاء وحذف جميع حجوزاتها؟ لن يمكن التراجع.`
+      : `حذف ${ids.length} حافلة نهائياً؟ لن يمكن التراجع.`;
+    if (!confirm(msg)) return;
+
+    if (usedTotal > 0) {
+      const { error: cancelErr } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled", deleted_at: new Date().toISOString() } as never)
+        .in("bus_id", ids);
+      if (cancelErr) return toast.error(cancelErr.message);
+
+      const { error: delErr } = await supabase.from("bookings").delete().in("bus_id", ids);
+      if (delErr) return toast.error(delErr.message);
+    }
+
+    const { error } = await supabase.from("buses").delete().in("id", ids);
+    if (error) return toast.error(error.message);
+
+    for (const id of ids) await untrackAssetUsage("bus", id);
+
+    setSelectedIds([]);
+    toast.success(`تم حذف ${ids.length} حافلة`);
+    qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
+    qc.invalidateQueries({ queryKey: ["admin-buses-booking-counts"] });
+  }
+
+
+
   if (isAdmin === false) {
     return <div className="p-8 text-center">ليس لديك صلاحية</div>;
   }
