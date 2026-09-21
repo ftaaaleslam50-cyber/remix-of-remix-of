@@ -1719,6 +1719,7 @@ export type Database = {
           hotel_costs: Json
           hotel_night_prices: Json
           id: number
+          return_seat_cost: number
           transfer: Json
           updated_at: string
         }
@@ -1730,6 +1731,7 @@ export type Database = {
           hotel_costs?: Json
           hotel_night_prices?: Json
           id?: number
+          return_seat_cost?: number
           transfer?: Json
           updated_at?: string
         }
@@ -1741,6 +1743,7 @@ export type Database = {
           hotel_costs?: Json
           hotel_night_prices?: Json
           id?: number
+          return_seat_cost?: number
           transfer?: Json
           updated_at?: string
         }

@@ -1,0 +1,1 @@
+ALTER TABLE public.settlement_reference ADD COLUMN IF NOT EXISTS return_seat_cost numeric NOT NULL DEFAULT 0;
