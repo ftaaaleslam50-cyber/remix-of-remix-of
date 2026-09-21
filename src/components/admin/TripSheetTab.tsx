@@ -82,6 +82,8 @@ type RefState = {
   ext: Record<string, { sale: number; cost: number }>;
   commissions: Record<string, number>;
   transfer: Record<string, number>;
+  /** تكلفة مقعد حجوزات «عودة فقط» — قيمة يدوية مستقلة عن قسمة مصاريف الحافلة. */
+  returnSeatCost: number;
 };
 
 const EMPTY_BUS_EXP: BusExpenses = {
@@ -100,7 +102,9 @@ const EMPTY_REF: RefState = {
   ext: {},
   commissions: {},
   transfer: { "ذهاب فقط": 50, "ذهاب وعوده فقط": 80, "ذهاب وعوده برحلة اخرى": 90 },
+  returnSeatCost: 0,
 };
+
 
 const n = (v: unknown) => Number(v) || 0;
 /** تقريب لأقرب ربع (0.25 / 0.5 / 0.75) بدل أقرب رقم صحيح. */
