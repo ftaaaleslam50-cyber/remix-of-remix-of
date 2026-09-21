@@ -467,13 +467,15 @@ export function TripSheetTab() {
   const housingCost = useMemo(() => housingStatsFor(filtered).housingCost, [filtered, ref]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* -------------------------- per-bus expenses ---------------------------- */
+  // حجوزات «عودة فقط» مستبعدة من قسمة مصاريف الحافلة (لا في البسط ولا في المقام).
   const busPassengerMap = useMemo(() => {
     const m = new Map<string, number>();
     for (const b of rows) {
-      if (b.status === "cancelled" || !b.bus_id) continue;
+      if (b.status === "cancelled" || !b.bus_id || b.trip_mode === "return") continue;
       m.set(b.bus_id, (m.get(b.bus_id) ?? 0) + (b.passenger_count || 0));
     }
     return m;
+
   }, [rows]);
 
   const busBookingsMap = useMemo(() => {
