@@ -71,7 +71,10 @@ type RefRow = {
   extension?: Record<string, { sale?: number; cost?: number }> | null;
   commissions?: Record<string, number> | null;
   bus_expenses?: Record<string, number> | null;
+  /** تكلفة مقعد حجوزات «عودة فقط» — تُدخل يدويًا في الحسابات والتصفية. */
+  return_seat_cost?: number | null;
 };
+
 
 const ROOM_LABELS: Record<string, string> = {
   "1": "فردي",
@@ -90,7 +93,7 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     const { data: bRaw } = await supabase
       .from("bookings")
       .select(
-        "id,total_price,passenger_count,room_type,booking_type,extension_nights,booking_source,rep_profile_id,bus_id,package_id,packages(name)",
+        "id,total_price,passenger_count,room_type,booking_type,extension_nights,booking_source,rep_profile_id,bus_id,package_id,trip_mode,packages(name)",
       )
       .eq("booking_code", bookingCode)
       .maybeSingle();
@@ -105,9 +108,11 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
       rep_profile_id: string | null;
       bus_id: string | null;
       package_id: string | null;
+      trip_mode: string | null;
       packages: { name: string } | null;
     } | null;
     if (!b) return;
+
 
     const [{ data: refRaw }, { data: hotelRaw }] = await Promise.all([
       supabase.from("settlement_reference").select("*").eq("id", 1).maybeSingle(),
@@ -131,20 +136,27 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
         : (ROOM_LABELS[String(b.room_type ?? "5")] ?? "خماسي");
     const bedCost = hotel ? nightPrice / (ROOM_CAPACITY[roomLabel] ?? 5) : 0;
 
-    // نصيب الفرد من مصاريف الحافلة = إجمالي المصاريف ÷ ركاب نفس الحافلة.
+    // نصيب الفرد من مصاريف الحافلة = إجمالي المصاريف ÷ ركاب نفس الحافلة،
+    // مع استبعاد حجوزات «عودة فقط» تمامًا من هذه القسمة.
     const be = ref.bus_expenses ?? {};
     const busTotal = n(be["busCost"]) + n(be["driverTip"]) + n(be["taxi"]) + n(be["supervisor"]) + n(be["extra"]);
     let seatCost = 0;
-    if (busTotal > 0 && b.bus_id) {
+    if (b.trip_mode === "return") {
+      // حجوزات العودة فقط: تكلفة المقعد قيمة يدوية مستقلة.
+      seatCost = n(ref.return_seat_cost);
+    } else if (busTotal > 0 && b.bus_id) {
       const { data: mates } = await supabase
         .from("bookings")
-        .select("passenger_count")
+        .select("passenger_count,trip_mode")
         .eq("bus_id", b.bus_id)
         .neq("status", "cancelled")
         .is("deleted_at", null);
-      const total = (mates ?? []).reduce((s, r) => s + n((r as { passenger_count: number }).passenger_count), 0);
+      const total = (mates ?? [])
+        .filter((r) => (r as { trip_mode: string | null }).trip_mode !== "return")
+        .reduce((s, r) => s + n((r as { passenger_count: number }).passenger_count), 0);
       seatCost = total > 0 ? busTotal / total : 0;
     }
+
 
     // نسبة العمولة: الجديدة من ملف المندوب، وإلا الطريقة القديمة بالاسم.
     let rate = 0;

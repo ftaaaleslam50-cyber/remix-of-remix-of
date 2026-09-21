@@ -7,8 +7,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2, Save, Bus as BusIcon,
-  AlertTriangle, Users,
+  AlertTriangle, Users, Copy,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,10 @@ export interface ReturnBookingRow {
   return_seat_numbers: string[] | null;
   contact_phone: string | null;
   status: string;
+  trip_id?: string | null;
+  booking_source?: string | null;
+  rep_name?: string | null;
+
 }
 
 
@@ -122,7 +127,7 @@ export function useReturnData(date: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status")
+        .select("id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name")
         .eq("actual_return_date", date)
         .is("deleted_at", null)
         .neq("status", "cancelled")
@@ -754,9 +759,11 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
         <Badge variant="secondary">حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)</Badge>
         <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
-        <div className="ms-auto">
+        <div className="ms-auto flex flex-wrap gap-2">
+          <ReturnNamesCopyButton bookings={rows} />
           <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
         </div>
+
       </div>
 
       {bookings.isError && (
@@ -797,3 +804,60 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 }
 
 
+
+/** زر نسخ أسماء العودات مجمّعة حسب رحلة الذهاب. */
+export function ReturnNamesCopyButton({ bookings }: { bookings: ReturnBookingRow[] }) {
+  const tripIds = useMemo(
+    () => Array.from(new Set(bookings.map((b) => b.trip_id).filter(Boolean) as string[])),
+    [bookings],
+  );
+
+  const trips = useQuery({
+    queryKey: ["return-copy-trips", tripIds.join(",")],
+    enabled: tripIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("id,name").in("id", tripIds);
+      if (error) throw error;
+      return (data as { id: string; name: string }[]) ?? [];
+    },
+  });
+
+  function buildText(): string {
+    const nameOf = (id?: string | null) =>
+      (id ? trips.data?.find((t) => t.id === id)?.name : "") || "بدون رحلة";
+    const groups = new Map<string, ReturnBookingRow[]>();
+    for (const b of bookings) {
+      const key = nameOf(b.trip_id);
+      const list = groups.get(key) ?? [];
+      list.push(b);
+      groups.set(key, list);
+    }
+    const parts: string[] = ["أسماء العودات", ""];
+    for (const [tripName, list] of groups) {
+      parts.push(`من رحلة (  ${tripName}  )`, "");
+      for (const b of list) {
+        const name = (b.customer_name || b.booking_code || "").trim();
+        const source = (b.booking_source || b.rep_name || "").trim();
+        parts.push(`${name} / ${b.passenger_count || 1} / ${source || "—"}`);
+      }
+      parts.push("");
+    }
+    return parts.join("\n").trim();
+  }
+
+  async function copy() {
+    if (bookings.length === 0) return toast.error("لا توجد عودات في هذا التاريخ");
+    try {
+      await navigator.clipboard.writeText(buildText());
+      toast.success("تم نسخ أسماء العودات");
+    } catch {
+      toast.error("تعذّر النسخ من هذا المتصفح");
+    }
+  }
+
+  return (
+    <Button size="sm" variant="outline" className="rounded-full" onClick={() => void copy()}>
+      <Copy className="h-4 w-4 ml-1" /> نسخ العودات
+    </Button>
+  );
+}

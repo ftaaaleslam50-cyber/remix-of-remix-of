@@ -82,6 +82,8 @@ type RefState = {
   ext: Record<string, { sale: number; cost: number }>;
   commissions: Record<string, number>;
   transfer: Record<string, number>;
+  /** تكلفة مقعد حجوزات «عودة فقط» — قيمة يدوية مستقلة عن قسمة مصاريف الحافلة. */
+  returnSeatCost: number;
 };
 
 const EMPTY_BUS_EXP: BusExpenses = {
@@ -100,7 +102,9 @@ const EMPTY_REF: RefState = {
   ext: {},
   commissions: {},
   transfer: { "ذهاب فقط": 50, "ذهاب وعوده فقط": 80, "ذهاب وعوده برحلة اخرى": 90 },
+  returnSeatCost: 0,
 };
+
 
 const n = (v: unknown) => Number(v) || 0;
 /** تقريب لأقرب ربع (0.25 / 0.5 / 0.75) بدل أقرب رقم صحيح. */
@@ -323,6 +327,8 @@ export function TripSheetTab() {
           ext: (d["extension"] as RefState["ext"]) ?? {},
           commissions: (d["commissions"] as RefState["commissions"]) ?? {},
           transfer: { ...EMPTY_REF.transfer, ...((d["transfer"] as Record<string, number>) ?? {}) },
+          returnSeatCost: Number(d["return_seat_cost"] ?? 0) || 0,
+
         });
       }
       setLoadedRef(true);
@@ -344,6 +350,8 @@ export function TripSheetTab() {
         extension: ref.ext,
         commissions: ref.commissions,
         transfer: ref.transfer,
+        return_seat_cost: ref.returnSeatCost,
+
       } as never);
       setSaving(false);
       if (error) toast.error("تعذر حفظ بيانات الحسابات");
@@ -459,13 +467,15 @@ export function TripSheetTab() {
   const housingCost = useMemo(() => housingStatsFor(filtered).housingCost, [filtered, ref]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* -------------------------- per-bus expenses ---------------------------- */
+  // حجوزات «عودة فقط» مستبعدة من قسمة مصاريف الحافلة (لا في البسط ولا في المقام).
   const busPassengerMap = useMemo(() => {
     const m = new Map<string, number>();
     for (const b of rows) {
-      if (b.status === "cancelled" || !b.bus_id) continue;
+      if (b.status === "cancelled" || !b.bus_id || b.trip_mode === "return") continue;
       m.set(b.bus_id, (m.get(b.bus_id) ?? 0) + (b.passenger_count || 0));
     }
     return m;
+
   }, [rows]);
 
   const busBookingsMap = useMemo(() => {
@@ -563,7 +573,9 @@ export function TripSheetTab() {
         const packageTotal = n(b.total_price) - extSale * nights;
         // تكلفة المقعد: من مصاريف حافلة هذا الحجز بالذات (شاملة سرير المشرف والأسرّة
         // الفارغة الخاصة بها) ÷ ركاب هذه الحافلة فقط.
-        const seatCost = seatCostForBus(b.bus_id);
+        // أما حجوزات «عودة فقط» فتأخذ القيمة اليدوية «تكلفة مقعد العودة فقط».
+        const seatCost = b.trip_mode === "return" ? n(ref.returnSeatCost) : seatCostForBus(b.bus_id);
+
         // تكلفة السرير الخاص بهذا الراكب فقط (غير سرير المشرف والأسرّة الفارغة، دول
         // بقوا جزء من تكلفة المقعد أعلاه).
         const bedCost = bedCostFor(b, hotel, roomLabel);
@@ -884,6 +896,10 @@ export function TripSheetTab() {
       title,
       columns: ["م", ...COLUMN_DEFS.map((c) => c.label)],
       highlightColumn: "مجمل الربح",
+      returnRows: sortedComputed
+        .map((r, i) => (r.b.trip_mode === "return" ? i : -1))
+        .filter((i) => i >= 0),
+
       sections: expenseSections(),
       rows: sortedComputed.map((r, i) => [
         i + 1,
@@ -1077,7 +1093,15 @@ export function TripSheetTab() {
           </thead>
           <tbody>
             {sortedComputed.map((r, i) => (
-              <tr key={r.b.id} className="odd:bg-white even:bg-muted/30">
+              <tr
+                key={r.b.id}
+                className={
+                  r.b.trip_mode === "return"
+                    ? "bg-blue-100 text-blue-800 font-bold"
+                    : "odd:bg-white even:bg-muted/30"
+                }
+              >
+
                 <td className="border px-2 py-0.5 text-center">{i + 1}</td>
                 <td className="border px-2 py-0.5 text-center">{r.rep}</td>
                 <td className="border px-2 py-0.5">{r.b.customer_name}</td>
@@ -1201,6 +1225,21 @@ export function TripSheetTab() {
             مصاريف الباص
             {bus ? <span className="text-sm font-normal"> — {bus.name || `حافلة ${bus.bus_number}`}</span> : null}
           </h3>
+
+          {/* قيمة يدوية عامة تُطبّق على حجوزات «عودة فقط» بدل قسمة مصاريف الحافلة */}
+          <div className="rounded-lg border bg-blue-50 p-3">
+            <Label className="text-xs mb-1 block font-bold text-blue-800">تكلفة مقعد العودة فقط</Label>
+            <Input
+              type="number"
+              value={String(ref.returnSeatCost ?? 0)}
+              onChange={(e) => setRef((s) => ({ ...s, returnSeatCost: Number(e.target.value) || 0 }))}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              تُستخدم لحجوزات «عودة فقط»، وهذه الحجوزات مستبعدة من قسمة مصاريف الحافلة.
+            </p>
+          </div>
+
+
 
           {busId ? (
             <>

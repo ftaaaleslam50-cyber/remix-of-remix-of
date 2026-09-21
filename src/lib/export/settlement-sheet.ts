@@ -16,9 +16,12 @@ export interface SettlementExport {
   rows: (string | number)[][];
   totals?: (string | number)[];
   highlightColumn?: string;
+  /** أرقام صفوف حجوزات «عودة فقط» (0-based) — تُلوّن بالأزرق. */
+  returnRows?: number[];
   /** صفحات/أوراق إضافية (مثل كشف مصاريف الباص والرحلة). */
   sections?: SettlementSection[];
 }
+
 
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -60,9 +63,11 @@ export async function buildSettlementWorkbook(input: SettlementExport): Promise<
   };
   if (highlightIndex > 0) applyHighlight(head.getCell(highlightIndex));
 
-  for (const r of input.rows) {
+  const returnSet = new Set(input.returnRows ?? []);
+  for (const [ri, r] of input.rows.entries()) {
     const row = ws.addRow(r);
     row.alignment = { horizontal: "center", vertical: "middle" };
+    const isReturn = returnSet.has(ri);
     row.eachCell((c) => {
       c.border = {
         top: { style: "thin" },
@@ -70,9 +75,14 @@ export async function buildSettlementWorkbook(input: SettlementExport): Promise<
         right: { style: "thin" },
         bottom: { style: "thin" },
       };
+      if (isReturn) {
+        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } };
+        c.font = { ...(c.font ?? {}), color: { argb: "FF1D4ED8" }, bold: true };
+      }
     });
     if (highlightIndex > 0) applyHighlight(row.getCell(highlightIndex));
   }
+
 
   if (input.totals) {
     const row = ws.addRow(input.totals);
@@ -152,13 +162,15 @@ export function printSettlementSheet(input: SettlementExport): boolean {
   th, td { border: 1px solid #444; padding: 3px 4px; text-align: center; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   thead th { background-color: #e8eef7; }
   tfoot td { font-weight: bold; background-color: #f3f4f6; }
+  tr.ret td { background-color: #dbeafe !important; color: #1d4ed8 !important; font-weight: bold; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   section.page { break-after: page; page-break-after: always; }
   section.page:last-child { break-after: auto; page-break-after: auto; }
   ${highlightCss}
 </style></head><body>
 <section class="page main"><h1>${esc(input.title)}</h1>
 <table><thead><tr>${input.columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
-<tbody>${input.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody>
+<tbody>${input.rows.map((r, ri) => `<tr${(input.returnRows ?? []).includes(ri) ? ' class="ret"' : ""}>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody>
+
 ${input.totals ? `<tfoot><tr>${input.totals.map((c) => `<td>${esc(c)}</td>`).join("")}</tr></tfoot>` : ""}
 </table></section>
 ${(input.sections ?? []).map(tableHtml).join("")}

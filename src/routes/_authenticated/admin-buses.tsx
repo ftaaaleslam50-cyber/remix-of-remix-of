@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AssetField } from "@/components/admin/AssetField";
@@ -114,6 +116,10 @@ function AdminBuses() {
 
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [transferFrom, setTransferFrom] = useState<BusRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const toggleSelected = (id: string, on: boolean) =>
+    setSelectedIds((s) => (on ? [...new Set([...s, id])] : s.filter((x) => x !== id)));
+
 
   useEffect(() => {
     (async () => {
@@ -416,6 +422,41 @@ function AdminBuses() {
     });
   }
 
+  /** حذف جماعي للحافلات المحددة عبر خانات التحديد. */
+  async function delSelected() {
+    const ids = selectedIds;
+    if (ids.length === 0) return;
+
+    const usedTotal = ids.reduce((s, id) => s + (bookingCounts[id] ?? 0), 0);
+    const msg = usedTotal > 0
+      ? `تنبيه: الحافلات المحددة (${ids.length}) تحتوي على ${usedTotal} مقعد محجوز ضمن حجوزات نشطة.\n\nهل تريد حذفها نهائياً مع إلغاء وحذف جميع حجوزاتها؟ لن يمكن التراجع.`
+      : `حذف ${ids.length} حافلة نهائياً؟ لن يمكن التراجع.`;
+    if (!confirm(msg)) return;
+
+    if (usedTotal > 0) {
+      const { error: cancelErr } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled", deleted_at: new Date().toISOString() } as never)
+        .in("bus_id", ids);
+      if (cancelErr) return toast.error(cancelErr.message);
+
+      const { error: delErr } = await supabase.from("bookings").delete().in("bus_id", ids);
+      if (delErr) return toast.error(delErr.message);
+    }
+
+    const { error } = await supabase.from("buses").delete().in("id", ids);
+    if (error) return toast.error(error.message);
+
+    for (const id of ids) await untrackAssetUsage("bus", id);
+
+    setSelectedIds([]);
+    toast.success(`تم حذف ${ids.length} حافلة`);
+    qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
+    qc.invalidateQueries({ queryKey: ["admin-buses-booking-counts"] });
+  }
+
+
+
   if (isAdmin === false) {
     return <div className="p-8 text-center">ليس لديك صلاحية</div>;
   }
@@ -456,14 +497,29 @@ function AdminBuses() {
       </header>
 
       <main className="container-luxe py-8 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-extrabold">الأسطول ({buses.length})</h2>
 
-          <Button onClick={addBus} className="rounded-full">
-            <Plus className="h-4 w-4 ml-1" />
-            إضافة حافلة
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.length > 0 && (
+              <>
+                <Button variant="outline" className="rounded-full" onClick={() => setSelectedIds([])}>
+                  إلغاء التحديد ({selectedIds.length})
+                </Button>
+                <Button variant="destructive" className="rounded-full" onClick={() => void delSelected()}>
+                  <Trash2 className="h-4 w-4 ml-1" />
+                  حذف المحدد ({selectedIds.length})
+                </Button>
+              </>
+            )}
+
+            <Button onClick={addBus} className="rounded-full">
+              <Plus className="h-4 w-4 ml-1" />
+              إضافة حافلة
+            </Button>
+          </div>
         </div>
+
 
         {([
           { key: "outbound", title: "حافلات الذهاب" },
@@ -518,7 +574,20 @@ function AdminBuses() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-8">
+                          <Checkbox
+                            checked={wg.items.length > 0 && wg.items.every((b) => selectedIds.includes(b.id))}
+                            onCheckedChange={(v) =>
+                              setSelectedIds((s) =>
+                                v
+                                  ? [...new Set([...s, ...wg.items.map((b) => b.id)])]
+                                  : s.filter((id) => !wg.items.some((b) => b.id === id)),
+                              )
+                            }
+                          />
+                        </TableHead>
                         <TableHead>رقم الحافلة</TableHead>
+
                         <TableHead>الاسم</TableHead>
                         <TableHead>الرحلة المرتبطة</TableHead>
                         <TableHead>التاريخ</TableHead>
@@ -558,10 +627,13 @@ function AdminBuses() {
                               : []),
                           ]}
                           layouts={layouts}
+                          selected={selectedIds.includes(b.id)}
+                          onSelectChange={(on) => toggleSelected(b.id, on)}
                           onSave={save}
                           onDelete={() => del(b.id)}
                           onDuplicate={() => duplicateBus(b)}
                           onTransfer={() => setTransferFrom(b)}
+
                         />
                       ))}
                     </TableBody>
@@ -666,6 +738,8 @@ function BusEditRow({
   used,
   tripLabels,
   layouts,
+  selected,
+  onSelectChange,
   onSave,
   onDelete,
   onDuplicate,
@@ -675,10 +749,13 @@ function BusEditRow({
   used: number;
   tripLabels: string[];
   layouts: LayoutRow[];
+  selected: boolean;
+  onSelectChange: (on: boolean) => void;
   onSave: (b: BusRow) => void;
   onDelete: () => void;
   onDuplicate: () => void;
   onTransfer: () => void;
+
 }) {
   const [local, setLocal] = useState(bus);
   const [notifText, setNotifText] = useState("");
@@ -727,7 +804,11 @@ function BusEditRow({
   const free = local.capacity - used;
 
   return (
-    <TableRow>
+    <TableRow className={selected ? "bg-destructive/5" : undefined}>
+      <TableCell className="w-8">
+        <Checkbox checked={selected} onCheckedChange={(v) => onSelectChange(!!v)} />
+      </TableCell>
+
       <TableCell>
         <Input
           inputMode="numeric"
