@@ -327,6 +327,8 @@ export function TripSheetTab() {
           ext: (d["extension"] as RefState["ext"]) ?? {},
           commissions: (d["commissions"] as RefState["commissions"]) ?? {},
           transfer: { ...EMPTY_REF.transfer, ...((d["transfer"] as Record<string, number>) ?? {}) },
+          returnSeatCost: Number(d["return_seat_cost"] ?? 0) || 0,
+
         });
       }
       setLoadedRef(true);
