@@ -802,3 +802,60 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 }
 
 
+
+/** زر نسخ أسماء العودات مجمّعة حسب رحلة الذهاب. */
+export function ReturnNamesCopyButton({ bookings }: { bookings: ReturnBookingRow[] }) {
+  const tripIds = useMemo(
+    () => Array.from(new Set(bookings.map((b) => b.trip_id).filter(Boolean) as string[])),
+    [bookings],
+  );
+
+  const trips = useQuery({
+    queryKey: ["return-copy-trips", tripIds.join(",")],
+    enabled: tripIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("id,name").in("id", tripIds);
+      if (error) throw error;
+      return (data as { id: string; name: string }[]) ?? [];
+    },
+  });
+
+  function buildText(): string {
+    const nameOf = (id?: string | null) =>
+      (id ? trips.data?.find((t) => t.id === id)?.name : "") || "بدون رحلة";
+    const groups = new Map<string, ReturnBookingRow[]>();
+    for (const b of bookings) {
+      const key = nameOf(b.trip_id);
+      const list = groups.get(key) ?? [];
+      list.push(b);
+      groups.set(key, list);
+    }
+    const parts: string[] = ["أسماء العودات", ""];
+    for (const [tripName, list] of groups) {
+      parts.push(`من رحلة (  ${tripName}  )`, "");
+      for (const b of list) {
+        const name = (b.customer_name || b.booking_code || "").trim();
+        const source = (b.booking_source || b.rep_name || "").trim();
+        parts.push(`${name} / ${b.passenger_count || 1} / ${source || "—"}`);
+      }
+      parts.push("");
+    }
+    return parts.join("\n").trim();
+  }
+
+  async function copy() {
+    if (bookings.length === 0) return toast.error("لا توجد عودات في هذا التاريخ");
+    try {
+      await navigator.clipboard.writeText(buildText());
+      toast.success("تم نسخ أسماء العودات");
+    } catch {
+      toast.error("تعذّر النسخ من هذا المتصفح");
+    }
+  }
+
+  return (
+    <Button size="sm" variant="outline" className="rounded-full" onClick={() => void copy()}>
+      <Copy className="h-4 w-4 ml-1" /> نسخ العودات
+    </Button>
+  );
+}
