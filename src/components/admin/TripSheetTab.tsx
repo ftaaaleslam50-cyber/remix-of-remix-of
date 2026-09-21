@@ -1226,6 +1226,21 @@ export function TripSheetTab() {
             {bus ? <span className="text-sm font-normal"> — {bus.name || `حافلة ${bus.bus_number}`}</span> : null}
           </h3>
 
+          {/* قيمة يدوية عامة تُطبّق على حجوزات «عودة فقط» بدل قسمة مصاريف الحافلة */}
+          <div className="rounded-lg border bg-blue-50 p-3">
+            <Label className="text-xs mb-1 block font-bold text-blue-800">تكلفة مقعد العودة فقط</Label>
+            <Input
+              type="number"
+              value={String(ref.returnSeatCost ?? 0)}
+              onChange={(e) => setRef((s) => ({ ...s, returnSeatCost: Number(e.target.value) || 0 }))}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              تُستخدم لحجوزات «عودة فقط»، وهذه الحجوزات مستبعدة من قسمة مصاريف الحافلة.
+            </p>
+          </div>
+
+
+
           {busId ? (
             <>
               <p className="text-xs text-muted-foreground">
