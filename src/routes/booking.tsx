@@ -932,41 +932,27 @@ function BookingPage() {
                     const removed = seats.filter((s) => !next.includes(s));
                     const g = { ...seatGenders };
                     for (const r of removed) delete g[r];
-                    // التوزيع يتكيّف تلقائيًا مع اختيار المستخدم بدل منعه.
-                    let male = maleCount;
-                    let female = femaleCount;
-                    let rebalanced = false;
+                    // لا نغيّر عدد الذكور/الإناث الذي اختاره المستخدم —
+                    // فقط ننتقل تلقائيًا إلى الجنس الآخر عند اكتمال حصة الجنس الحالي.
+                    let want = activeGender;
                     for (const a of added) {
-                      const usedMale = Object.values(g).filter((v) => v === "male").length;
-                      const usedFemale = Object.values(g).filter((v) => v === "female").length;
-                      const want = activeGender;
-                      const usedWant = want === "male" ? usedMale : usedFemale;
-                      const cntWant = want === "male" ? male : female;
-                      const usedOther = want === "male" ? usedFemale : usedMale;
-                      const cntOther = want === "male" ? female : male;
-                      if (usedWant >= cntWant) {
-                        if (usedOther < cntOther) {
-                          // انقل حصة واحدة من الجنس الآخر للجنس المختار.
-                          if (want === "male") {
-                            male += 1;
-                            female -= 1;
-                          } else {
-                            female += 1;
-                            male -= 1;
-                          }
-                          rebalanced = true;
-                        } else {
-                          continue;
-                        }
+                      const used = (v: "male" | "female") =>
+                        Object.values(g).filter((x) => x === v).length;
+                      const quota = (v: "male" | "female") => (v === "male" ? maleCount : femaleCount);
+                      const other: "male" | "female" = want === "male" ? "female" : "male";
+                      if (used(want) >= quota(want)) {
+                        if (used(other) < quota(other)) want = other;
+                        else continue;
                       }
                       g[a] = want;
+                      // انتقل تلقائيًا للجنس الآخر إذا اكتملت حصة الجنس الحالي.
+                      if (used(want) >= quota(want) && used(other) < quota(other)) want = other;
                     }
-                    if (male !== maleCount) setMaleCount(male);
-                    if (female !== femaleCount) setFemaleCount(female);
-                    if (rebalanced) toast.info(`تم تحديث التوزيع تلقائيًا: ${male} ذكور / ${female} إناث`);
+                    if (want !== activeGender) setActiveGender(want);
                     setSeatGenders(g);
                     setSeats(next.filter((s) => g[s]));
                   }}
+
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
