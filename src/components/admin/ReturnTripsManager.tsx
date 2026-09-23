@@ -805,7 +805,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 
 
 /** زر نسخ أسماء العودات مجمّعة حسب رحلة الذهاب. */
-export function ReturnNamesCopyButton({ bookings }: { bookings: ReturnBookingRow[] }) {
+export function ReturnNamesCopyButton({ bookings, returnTripName }: { bookings: ReturnBookingRow[]; returnTripName?: string }) {
   const tripIds = useMemo(
     () => Array.from(new Set(bookings.map((b) => b.trip_id).filter(Boolean) as string[])),
     [bookings],
@@ -824,6 +824,7 @@ export function ReturnNamesCopyButton({ bookings }: { bookings: ReturnBookingRow
   function buildText(): string {
     const nameOf = (id?: string | null) =>
       (id ? trips.data?.find((t) => t.id === id)?.name : "") || "بدون رحلة";
+    const pax = (b: ReturnBookingRow) => b.passenger_count || 1;
     const groups = new Map<string, ReturnBookingRow[]>();
     for (const b of bookings) {
       const key = nameOf(b.trip_id);
@@ -831,18 +832,24 @@ export function ReturnNamesCopyButton({ bookings }: { bookings: ReturnBookingRow
       list.push(b);
       groups.set(key, list);
     }
-    const parts: string[] = ["أسماء العودات", ""];
+    const total = bookings.reduce((s, b) => s + pax(b), 0);
+    const parts: string[] = [
+      `أسماء العودات في رحلة العودة ( ${returnTripName || "—"} ) = ${total}`,
+      "",
+    ];
     for (const [tripName, list] of groups) {
-      parts.push(`من رحلة (  ${tripName}  )`, "");
+      const sub = list.reduce((s, b) => s + pax(b), 0);
+      parts.push(`من رحلة ( ${tripName} ) = ${sub}`, "");
       for (const b of list) {
         const name = (b.customer_name || b.booking_code || "").trim();
         const source = (b.booking_source || b.rep_name || "").trim();
-        parts.push(`${name} / ${b.passenger_count || 1} / ${source || "—"}`);
+        parts.push(`${name} / ${pax(b)} / ${source || "—"}`);
       }
       parts.push("");
     }
     return parts.join("\n").trim();
   }
+
 
   async function copy() {
     if (bookings.length === 0) return toast.error("لا توجد عودات في هذا التاريخ");
