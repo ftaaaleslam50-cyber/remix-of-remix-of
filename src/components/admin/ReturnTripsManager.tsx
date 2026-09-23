@@ -759,7 +759,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
         <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
         <div className="ms-auto flex flex-wrap gap-2">
-          <ReturnNamesCopyButton bookings={rows} />
+          <ReturnNamesCopyButton bookings={rows} returnTripName={dayTrips.map((t) => t.name).join("، ")} />
           <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
         </div>
 
