@@ -1,5 +1,5 @@
 const FALLBACK_ICON = '/brand-logo.png';
-const SW_VERSION = 'v2';
+const SW_VERSION = 'v3';
 
 self.addEventListener('install', () => {
   // New worker takes over immediately so users move off the old version after deploy.
@@ -24,12 +24,18 @@ self.addEventListener('push', (event) => {
       notification_id: data.notification_id || null,
       booking_id: data.booking_id || null,
       type: data.type || 'system',
+      category: data.category || 'system',
+      priority: data.priority || 'normal',
+      extra: data.data || {},
       sw: SW_VERSION,
     },
+    // High/urgent stay on screen until the user acts; low arrives silently.
+    requireInteraction: data.priority === 'urgent' || data.priority === 'high',
+    silent: data.priority === 'low',
     dir: 'rtl',
     lang: 'ar',
     tag: data.notification_id ? `notification-${data.notification_id}` : undefined,
-    renotify: true,
+    renotify: Boolean(data.notification_id),
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

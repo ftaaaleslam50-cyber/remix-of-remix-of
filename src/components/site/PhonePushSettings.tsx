@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff, Loader2, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { PushDevices } from '@/components/site/NotificationPreferences';
 import { getPushPermission, hasCurrentPushSubscription, registerPushSubscription, removeCurrentPushSubscription, type PushPermissionState } from '@/lib/push-notifications';
 
 export function PhonePushSettings({ userId }: { userId: string }) {
   const [permission, setPermission] = useState<PushPermissionState>(() => getPushPermission());
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rev, setRev] = useState(0);
 
   useEffect(() => { void hasCurrentPushSubscription(userId).then(setEnabled); }, [userId]);
 
@@ -16,7 +18,7 @@ export function PhonePushSettings({ userId }: { userId: string }) {
     const result = await registerPushSubscription(userId);
     setBusy(false);
     setPermission(getPushPermission());
-    if (result.ok) { setEnabled(true); toast.success('تم تفعيل إشعارات الهاتف'); }
+    if (result.ok) { setEnabled(true); setRev((r) => r + 1); toast.success('تم تفعيل إشعارات الهاتف'); }
     else if (result.reason === 'denied') toast.error('تم رفض الإذن. اسمح بالإشعارات من إعدادات المتصفح أو الهاتف.');
     else if (result.reason === 'unsupported') toast.error('هذا المتصفح لا يدعم إشعارات الهاتف.');
     else toast.error('تعذر تفعيل إشعارات الهاتف، حاول مرة أخرى.');
@@ -26,6 +28,7 @@ export function PhonePushSettings({ userId }: { userId: string }) {
     setBusy(true);
     await removeCurrentPushSubscription(userId);
     setEnabled(false);
+    setRev((r) => r + 1);
     setBusy(false);
     toast.success('تم إيقاف إشعارات هذا الجهاز');
   }
@@ -41,6 +44,7 @@ export function PhonePushSettings({ userId }: { userId: string }) {
       {permission === 'unsupported' && <p className="text-xs text-muted-foreground">تحتاج هذه الميزة إلى Android Chrome أو Safari الحديث بعد إضافة الموقع إلى الشاشة الرئيسية.</p>}
       {!enabled && permission !== 'denied' && permission !== 'unsupported' && <Button onClick={enable} disabled={busy} className="w-full h-11 rounded-xl font-bold"><Smartphone className="h-4 w-4 ml-2" />{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تفعيل إشعارات الهاتف'}</Button>}
       {enabled && <div className="space-y-3"><p className="text-xs text-emerald-700">ستصل الإشعارات إلى قائمة إشعارات جهازك، ويمكن ربط أكثر من جهاز بحسابك.</p><Button onClick={disable} disabled={busy} variant="outline" className="w-full h-10 rounded-xl font-bold">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellOff className="h-4 w-4 ml-2" />}إيقاف إشعارات هذا الجهاز</Button></div>}
+      <PushDevices userId={userId} refreshKey={rev} />
     </section>
   );
 }

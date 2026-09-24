@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { PhonePushSettings } from "@/components/site/PhonePushSettings";
+import { NotificationPreferences } from "@/components/site/NotificationPreferences";
 import { BRAND } from "@/lib/brand";
 import { SiteLayout } from "@/components/site/SiteLayout";
 
@@ -229,6 +230,7 @@ function ProfilePage() {
         </div>
 
         {uid && <PhonePushSettings userId={uid} />}
+        {uid && <NotificationPreferences userId={uid} />}
       </div>
     </SiteLayout>
   );

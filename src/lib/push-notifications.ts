@@ -124,3 +124,43 @@ export async function hasCurrentPushSubscription(userId: string): Promise<boolea
   const { data } = await supabase.from('push_subscriptions').select('id').eq('user_id', userId).eq('endpoint', subscription.endpoint).eq('is_active', true).maybeSingle();
   return Boolean(data);
 }
+
+export interface PushDevice {
+  id: string;
+  endpoint: string;
+  user_agent: string | null;
+  is_active: boolean;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Human label for a device from its browser user agent (e.g. "Chrome — Android"). */
+export function deviceLabel(ua: string | null): string {
+  if (!ua) return 'جهاز غير معروف';
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : 'نظام آخر';
+  const br = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'متصفح';
+  return `${br} — ${os}`;
+}
+
+export async function currentPushEndpoint(): Promise<string | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
+  const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
+  const subscription = await registration?.pushManager.getSubscription();
+  return subscription?.endpoint ?? null;
+}
+
+export async function listPushDevices(userId: string): Promise<PushDevice[]> {
+  const { data } = await supabase.from('push_subscriptions')
+    .select('id, endpoint, user_agent, is_active, last_error, created_at, updated_at')
+    .eq('user_id', userId).order('updated_at', { ascending: false });
+  return (data as PushDevice[] | null) ?? [];
+}
+
+export async function setPushDeviceActive(id: string, active: boolean) {
+  return supabase.from('push_subscriptions').update({ is_active: active, updated_at: new Date().toISOString() }).eq('id', id);
+}
+
+export async function deletePushDevice(id: string) {
+  return supabase.from('push_subscriptions').delete().eq('id', id);
+}
