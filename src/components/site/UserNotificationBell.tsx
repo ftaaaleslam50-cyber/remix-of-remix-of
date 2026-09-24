@@ -9,7 +9,7 @@ import { NOTIF_TYPE_LABELS, notifTarget, useUserNotifications, type UserNotif } 
 export function UserNotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const { items, unread, markRead, markAllRead, remove } = useUserNotifications();
+  const { items, unread, prefs, markRead, markAllRead, remove } = useUserNotifications();
 
   async function openNotif(n: UserNotif) {
     if (!n.read) await markRead(n.id);
@@ -25,7 +25,7 @@ export function UserNotificationBell() {
           aria-label="الإشعارات"
           className="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-muted hover:bg-muted/70 transition"
         >
-          <Bell className={`h-5 w-5 ${unread > 0 ? "animate-bounce" : ""}`} />
+          <Bell className={`h-5 w-5 ${unread > 0 && prefs.bell_animation ? "animate-bounce" : ""}`} />
           {unread > 0 && (
             <span className="absolute -top-0.5 -left-0.5 h-5 min-w-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
               {unread > 99 ? "99+" : unread}
