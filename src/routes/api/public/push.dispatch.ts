@@ -33,6 +33,8 @@ type DeliveryRow = {
     booking_id: string | null;
     type: string | null;
     category: string | null;
+    priority: string | null;
+    data: Record<string, unknown> | null;
   } | null;
 };
 
@@ -70,7 +72,7 @@ export const Route = createFileRoute('/api/public/push/dispatch')({
 
         const { data: due } = await supabaseAdmin
           .from('push_deliveries')
-          .select('id, attempt_count, notification_id, subscription_id, push_subscriptions(endpoint, p256dh, auth), notifications(id, title, body, action_url, link, booking_id, type, category)')
+          .select('id, attempt_count, notification_id, subscription_id, push_subscriptions(endpoint, p256dh, auth), notifications(id, title, body, action_url, link, booking_id, type, category, priority, data)')
           .in('status', ['pending', 'failed'])
           .lt('attempt_count', MAX_ATTEMPTS)
           .or(`next_retry_at.is.null,next_retry_at.lte.${nowIso}`)
@@ -80,7 +82,7 @@ export const Route = createFileRoute('/api/public/push/dispatch')({
         const rows = (due ?? []) as unknown as DeliveryRow[];
         if (!rows.length) return json({ ok: true, sent: 0 });
 
-        await supabaseAdmin.from('push_deliveries').update({ status: 'sending', updated_at: nowIso }).in('id', rows.map((r) => r.id));
+        await supabaseAdmin.from('push_deliveries').update({ status: 'sending', last_attempt_at: nowIso, updated_at: nowIso }).in('id', rows.map((r) => r.id));
 
         const keys = await ApplicationServerKeys.fromJSON({ publicKey: vapidPublic, privateKey: vapidPrivate });
 
@@ -103,6 +105,9 @@ export const Route = createFileRoute('/api/public/push/dispatch')({
             notification_id: notification.id,
             booking_id: notification.booking_id,
             type: notification.type || notification.category,
+            category: notification.category,
+            priority: notification.priority || 'normal',
+            data: notification.data ?? {},
           });
 
           try {
@@ -112,7 +117,7 @@ export const Route = createFileRoute('/api/public/push/dispatch')({
               target: { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
               adminContact: subject,
               ttl: 86400,
-              urgency: 'normal',
+              urgency: notification.priority === 'urgent' || notification.priority === 'high' ? 'high' : notification.priority === 'low' ? 'low' : 'normal',
             });
             const response = await fetch(requestData.endpoint, { method: 'POST', headers: requestData.headers, body: requestData.body });
             const kind = classify(response.status);
