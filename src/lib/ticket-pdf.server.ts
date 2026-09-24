@@ -5,7 +5,11 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import ArabicReshaper from "arabic-reshaper";
-import QRCode from "qrcode";
+// Core encoder only: the package's main entry pulls in PNG/file-system
+// renderers that crash in the edge runtime ("No such module node:fs").
+// @ts-expect-error - no bundled types for the core subpath
+import QRCodeCore from "qrcode/lib/core/qrcode";
+const QRCode = QRCodeCore as { create: (text: string, opts: { errorCorrectionLevel: string }) => { modules: { size: number; get: (r: number, c: number) => boolean | number } } };
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { roomDisplayLabel } from "@/lib/booking/pricing";
