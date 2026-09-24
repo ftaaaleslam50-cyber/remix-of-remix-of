@@ -1153,6 +1153,72 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_broadcasts: {
+        Row: {
+          audience: string
+          body: string
+          channels: string[]
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          priority: string
+          recipients_count: number
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          target_booking_id: string | null
+          target_bus_id: string | null
+          target_trip_id: string | null
+          target_user_id: string | null
+          title: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          audience: string
+          body?: string
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          priority?: string
+          recipients_count?: number
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_booking_id?: string | null
+          target_bus_id?: string | null
+          target_trip_id?: string | null
+          target_user_id?: string | null
+          title: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          audience?: string
+          body?: string
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          priority?: string
+          recipients_count?: number
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_booking_id?: string | null
+          target_bus_id?: string | null
+          target_trip_id?: string | null
+          target_user_id?: string | null
+          title?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           bell_animation: boolean
@@ -1219,6 +1285,98 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_templates: {
+        Row: {
+          body: string
+          created_at: string
+          lang: string
+          title: string
+          type_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          lang?: string
+          title: string
+          type_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          lang?: string
+          title?: string
+          type_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_type_key_fkey"
+            columns: ["type_key"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      notification_types: {
+        Row: {
+          category: string
+          channels: string[]
+          created_at: string
+          default_body: Json
+          default_title: Json
+          description: string | null
+          display_order: number
+          enabled: boolean
+          is_automatic: boolean
+          is_critical: boolean
+          key: string
+          name: string
+          priority: string
+          updated_at: string
+          variables: string[]
+        }
+        Insert: {
+          category: string
+          channels?: string[]
+          created_at?: string
+          default_body?: Json
+          default_title?: Json
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          is_automatic?: boolean
+          is_critical?: boolean
+          key: string
+          name: string
+          priority?: string
+          updated_at?: string
+          variables?: string[]
+        }
+        Update: {
+          category?: string
+          channels?: string[]
+          created_at?: string
+          default_body?: Json
+          default_title?: Json
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          is_automatic?: boolean
+          is_critical?: boolean
+          key?: string
+          name?: string
+          priority?: string
+          updated_at?: string
+          variables?: string[]
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_url: string | null
@@ -1226,11 +1384,16 @@ export type Database = {
           body: string | null
           booking_id: string | null
           category: string
+          channels: string[]
           created_at: string
+          data: Json | null
           dedupe_key: string | null
+          event_id: string | null
           id: string
+          lang: string
           link: string | null
           metadata: Json | null
+          priority: string
           read: boolean
           read_at: string | null
           recipient_user_id: string | null
@@ -1243,11 +1406,16 @@ export type Database = {
           body?: string | null
           booking_id?: string | null
           category?: string
+          channels?: string[]
           created_at?: string
+          data?: Json | null
           dedupe_key?: string | null
+          event_id?: string | null
           id?: string
+          lang?: string
           link?: string | null
           metadata?: Json | null
+          priority?: string
           read?: boolean
           read_at?: string | null
           recipient_user_id?: string | null
@@ -1260,11 +1428,16 @@ export type Database = {
           body?: string | null
           booking_id?: string | null
           category?: string
+          channels?: string[]
           created_at?: string
+          data?: Json | null
           dedupe_key?: string | null
+          event_id?: string | null
           id?: string
+          lang?: string
           link?: string | null
           metadata?: Json | null
+          priority?: string
           read?: boolean
           read_at?: string | null
           recipient_user_id?: string | null
@@ -1463,6 +1636,7 @@ export type Database = {
           error_message: string | null
           failed_at: string | null
           id: string
+          last_attempt_at: string | null
           next_retry_at: string | null
           notification_id: string
           queued_at: string
@@ -1479,6 +1653,7 @@ export type Database = {
           error_message?: string | null
           failed_at?: string | null
           id?: string
+          last_attempt_at?: string | null
           next_retry_at?: string | null
           notification_id: string
           queued_at?: string
@@ -1495,6 +1670,7 @@ export type Database = {
           error_message?: string | null
           failed_at?: string | null
           id?: string
+          last_attempt_at?: string | null
           next_retry_at?: string | null
           notification_id?: string
           queued_at?: string
@@ -1895,6 +2071,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notification_preferences: {
+        Row: {
+          bell_animation: boolean
+          categories: Json
+          created_at: string
+          dnd_enabled: boolean
+          dnd_end: string
+          dnd_start: string
+          enabled: boolean
+          lang: string
+          push_enabled: boolean
+          sound_enabled: boolean
+          toast_enabled: boolean
+          updated_at: string
+          user_id: string
+          vibrate_enabled: boolean
+        }
+        Insert: {
+          bell_animation?: boolean
+          categories?: Json
+          created_at?: string
+          dnd_enabled?: boolean
+          dnd_end?: string
+          dnd_start?: string
+          enabled?: boolean
+          lang?: string
+          push_enabled?: boolean
+          sound_enabled?: boolean
+          toast_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          vibrate_enabled?: boolean
+        }
+        Update: {
+          bell_animation?: boolean
+          categories?: Json
+          created_at?: string
+          dnd_enabled?: boolean
+          dnd_end?: string
+          dnd_start?: string
+          enabled?: boolean
+          lang?: string
+          push_enabled?: boolean
+          sound_enabled?: boolean
+          toast_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          vibrate_enabled?: boolean
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2042,10 +2269,47 @@ export type Database = {
         Returns: Json
       }
       booking_availability: { Args: never; Returns: Json }
+      booking_notification_vars: {
+        Args: { _booking_id: string }
+        Returns: Json
+      }
+      booking_recipients: {
+        Args: { _created_by: string; _rep_name: string; _rep_profile: string }
+        Returns: string[]
+      }
       can_manage_bookings: { Args: { _user_id: string }; Returns: boolean }
+      create_notification_broadcast: {
+        Args: {
+          _audience: string
+          _body: string
+          _channels?: string[]
+          _priority?: string
+          _scheduled_at?: string
+          _target_booking?: string
+          _target_bus?: string
+          _target_trip?: string
+          _target_user?: string
+          _title: string
+          _url?: string
+        }
+        Returns: Json
+      }
       deactivate_push_subscription: {
         Args: { _endpoint: string }
         Returns: boolean
+      }
+      emit_notification: {
+        Args: {
+          _booking_id?: string
+          _data?: Json
+          _dedupe: string
+          _event_id?: string
+          _type: string
+          _url?: string
+          _user: string
+          _vars: Json
+        }
+        Returns: string
       }
       generate_booking_code: { Args: never; Returns: string }
       get_bus_occupancy: {
@@ -2109,6 +2373,24 @@ export type Database = {
         Args: { _booking_code: string; _code: string }
         Returns: boolean
       }
+      render_notification_text: {
+        Args: { _tpl: string; _vars: Json }
+        Returns: string
+      }
+      resolve_notification: {
+        Args: { _type: string; _user: string; _vars: Json }
+        Returns: {
+          body: string
+          category: string
+          channels: string[]
+          lang: string
+          ok: boolean
+          priority: string
+          title: string
+        }[]
+      }
+      run_notification_jobs: { Args: never; Returns: number }
+      send_notification_broadcast: { Args: { _id: string }; Returns: number }
       sync_push_subscription: {
         Args: {
           _auth: string
