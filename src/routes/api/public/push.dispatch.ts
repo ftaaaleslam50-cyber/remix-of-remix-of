@@ -173,27 +173,41 @@ async function markPermanent(supabaseAdmin: AdminClient, id: string, attempt: nu
   await supabaseAdmin.from('push_deliveries').update({ status: 'failed', attempt_count: attempt, failed_at: stamp, next_retry_at: null, error_code: code, error_message: message, updated_at: stamp }).eq('id', id);
 }
 
+function riyadhMinutes(): number {
+  const riyadh = new Date(Date.now() + 3 * 3600 * 1000);
+  return riyadh.getUTCHours() * 60 + riyadh.getUTCMinutes();
+}
+function toMin(t: string) { const [h, m] = t.split(':').map(Number); return (h ?? 0) * 60 + (m || 0); }
+function inWindow(start: string, end: string): boolean {
+  const now = riyadhMinutes(); const s = toMin(start), e = toMin(end);
+  return s <= e ? now >= s && now < e : now >= s || now < e;
+}
+
 async function queueDeliveries(supabaseAdmin: AdminClient, notificationId: string): Promise<{ skipped?: string }> {
-  const { data: notification } = await supabaseAdmin.from('notifications').select('id, category, recipient_user_id').eq('id', notificationId).maybeSingle();
+  const { data: notification } = await supabaseAdmin.from('notifications').select('id, category, recipient_user_id, channels, priority').eq('id', notificationId).maybeSingle();
   if (!notification) return { skipped: 'notification-missing' };
+  const channels = (notification as { channels?: string[] | null }).channels;
+  if (Array.isArray(channels) && !channels.includes('push')) return { skipped: 'push-channel-off' };
+  const priority = (notification as { priority?: string | null }).priority ?? 'normal';
 
   let userIds: string[] = [];
-  if (notification.recipient_user_id) userIds = [notification.recipient_user_id];
-  else {
+  if (notification.recipient_user_id) {
+    userIds = [notification.recipient_user_id];
+    // Per-user preferences: push switch + quiet hours (urgent always passes).
+    const { data: pref } = await supabaseAdmin.from('user_notification_preferences')
+      .select('enabled, push_enabled, dnd_enabled, dnd_start, dnd_end').eq('user_id', notification.recipient_user_id).maybeSingle();
+    if (pref) {
+      if (!pref.push_enabled && priority !== 'urgent') return { skipped: 'user-push-off' };
+      if (pref.dnd_enabled && priority !== 'urgent' && inWindow(pref.dnd_start, pref.dnd_end)) return { skipped: 'user-dnd' };
+    }
+  } else {
     const { data: staff } = await supabaseAdmin.from('user_roles').select('user_id').in('role', ['admin', 'manager', 'user_manager']);
     userIds = [...new Set((staff ?? []).map((r) => r.user_id))];
     const { data: prefs } = await supabaseAdmin.from('notification_settings').select('cat_bookings, cat_coupons, cat_buses, cat_hotels, cat_system, cat_users, dnd_enabled, dnd_start, dnd_end').eq('id', 1).maybeSingle();
     if (prefs) {
       const catKey = (`cat_${notification.category}`) as keyof typeof prefs;
       if (catKey in prefs && prefs[catKey] === false) return { skipped: 'category-disabled' };
-      if (prefs.dnd_enabled && prefs.dnd_start && prefs.dnd_end) {
-        const riyadh = new Date(Date.now() + 3 * 3600 * 1000);
-        const now = riyadh.getUTCHours() * 60 + riyadh.getUTCMinutes();
-        const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return (h ?? 0) * 60 + (m || 0); };
-        const s = toMin(prefs.dnd_start), e = toMin(prefs.dnd_end);
-        const inDnd = s <= e ? now >= s && now < e : now >= s || now < e;
-        if (inDnd) return { skipped: 'dnd' };
-      }
+      if (prefs.dnd_enabled && prefs.dnd_start && prefs.dnd_end && priority !== 'urgent' && inWindow(prefs.dnd_start, prefs.dnd_end)) return { skipped: 'dnd' };
     }
   }
   if (!userIds.length) return { skipped: 'no-recipients' };
