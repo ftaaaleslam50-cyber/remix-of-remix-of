@@ -1,8 +1,9 @@
 // «تصدير شعار رحلة الذهاب» — يبني نص إشعار الذهاب من بيانات الرحلة/الحافلة/الحجوزات
 // المفلترة حاليًا في تبويب الذهاب، مع نسخ ومشاركة نصية.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Share2, AlertTriangle, FileText } from "lucide-react";
+import { Copy, Share2, AlertTriangle, FileText, Download, Loader2 } from "lucide-react";
+import { loadBusTemplate, renderBusImage } from "@/lib/bus-image";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -97,6 +98,43 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
     return { text: body, missing: Array.from(new Set(gaps)) };
   }, [bookings, tripName, bus]);
 
+  // صورة الباص: تُولَّد من جديد لكل فتح/تغيير باص، ولا يُعاد استخدام صورة باص سابق.
+  const [img, setImg] = useState<{ key: string; url: string; blob: Blob } | null>(null);
+  const [imgNote, setImgNote] = useState<string>("");
+  const busKey = `${bus?.bus_number ?? ""}|${bus?.plate ?? ""}`;
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    let made = "";
+    setImg(null);
+    setImgNote("");
+    (async () => {
+      try {
+        const t = await loadBusTemplate();
+        if (!t) { if (alive) setImgNote("لم يتم إعداد قالب صورة الباص بعد."); return; }
+        if (!bus?.bus_number && !bus?.plate) { if (alive) setImgNote("لا توجد بيانات رقم باص أو لوحة لإنشاء صورة الباص."); return; }
+        const blob = await renderBusImage(t, { bus_number: bus?.bus_number, plate: bus?.plate });
+        if (!alive) return;
+        made = URL.createObjectURL(blob);
+        setImg({ key: busKey, url: made, blob });
+      } catch (e) {
+        if (alive) setImgNote((e as Error).message || "تعذّر إنشاء صورة الباص");
+      }
+    })();
+    return () => { alive = false; if (made) URL.revokeObjectURL(made); };
+  }, [open, busKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const busImg = img && img.key === busKey ? img : null;
+  const fileName = `bus-${bus?.bus_number || "x"}.jpg`;
+
+  function downloadImg() {
+    if (!busImg) return;
+    const a = document.createElement("a");
+    a.href = busImg.url;
+    a.download = fileName;
+    a.click();
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
@@ -108,8 +146,14 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
 
   async function share() {
     if (typeof navigator !== "undefined" && navigator.share) {
+      const file = busImg ? new File([busImg.blob], fileName, { type: "image/jpeg" }) : null;
       try {
-        await navigator.share({ text });
+        if (file && navigator.canShare?.({ files: [file] })) {
+          await navigator.clipboard.writeText(text).catch(() => undefined);
+          await navigator.share({ files: [file], text });
+        } else {
+          await navigator.share({ text });
+        }
         return;
       } catch { /* المستخدم ألغى المشاركة */ }
       return;
@@ -132,7 +176,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg" dir="rtl">
+        <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto" dir="rtl">
           <DialogHeader><DialogTitle>تصدير شعار رحلة الذهاب</DialogTitle></DialogHeader>
 
           <div className="space-y-3">
@@ -143,13 +187,22 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
               </div>
             )}
 
-            <pre className="max-h-96 overflow-auto rounded-xl border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-sans leading-6">
+            {busImg ? (
+              <img src={busImg.url} alt={`صورة الباص رقم ${bus?.bus_number ?? ""}`} className="w-full max-h-72 object-contain rounded-xl border bg-muted/40" />
+            ) : imgNote ? (
+              <div className="rounded-xl border border-warning/50 bg-warning/10 p-2 text-xs">{imgNote}</div>
+            ) : (
+              <div className="rounded-xl border p-4 text-center text-xs text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline ml-1" /> جارِ إنشاء صورة الباص…</div>
+            )}
+
+            <pre className="max-h-72 overflow-auto rounded-xl border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-sans leading-6">
               {text}
             </pre>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button className="flex-1 rounded-xl font-bold" onClick={copy}><Copy className="h-4 w-4 ml-1" /> 📋 نسخ الشعار</Button>
               <Button variant="outline" className="flex-1 rounded-xl font-bold" onClick={share}><Share2 className="h-4 w-4 ml-1" /> 📤 مشاركة</Button>
+              <Button variant="outline" className="flex-1 rounded-xl font-bold" disabled={!busImg} onClick={downloadImg}><Download className="h-4 w-4 ml-1" /> تحميل الصورة</Button>
             </div>
           </div>
         </DialogContent>

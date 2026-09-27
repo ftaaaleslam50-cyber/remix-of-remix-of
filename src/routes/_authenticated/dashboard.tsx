@@ -41,6 +41,8 @@ import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
 import { DepartureSloganDialog } from "@/components/admin/DepartureSloganDialog";
+import { CustomersTab } from "@/components/admin/CustomersTab";
+import { BusTemplateTab } from "@/components/admin/BusTemplateTab";
 import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import {
@@ -419,7 +421,13 @@ function Dashboard() {
             <TabsTrigger value="bookings" className="rounded-xl">
               <CalendarCheck className="h-4 w-4 ml-1" /> إدارة الحجوزات
             </TabsTrigger>
+            <TabsTrigger value="customers" className="rounded-xl">
+              <Users className="h-4 w-4 ml-1" /> العملاء
+            </TabsTrigger>
             {canManageContent && (<>
+            <TabsTrigger value="bustemplate" className="rounded-xl">
+              <Layout className="h-4 w-4 ml-1" /> قالب صورة الباص
+            </TabsTrigger>
             <TabsTrigger value="tripsheet" className="rounded-xl">
               <FileText className="h-4 w-4 ml-1" /> الحسابات والتصفية
             </TabsTrigger>
@@ -478,6 +486,12 @@ function Dashboard() {
             </Tabs>
           </TabsContent>
 
+          <TabsContent value="customers" className="mt-4">
+            <CustomersTab />
+          </TabsContent>
+          <TabsContent value="bustemplate" className="mt-4">
+            {canManageContent && <BusTemplateTab />}
+          </TabsContent>
           <TabsContent value="tripsheet" className="mt-4">
             <TripSheetTab />
           </TabsContent>
