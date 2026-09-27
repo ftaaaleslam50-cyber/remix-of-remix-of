@@ -33,15 +33,25 @@ export const DEFAULT_TEMPLATE_URL = defaultTemplate.url;
 export const templateTable = () => supabase.from("bus_image_template" as never);
 
 export async function loadBusTemplate(): Promise<BusImageTemplate | null> {
-  const { data } = await templateTable().select("*").eq("id" as never, 1 as never).maybeSingle();
+  const { data } = await templateTable()
+    .select("*")
+    .eq("id" as never, 1 as never)
+    .maybeSingle();
   if (!data) return null;
   const t = data as unknown as BusImageTemplate;
   const num = (v: unknown) => Number(v);
   return {
     ...t,
-    bus_number_x: num(t.bus_number_x), bus_number_y: num(t.bus_number_y), bus_number_width: num(t.bus_number_width),
-    bus_number_font_size: num(t.bus_number_font_size), bus_number2_x: num(t.bus_number2_x), bus_number2_y: num(t.bus_number2_y),
-    plate_x: num(t.plate_x), plate_y: num(t.plate_y), plate_width: num(t.plate_width), plate_height: num(t.plate_height),
+    bus_number_x: num(t.bus_number_x),
+    bus_number_y: num(t.bus_number_y),
+    bus_number_width: num(t.bus_number_width),
+    bus_number_font_size: num(t.bus_number_font_size),
+    bus_number2_x: num(t.bus_number2_x),
+    bus_number2_y: num(t.bus_number2_y),
+    plate_x: num(t.plate_x),
+    plate_y: num(t.plate_y),
+    plate_width: num(t.plate_width),
+    plate_height: num(t.plate_height),
     plate_font_size: num(t.plate_font_size),
   };
 }
@@ -54,12 +64,21 @@ function loadImage(src: string) {
       const im = new Image();
       im.crossOrigin = "anonymous";
       im.onload = () => res(im);
-      im.onerror = () => { imgCache.delete(src); rej(new Error("تعذّر تحميل قالب صورة الباص")); };
+      im.onerror = () => {
+        imgCache.delete(src);
+        rej(new Error("تعذّر تحميل قالب صورة الباص"));
+      };
       im.src = src;
     });
     imgCache.set(src, p);
   }
   return p;
+}
+
+// تحويل الأرقام الإنجليزية (0-9) إلى أرقام عربية (٠-٩).
+const ARABIC_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+function toArabicDigits(input: string): string {
+  return input.replace(/[0-9]/g, (d) => ARABIC_DIGITS[Number(d)]);
 }
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxW: number) {
@@ -71,7 +90,17 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, weight: number, si
   }
 }
 
-function drawText(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: number, w: number, align: Align, weight: number, size: number, color: string) {
+function drawText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  cy: number,
+  w: number,
+  align: Align,
+  weight: number,
+  size: number,
+  color: string,
+) {
   fitText(ctx, text, weight, size, w);
   ctx.fillStyle = color;
   ctx.textBaseline = "middle";
@@ -82,24 +111,48 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: n
 }
 
 /** Deterministic: same template + same bus data ⇒ identical image. */
-export async function renderBusImage(t: BusImageTemplate, bus: { bus_number?: number | null; plate?: string | null }): Promise<Blob> {
+export async function renderBusImage(
+  t: BusImageTemplate,
+  bus: { bus_number?: number | null; plate?: string | null },
+): Promise<Blob> {
   const im = await loadImage(t.template_image_url || DEFAULT_TEMPLATE_URL);
-  const W = im.naturalWidth, H = im.naturalHeight;
+  const W = im.naturalWidth,
+    H = im.naturalHeight;
   const c = document.createElement("canvas");
-  c.width = W; c.height = H;
+  c.width = W;
+  c.height = H;
   const ctx = c.getContext("2d")!;
   ctx.drawImage(im, 0, 0, W, H);
 
   const num = bus.bus_number ? String(bus.bus_number) : "";
   if (num && t.bus_number_enabled) {
-    const args = [t.bus_number_width * W, t.bus_number_alignment, t.bus_number_font_weight, t.bus_number_font_size * W, t.bus_number_color] as const;
-    drawText(ctx, num, t.bus_number_x * W, t.bus_number_y * H, ...args);
+    const args = [
+      t.bus_number_width * W,
+      t.bus_number_alignment,
+      t.bus_number_font_weight,
+      t.bus_number_font_size * W,
+      t.bus_number_color,
+    ] as const;
+    // اليسار: أرقام عربية (زي لوحة الباص الحقيقية)
+    drawText(ctx, toArabicDigits(num), t.bus_number_x * W, t.bus_number_y * H, ...args);
+    // اليمين: أرقام إنجليزية (تكرار الرقم بالشكل اللاتيني)
     if (t.bus_number2_enabled) drawText(ctx, num, t.bus_number2_x * W, t.bus_number2_y * H, ...args);
   }
   const plate = (bus.plate ?? "").trim();
   if (plate) {
-    drawText(ctx, plate, t.plate_x * W, t.plate_y * H, t.plate_width * W * 0.92, t.plate_alignment, t.plate_font_weight,
-      Math.min(t.plate_font_size * W, t.plate_height * H * 0.8), t.plate_color);
+    drawText(
+      ctx,
+      plate,
+      t.plate_x * W,
+      t.plate_y * H,
+      t.plate_width * W * 0.92,
+      t.plate_alignment,
+      t.plate_font_weight,
+      Math.min(t.plate_font_size * W, t.plate_height * H * 0.8),
+      t.plate_color,
+    );
   }
-  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("تعذّر إنشاء الصورة"))), "image/jpeg", 0.92));
+  return new Promise((res, rej) =>
+    c.toBlob((b) => (b ? res(b) : rej(new Error("تعذّر إنشاء الصورة"))), "image/jpeg", 0.92),
+  );
 }
