@@ -20,6 +20,8 @@ import { sar } from "@/lib/format";
 import { formatReturnOption } from "@/lib/trip-dates";
 import { writeAudit } from "@/lib/audit";
 import { storeBookingProfit } from "@/lib/profit";
+import { CustomerCombobox } from "@/components/admin/CustomerCombobox";
+import { customersTable, customerWhatsapp, type TravelCustomer } from "@/lib/customers";
 
 export type TripMode = "round" | "outbound" | "return" | "round_open";
 
@@ -167,6 +169,38 @@ export function ManualBookingRow({
   const [saving, setSaving] = useState(false);
   const [seatOpen, setSeatOpen] = useState(false);
   const [priceOverride, setPriceOverride] = useState<string>("");
+  // عميل محفوظ مختار من «العملاء» — لا يُحدَّث سجله إلا بموافقة صريحة.
+  const [picked, setPicked] = useState<TravelCustomer | null>(null);
+  const [updateSaved, setUpdateSaved] = useState(false);
+  const customerChanged = !!picked && (
+    picked.full_name !== d.customer_name.trim() ||
+    picked.id_number !== d.id_number.trim() ||
+    picked.contact_phone !== d.contact_phone.trim() ||
+    customerWhatsapp(picked) !== (d.whatsapp_phone || d.contact_phone).trim()
+  );
+
+  async function syncCustomer() {
+    const name = d.customer_name.trim();
+    const idn = d.id_number.trim();
+    const phone = d.contact_phone.trim();
+    const wa = (d.whatsapp_phone || phone).trim();
+    const row = {
+      full_name: name, id_number: idn, contact_phone: phone,
+      whatsapp_phone: wa, same_whatsapp: wa === phone,
+      nationality: d.nationality.trim() || null,
+      id_image_url: d.id_image_url.trim() || null,
+    };
+    if (picked) {
+      if (!customerChanged || !updateSaved) return;
+      const { error } = await customersTable().update(row as never).eq("id", picked.id);
+      if (error) toast.error(`تعذّر تحديث بيانات العميل: ${error.message}`);
+      else toast.success("تم تحديث بيانات العميل المحفوظة");
+      return;
+    }
+    if (d.id || !name || !idn || !phone) return;
+    const { error } = await customersTable().insert(row as never);
+    if (!error) toast.success("تم حفظ العميل في قائمة العملاء");
+  }
 
   const set = <K extends keyof ManualBookingDraft>(k: K, v: ManualBookingDraft[K]) =>
     setD((p) => ({ ...p, [k]: v }));
@@ -414,6 +448,7 @@ export function ManualBookingRow({
           .insert((trustedOwnerId ? { ...payload, created_by: trustedOwnerId } : payload) as never);
     setSaving(false);
     if (error) return toast.error(error.message);
+    void syncCustomer();
     void storeBookingProfit(code);
     void writeAudit(d.id ? "booking.manual_update" : "booking.manual_create", "bookings", d.id ?? code, { code });
     toast.success(d.id ? "تم تحديث الحجز" : `تم إنشاء الحجز ${code}`);
@@ -641,7 +676,26 @@ export function ManualBookingRow({
           {/* 4) بيانات المعتمر */}
           <Section title="٤) بيانات المعتمر">
             <Field label="الاسم">
-              <Input className={cell} value={d.customer_name} onChange={(e) => set("customer_name", e.target.value)} />
+              <CustomerCombobox
+                className={cell}
+                value={d.customer_name}
+                selected={!!picked}
+                onChange={(v) => set("customer_name", v)}
+                onPick={(c) => {
+                  setPicked(c);
+                  setUpdateSaved(false);
+                  setD((p) => ({
+                    ...p,
+                    customer_name: c.full_name,
+                    id_number: c.id_number,
+                    contact_phone: c.contact_phone,
+                    whatsapp_phone: customerWhatsapp(c),
+                    id_image_url: c.id_image_url || p.id_image_url,
+                    nationality: c.nationality || p.nationality,
+                  }));
+                }}
+                onNew={() => setPicked(null)}
+              />
             </Field>
             <Field label="الجوال">
               <Input className={cell} dir="ltr" value={d.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} />
@@ -659,6 +713,15 @@ export function ManualBookingRow({
               <Input className={cell} dir="ltr" value={d.id_image_url} onChange={(e) => set("id_image_url", e.target.value)} />
             </Field>
           </Section>
+          {picked && customerChanged && (
+            <label className="flex items-center gap-2 text-xs rounded-xl border border-warning/50 bg-warning/10 p-2">
+              <input type="checkbox" checked={updateSaved} onChange={(e) => setUpdateSaved(e.target.checked)} />
+              تحديث بيانات العميل المحفوظة «{picked.full_name}» بالبيانات المعدّلة
+            </label>
+          )}
+          {!picked && !d.id && d.customer_name.trim() && d.id_number.trim() && (
+            <div className="text-[11px] text-muted-foreground">سيُحفظ هذا العميل تلقائيًا في «العملاء» بعد حفظ الحجز (إن لم يكن رقم هويته مسجلًا).</div>
+          )}
 
           {/* 5) المندوب والمصدر */}
           <Section title="٥) المندوب ومصدر الحجز">
