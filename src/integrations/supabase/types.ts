@@ -633,6 +633,81 @@ export type Database = {
           },
         ]
       }
+      bus_image_template: {
+        Row: {
+          bus_number_alignment: string
+          bus_number_color: string
+          bus_number_enabled: boolean
+          bus_number_font_size: number
+          bus_number_font_weight: number
+          bus_number_width: number
+          bus_number_x: number
+          bus_number_y: number
+          bus_number2_enabled: boolean
+          bus_number2_x: number
+          bus_number2_y: number
+          id: number
+          plate_alignment: string
+          plate_color: string
+          plate_font_size: number
+          plate_font_weight: number
+          plate_height: number
+          plate_width: number
+          plate_x: number
+          plate_y: number
+          template_image_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          bus_number_alignment?: string
+          bus_number_color?: string
+          bus_number_enabled?: boolean
+          bus_number_font_size?: number
+          bus_number_font_weight?: number
+          bus_number_width?: number
+          bus_number_x?: number
+          bus_number_y?: number
+          bus_number2_enabled?: boolean
+          bus_number2_x?: number
+          bus_number2_y?: number
+          id?: number
+          plate_alignment?: string
+          plate_color?: string
+          plate_font_size?: number
+          plate_font_weight?: number
+          plate_height?: number
+          plate_width?: number
+          plate_x?: number
+          plate_y?: number
+          template_image_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bus_number_alignment?: string
+          bus_number_color?: string
+          bus_number_enabled?: boolean
+          bus_number_font_size?: number
+          bus_number_font_weight?: number
+          bus_number_width?: number
+          bus_number_x?: number
+          bus_number_y?: number
+          bus_number2_enabled?: boolean
+          bus_number2_x?: number
+          bus_number2_y?: number
+          id?: number
+          plate_alignment?: string
+          plate_color?: string
+          plate_font_size?: number
+          plate_font_weight?: number
+          plate_height?: number
+          plate_width?: number
+          plate_x?: number
+          plate_y?: number
+          template_image_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bus_layouts: {
         Row: {
           created_at: string
@@ -1922,6 +1997,54 @@ export type Database = {
           return_seat_cost?: number
           transfer?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      travel_customers: {
+        Row: {
+          active: boolean
+          contact_phone: string
+          created_at: string
+          created_by: string | null
+          full_name: string
+          id: string
+          id_image_url: string | null
+          id_number: string
+          nationality: string | null
+          notes: string | null
+          same_whatsapp: boolean
+          updated_at: string
+          whatsapp_phone: string | null
+        }
+        Insert: {
+          active?: boolean
+          contact_phone: string
+          created_at?: string
+          created_by?: string | null
+          full_name: string
+          id?: string
+          id_image_url?: string | null
+          id_number: string
+          nationality?: string | null
+          notes?: string | null
+          same_whatsapp?: boolean
+          updated_at?: string
+          whatsapp_phone?: string | null
+        }
+        Update: {
+          active?: boolean
+          contact_phone?: string
+          created_at?: string
+          created_by?: string | null
+          full_name?: string
+          id?: string
+          id_image_url?: string | null
+          id_number?: string
+          nationality?: string | null
+          notes?: string | null
+          same_whatsapp?: boolean
+          updated_at?: string
+          whatsapp_phone?: string | null
         }
         Relationships: []
       }
