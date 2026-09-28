@@ -378,7 +378,7 @@ export function TripSheetTab() {
       rows.filter((b) => {
         if (b.status === "cancelled") return false;
         if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
-         if (busIds.length === 0 && tripId && !matchesTripFilter(b, tripId)) return false;
+         if (tripId && !matchesTripFilter(b, tripId)) return false;
         if (sourceFilter && (b.booking_source || "الموقع") !== sourceFilter) return false;
         if (search) {
           const q = search.trim().toLowerCase();
@@ -396,7 +396,7 @@ export function TripSheetTab() {
     rows.forEach((b) => {
       if (b.status === "cancelled") return;
       if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return;
-      if (busIds.length === 0 && tripId && !matchesTripFilter(b, tripId)) return;
+      if (tripId && !matchesTripFilter(b, tripId)) return;
       set.add(b.booking_source || "الموقع");
     });
     return [...set].sort((a, b) => a.localeCompare(b, "ar"));

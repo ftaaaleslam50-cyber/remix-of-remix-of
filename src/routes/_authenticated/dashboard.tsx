@@ -731,11 +731,8 @@ function UnifiedBookingsTab(props: {
     if (tripMode && (b.trip_mode ?? "round") !== tripMode) return false;
     if (bookingType && (b.booking_type ?? "family") !== bookingType) return false;
     if (returnPick && (b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "") !== returnPick) return false;
-    if (busIds.length > 0) {
-      if (!b.bus_id || !busIds.includes(b.bus_id)) return false;
-     } else if (tripId) {
-       if (!matchesTripFilter(b, tripId)) return false;
-    }
+    if (tripId && !matchesTripFilter(b, tripId)) return false;
+    if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
     if (search) {
       const q = search.trim().toLowerCase();
       const hay = `${b.booking_code} ${b.customer_name} ${b.contact_phone} ${b.id_number}`.toLowerCase();
