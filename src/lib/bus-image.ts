@@ -75,18 +75,57 @@ function loadImage(src: string) {
   return p;
 }
 
+// ---- الخطوط ----
+// العربي: Amiri (نسخ) يقرّب شكل الأرقام من اللي على الباصات. اللاتيني: Tahoma/Verdana عريض.
+const FONT_ARABIC = '"Amiri", "Noto Naskh Arabic", "Traditional Arabic", serif';
+const FONT_LATIN = 'Tahoma, Verdana, "Segoe UI", Arial, sans-serif';
+
+let fontsReady: Promise<void> | null = null;
+function ensureFonts(): Promise<void> {
+  if (fontsReady) return fontsReady;
+  fontsReady = (async () => {
+    try {
+      if (!document.getElementById("bus-image-fonts")) {
+        const l = document.createElement("link");
+        l.id = "bus-image-fonts";
+        l.rel = "stylesheet";
+        l.href = "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap";
+        document.head.appendChild(l);
+      }
+      // ننتظر التحميل (بحد أقصى 3 ثواني) حتى لا تُرسم الصورة بخط بديل.
+      await Promise.race([
+        Promise.all([
+          document.fonts.load('700 40px "Amiri"', "٠١٢٣٤٥٦٧٨٩"),
+          document.fonts.load("700 40px Tahoma", "0123456789"),
+        ]),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch {
+      /* نكمل بالخط البديل */
+    }
+  })();
+  return fontsReady;
+}
+
 // تحويل الأرقام الإنجليزية (0-9) إلى أرقام عربية (٠-٩).
 const ARABIC_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 function toArabicDigits(input: string): string {
   return input.replace(/[0-9]/g, (d) => ARABIC_DIGITS[Number(d)]);
 }
 
-function fitText(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, maxW: number) {
+function fitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  weight: number,
+  size: number,
+  maxW: number,
+  family: string,
+) {
   let s = size;
-  ctx.font = `${weight} ${s}px "Segoe UI", Arial, sans-serif`;
+  ctx.font = `${weight} ${s}px ${family}`;
   while (s > 6 && ctx.measureText(text).width > maxW) {
     s -= 1;
-    ctx.font = `${weight} ${s}px "Segoe UI", Arial, sans-serif`;
+    ctx.font = `${weight} ${s}px ${family}`;
   }
 }
 
@@ -100,8 +139,9 @@ function drawText(
   weight: number,
   size: number,
   color: string,
+  family: string = FONT_LATIN,
 ) {
-  fitText(ctx, text, weight, size, w);
+  fitText(ctx, text, weight, size, w, family);
   ctx.fillStyle = color;
   ctx.textBaseline = "middle";
   ctx.textAlign = align;
@@ -115,6 +155,7 @@ export async function renderBusImage(
   t: BusImageTemplate,
   bus: { bus_number?: number | null; plate?: string | null },
 ): Promise<Blob> {
+  await ensureFonts();
   const im = await loadImage(t.template_image_url || DEFAULT_TEMPLATE_URL);
   const W = im.naturalWidth,
     H = im.naturalHeight;
@@ -134,7 +175,7 @@ export async function renderBusImage(
       t.bus_number_color,
     ] as const;
     // اليسار: أرقام عربية (زي لوحة الباص الحقيقية)
-    drawText(ctx, toArabicDigits(num), t.bus_number_x * W, t.bus_number_y * H, ...args);
+    drawText(ctx, toArabicDigits(num), t.bus_number_x * W, t.bus_number_y * H, ...args, FONT_ARABIC);
     // اليمين: أرقام إنجليزية (تكرار الرقم بالشكل اللاتيني)
     if (t.bus_number2_enabled) drawText(ctx, num, t.bus_number2_x * W, t.bus_number2_y * H, ...args);
   }
