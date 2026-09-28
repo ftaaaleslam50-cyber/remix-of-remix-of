@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sar, formatDateTime } from "@/lib/format";
+import { busDateLabel } from "@/components/admin/BusMultiSelect";
 
 export const Route = createFileRoute("/_authenticated/admin-bookings")({
   component: AdminBookings,
@@ -148,7 +149,11 @@ function AdminBookings() {
     queryKey: ["admin-buses-list"],
     enabled: ok === true,
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number").order("bus_number");
+      const { data, error } = await supabase
+        .from("buses")
+        .select("id,name,bus_number,assigned_date")
+        .order("assigned_date", { ascending: true, nullsFirst: false })
+        .order("bus_number");
 
       if (error) throw error;
 
@@ -156,6 +161,7 @@ function AdminBookings() {
         id: string;
         name: string | null;
         bus_number: number;
+        assigned_date?: string | null;
       }>;
     },
   });
@@ -370,7 +376,7 @@ function AdminBookings() {
 
                 {buses.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.name ?? `حافلة ${b.bus_number}`}
+                    {b.name ?? `حافلة ${b.bus_number}`} — {busDateLabel(b.assigned_date)}
                   </option>
                 ))}
               </select>

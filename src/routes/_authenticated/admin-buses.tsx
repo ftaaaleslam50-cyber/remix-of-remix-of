@@ -146,7 +146,11 @@ function AdminBuses() {
     queryKey: ["admin-buses-fleet"],
     enabled: isAdmin === true,
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("*").order("bus_number");
+      const { data, error } = await supabase
+        .from("buses")
+        .select("*")
+        .order("assigned_date", { ascending: true, nullsFirst: false })
+        .order("bus_number");
 
       if (error) throw error;
 
