@@ -2022,6 +2022,7 @@ export type Database = {
           hotel_night_prices: Json
           id: number
           return_seat_cost: number
+          return_trip_company_profit_rate: number
           transfer: Json
           updated_at: string
         }
@@ -2034,6 +2035,7 @@ export type Database = {
           hotel_night_prices?: Json
           id?: number
           return_seat_cost?: number
+          return_trip_company_profit_rate?: number
           transfer?: Json
           updated_at?: string
         }
@@ -2046,6 +2048,7 @@ export type Database = {
           hotel_night_prices?: Json
           id?: number
           return_seat_cost?: number
+          return_trip_company_profit_rate?: number
           transfer?: Json
           updated_at?: string
         }
