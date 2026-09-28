@@ -85,6 +85,15 @@ import { customersTable, cleanPhone } from "@/lib/customers";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: () => ({ meta: [
+    { title: `لوحة التحكم | ${BRAND.name}` },
+    { name: "description", content: "إدارة الحجوزات والحافلات وحسابات رحلات زهرة طيبة." },
+    { property: "og:title", content: `لوحة التحكم | ${BRAND.name}` },
+    { property: "og:description", content: "إدارة الحجوزات والحافلات وحسابات رحلات زهرة طيبة." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: Dashboard,
 });
 
