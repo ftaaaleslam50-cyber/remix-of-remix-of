@@ -21,7 +21,63 @@ import { formatReturnOption } from "@/lib/trip-dates";
 import { writeAudit } from "@/lib/audit";
 import { storeBookingProfit } from "@/lib/profit";
 import { CustomerCombobox } from "@/components/admin/CustomerCombobox";
-import { customersTable, customerWhatsapp, type TravelCustomer } from "@/lib/customers";
+import { customersTable, customerWhatsapp, type TravelCustomer, idImageUrl, uploadCustomerId } from "@/lib/customers";
+import { Upload, Trash2 } from "lucide-react";
+
+const ID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** رفع صورة الهوية إلى التخزين الخاص؛ يحفظ المسار. الروابط القديمة تبقى معروضة كما هي. */
+function IdImageUpload({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setPreview(null);
+    if (value) idImageUrl(value).then((u) => alive && setPreview(u));
+    return () => { alive = false; };
+  }, [value]);
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    if (!ID_IMAGE_TYPES.includes(file.type)) return void toast.error("الصيغ المدعومة: JPG / PNG / WEBP");
+    setUploading(true);
+    try {
+      onChange(await uploadCustomerId(file));
+      toast.success("تم رفع صورة الهوية");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {value && (
+        <a href={preview ?? undefined} target="_blank" rel="noreferrer" className="shrink-0">
+          {preview ? (
+            <img src={preview} alt="صورة الهوية" className="h-12 w-16 rounded border object-cover" />
+          ) : (
+            <div className="h-12 w-16 rounded border bg-muted grid place-items-center"><Loader2 className="h-3 w-3 animate-spin" /></div>
+          )}
+        </a>
+      )}
+      <label className="inline-flex">
+        <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="hidden" disabled={uploading}
+          onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
+        <span className={`cursor-pointer inline-flex items-center gap-1 h-9 px-3 rounded-lg border bg-background text-xs font-bold hover:bg-muted ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {value ? "إعادة الرفع" : "رفع صورة الهوية"}
+        </span>
+      </label>
+      {value && (
+        <Button type="button" size="sm" variant="outline" onClick={() => onChange("")} title="حذف الصورة">
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export type TripMode = "round" | "outbound" | "return" | "round_open";
 
@@ -709,8 +765,8 @@ export function ManualBookingRow({
             <Field label="الجنسية">
               <Input className={cell} value={d.nationality} onChange={(e) => set("nationality", e.target.value)} />
             </Field>
-            <Field label="رابط صورة الهوية">
-              <Input className={cell} dir="ltr" value={d.id_image_url} onChange={(e) => set("id_image_url", e.target.value)} />
+            <Field label="صورة الهوية">
+              <IdImageUpload value={d.id_image_url} onChange={(v) => set("id_image_url", v)} />
             </Field>
           </Section>
           {picked && customerChanged && (
