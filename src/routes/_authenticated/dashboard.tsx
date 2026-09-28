@@ -79,6 +79,9 @@ import { DEFAULT_BOOKING_UNAVAILABLE_MESSAGE } from "@/lib/booking-availability"
 import { toast } from "sonner";
 import { useStaffRole } from "@/hooks/useStaffRole";
 import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
+import { TripFilterOptions } from "@/components/admin/TripFilterOptions";
+import { matchesTripFilter } from "@/lib/trip-filter";
+import { customersTable, cleanPhone } from "@/lib/customers";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -117,6 +120,7 @@ interface BookingRow {
   trip_mode?: string | null;
   bus_id?: string | null;
   trip_id?: string | null;
+  return_trip_id?: string | null;
   package_id?: string | null;
   packages?: { name: string } | null;
   departure_date?: string | null;
@@ -182,7 +186,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,actual_return_date,no_hotel,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
+           "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,actual_return_date,no_hotel,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,return_trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -609,6 +613,7 @@ function UnifiedBookingsTab(props: {
   const [returnPick, setReturnPick] = useState<string>("");
   const [bookingType, setBookingType] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const [addingCustomer, setAddingCustomer] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: trips = [] } = useQuery({
@@ -617,6 +622,36 @@ function UnifiedBookingsTab(props: {
       ((await supabase.from("trips").select("id,name").eq("active", true).order("display_order"))
         .data as UBTripOpt[]) ?? [],
   });
+  const { data: returnTrips = [] } = useQuery({
+    queryKey: ["ub-return-trip-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("return_trips").select("id,name").eq("active", true).order("display_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  async function addBookingCustomer(b: BookingRow) {
+    const name = b.customer_name?.trim();
+    const id = b.id_number?.trim();
+    const phone = b.contact_phone?.trim();
+    if (!name || !id || !phone || cleanPhone(phone).length < 9) {
+      toast.error("الاسم ورقم الهوية والجوال الصحيح مطلوبة لإضافة العميل");
+      return;
+    }
+    setAddingCustomer(b.id);
+    try {
+      const { error } = await customersTable().insert({
+        full_name: name, id_number: id, contact_phone: phone,
+        same_whatsapp: !b.whatsapp_phone || cleanPhone(b.whatsapp_phone) === cleanPhone(phone),
+        whatsapp_phone: b.whatsapp_phone?.trim() || phone,
+        id_image_url: b.id_image_url || null, nationality: b.nationality || null,
+      } as never);
+      if (error?.code === "23505") toast.info("العميل مسجل بالفعل بنفس رقم الهوية");
+      else if (error) throw error;
+      else { toast.success("تمت إضافة العميل إلى قائمة العملاء"); qcInner.invalidateQueries({ queryKey: ["travel-customers"] }); }
+    } catch (error) { toast.error(error instanceof Error ? error.message : "تعذرت إضافة العميل"); }
+    finally { setAddingCustomer(null); }
+  }
   const { data: buses = [] } = useQuery({
     queryKey: ["ub-buses-all", tripId],
     queryFn: async () => {
@@ -692,8 +727,8 @@ function UnifiedBookingsTab(props: {
     if (returnPick && (b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "") !== returnPick) return false;
     if (busIds.length > 0) {
       if (!b.bus_id || !busIds.includes(b.bus_id)) return false;
-    } else if (tripId) {
-      if (b.trip_id !== tripId) return false;
+     } else if (tripId) {
+       if (!matchesTripFilter(b, tripId)) return false;
     }
     if (search) {
       const q = search.trim().toLowerCase();
@@ -1124,11 +1159,7 @@ function UnifiedBookingsTab(props: {
             className="h-10 w-full rounded-md border px-3 text-sm bg-white"
           >
             <option value="">— كل الرحلات —</option>
-            {trips.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
+             <TripFilterOptions outbound={trips} returning={returnTrips} />
           </select>
         </div>
         <div>
@@ -1723,6 +1754,9 @@ function UnifiedBookingsTab(props: {
                       }}
                     >
                       <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="outline" title="إضافة إلى قائمة العملاء" aria-label="إضافة إلى قائمة العملاء" disabled={addingCustomer === b.id} onClick={() => addBookingCustomer(b)}>
+                      {addingCustomer === b.id ? <span className="animate-pulse">…</span> : <Users className="h-3 w-3" />}
                     </Button>
                     {b.whatsapp_phone && (
                       <a
