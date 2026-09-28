@@ -9,6 +9,7 @@ export interface BusOption {
   bus_number: number;
   capacity?: number;
   assigned_date?: string | null;
+  direction?: string | null;
 }
 
 /** التاريخ بصيغة عربية مختصرة (ميلادي) */
@@ -47,16 +48,32 @@ export function BusMultiSelect({
     onChange(on ? [...value, id] : value.filter((x) => x !== id));
   }
 
+  const byDate = (a: BusOption, b: BusOption) =>
+    (a.assigned_date ?? "9999-12-31").localeCompare(b.assigned_date ?? "9999-12-31") || a.bus_number - b.bus_number;
+  const outbound = buses.filter((b) => b.direction !== "return").sort(byDate);
+  const returning = buses.filter((b) => b.direction === "return").sort(byDate);
+  const renderBus = (b: BusOption) => (
+    <label key={b.id} className="flex items-center gap-2 rounded-md p-1.5 hover:bg-muted cursor-pointer">
+      <Checkbox checked={value.includes(b.id)} onCheckedChange={(v) => toggle(b.id, !!v)} />
+      <span className="text-xs">
+        <span className="font-bold">{b.name || `حافلة ${b.bus_number}`}</span>
+        <span className="text-muted-foreground"> — {busDateLabel(b.assigned_date)}</span>
+        {b.capacity ? <span className="text-muted-foreground"> — سعة {b.capacity}</span> : null}
+      </span>
+    </label>
+  );
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
-          className="h-10 w-full rounded-md border px-3 text-sm bg-white flex items-center justify-between gap-2 text-right"
+          variant="outline"
+          className="h-10 w-full rounded-md px-3 text-sm bg-background flex items-center justify-between gap-2 text-right font-normal"
         >
           <span className="truncate">{label}</span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2 max-h-72 overflow-auto">
         <div className="flex items-center justify-between mb-2">
@@ -67,16 +84,11 @@ export function BusMultiSelect({
         </div>
         {buses.length === 0 && <div className="text-xs text-muted-foreground p-2">لا توجد حافلات</div>}
         <div className="space-y-1">
-          {buses.map((b) => (
-            <label key={b.id} className="flex items-center gap-2 rounded-md p-1.5 hover:bg-muted cursor-pointer">
-              <Checkbox checked={value.includes(b.id)} onCheckedChange={(v) => toggle(b.id, !!v)} />
-              <span className="text-xs">
-                <span className="font-bold">{b.name || `حافلة ${b.bus_number}`}</span>
-                <span className="text-muted-foreground"> — {busDateLabel(b.assigned_date)}</span>
-                {b.capacity ? <span className="text-muted-foreground"> — سعة {b.capacity}</span> : null}
-              </span>
-            </label>
-          ))}
+          {outbound.length > 0 && <div className="px-1.5 pb-1 text-xs font-bold text-muted-foreground">حافلات الذهاب</div>}
+          {outbound.map(renderBus)}
+          {outbound.length > 0 && returning.length > 0 && <div role="separator" className="my-2 border-t border-border" />}
+          {returning.length > 0 && <div className="px-1.5 pb-1 text-xs font-bold text-muted-foreground">حافلات العودة</div>}
+          {returning.map(renderBus)}
         </div>
       </PopoverContent>
     </Popover>
