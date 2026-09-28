@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/admin-bus-layouts")({
+  head: () => ({ meta: [{ title: "تخطيط المقاعد | زهرة طيبة" }, { name: "description", content: "إدارة تخطيطات مقاعد الحافلات." }, { property: "og:title", content: "تخطيط المقاعد | زهرة طيبة" }, { property: "og:description", content: "إدارة تخطيطات مقاعد الحافلات." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminBusLayouts,
 });
 

@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AssetField } from "@/components/admin/AssetField";
 
 export const Route = createFileRoute("/_authenticated/admin-homepage")({
+  head: () => ({ meta: [{ title: "إعدادات الموقع | زهرة طيبة" }, { name: "description", content: "إدارة محتوى وإعدادات موقع زهرة طيبة." }, { property: "og:title", content: "إعدادات الموقع | زهرة طيبة" }, { property: "og:description", content: "إدارة محتوى وإعدادات موقع زهرة طيبة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminHomepage,
 });
 

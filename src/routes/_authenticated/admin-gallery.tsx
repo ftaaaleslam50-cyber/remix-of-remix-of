@@ -13,6 +13,7 @@ import { AssetField } from "@/components/admin/AssetField";
 import { trackAssetUsage, untrackAssetUsage } from "@/lib/asset-usage";
 
 export const Route = createFileRoute("/_authenticated/admin-gallery")({
+  head: () => ({ meta: [{ title: "إدارة المعرض | زهرة طيبة" }, { name: "description", content: "إدارة ألبومات وصور رحلات زهرة طيبة." }, { property: "og:title", content: "إدارة المعرض | زهرة طيبة" }, { property: "og:description", content: "إدارة ألبومات وصور رحلات زهرة طيبة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminGallery,
 });
 

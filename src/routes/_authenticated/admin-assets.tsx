@@ -10,6 +10,7 @@ import { assetKind } from "@/components/admin/AssetPicker";
 
 
 export const Route = createFileRoute("/_authenticated/admin-assets")({
+  head: () => ({ meta: [{ title: "مكتبة الوسائط | زهرة طيبة" }, { name: "description", content: "إدارة ملفات وصور زهرة طيبة." }, { property: "og:title", content: "مكتبة الوسائط | زهرة طيبة" }, { property: "og:description", content: "إدارة ملفات وصور زهرة طيبة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminAssets,
 });
 

@@ -18,6 +18,7 @@ import { startOfWeek as weekStart } from "@/lib/week";
 import { DeletedBusesSection } from "@/components/admin/DeletedBusesSection";
 
 export const Route = createFileRoute("/_authenticated/admin-buses")({
+  head: () => ({ meta: [{ title: "الأسطول | زهرة طيبة" }, { name: "description", content: "إدارة حافلات الذهاب والعودة في زهرة طيبة." }, { property: "og:title", content: "الأسطول | زهرة طيبة" }, { property: "og:description", content: "إدارة حافلات الذهاب والعودة في زهرة طيبة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminBuses,
 });
 

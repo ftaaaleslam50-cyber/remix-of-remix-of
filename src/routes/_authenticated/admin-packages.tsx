@@ -12,6 +12,7 @@ import { AssetImg } from "@/components/admin/AssetImg";
 
 
 export const Route = createFileRoute("/_authenticated/admin-packages")({
+  head: () => ({ meta: [{ title: "إدارة الباقات | زهرة طيبة" }, { name: "description", content: "إدارة باقات رحلات زهرة طيبة." }, { property: "og:title", content: "إدارة الباقات | زهرة طيبة" }, { property: "og:description", content: "إدارة باقات رحلات زهرة طيبة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminPackages,
 });
 
