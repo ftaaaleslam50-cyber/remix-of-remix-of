@@ -16,6 +16,7 @@ import { RepresentativesTab } from "@/components/admin/RepresentativesTab";
 
 
 export const Route = createFileRoute("/_authenticated/admin-users")({
+  head: () => ({ meta: [{ title: "إدارة المستخدمين | زهرة طيبة" }, { name: "description", content: "إدارة حسابات المستخدمين والمناديب." }, { property: "og:title", content: "إدارة المستخدمين | زهرة طيبة" }, { property: "og:description", content: "إدارة حسابات المستخدمين والمناديب." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminUsers,
 });
 

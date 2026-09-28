@@ -13,6 +13,7 @@ import { AssetField } from "@/components/admin/AssetField";
 import { trackAssetUsage, untrackAssetUsage } from "@/lib/asset-usage";
 
 export const Route = createFileRoute("/_authenticated/admin-hotels")({
+  head: () => ({ meta: [{ title: "إدارة الفنادق | زهرة طيبة" }, { name: "description", content: "إدارة خيارات الفنادق لرحلات زهرة طيبة." }, { property: "og:title", content: "إدارة الفنادق | زهرة طيبة" }, { property: "og:description", content: "إدارة خيارات الفنادق لرحلات زهرة طيبة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminHotels,
 });
 

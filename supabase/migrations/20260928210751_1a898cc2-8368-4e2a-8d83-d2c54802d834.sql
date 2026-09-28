@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.refresh_return_profit_shares() FROM PUBLIC, anon, authenticated;

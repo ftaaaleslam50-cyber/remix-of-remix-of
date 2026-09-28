@@ -87,6 +87,7 @@ type RefState = {
   transfer: Record<string, number>;
   /** تكلفة مقعد حجوزات «عودة فقط» — قيمة يدوية مستقلة عن قسمة مصاريف الحافلة. */
   returnSeatCost: number;
+  returnCompanyRate: number;
 };
 
 const EMPTY_BUS_EXP: BusExpenses = {
@@ -106,6 +107,7 @@ const EMPTY_REF: RefState = {
   commissions: {},
   transfer: { "ذهاب فقط": 50, "ذهاب وعوده فقط": 80, "ذهاب وعوده برحلة اخرى": 90 },
   returnSeatCost: 0,
+  returnCompanyRate: 0,
 };
 
 
@@ -197,8 +199,9 @@ export function TripSheetTab() {
         await supabase
           .from("buses")
           .select(
-            "id,name,bus_number,capacity,assigned_date,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra,settled_at",
+            "id,name,bus_number,capacity,assigned_date,direction,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra,settled_at",
           )
+          .order("assigned_date", { ascending: true, nullsFirst: false })
           .order("bus_number")
       ).data ?? []) as unknown as Array<{
         id: string;
@@ -206,6 +209,7 @@ export function TripSheetTab() {
         bus_number: number;
         capacity: number;
         assigned_date: string | null;
+        direction: string | null;
         expense_bus_cost?: number | null;
         expense_driver_tip?: number | null;
         expense_taxi?: number | null;
@@ -339,6 +343,7 @@ export function TripSheetTab() {
           commissions: (d["commissions"] as RefState["commissions"]) ?? {},
           transfer: { ...EMPTY_REF.transfer, ...((d["transfer"] as Record<string, number>) ?? {}) },
           returnSeatCost: Number(d["return_seat_cost"] ?? 0) || 0,
+          returnCompanyRate: Number(d["return_trip_company_profit_rate"] ?? 0) || 0,
 
         });
       }
@@ -362,6 +367,7 @@ export function TripSheetTab() {
         commissions: ref.commissions,
         transfer: ref.transfer,
         return_seat_cost: ref.returnSeatCost,
+        return_trip_company_profit_rate: ref.returnCompanyRate,
 
       } as never);
       setSaving(false);
@@ -603,6 +609,8 @@ export function TripSheetTab() {
           emptyBedShare: 0, // بقت متضمنة داخل seatCost (على مستوى كل حافلة)
           count,
           rate,
+          isReturn: Boolean(b.return_trip_id) || b.trip_mode === "return",
+          returnCompanyRate: ref.returnCompanyRate,
         });
 
         return { idx, b, rep, hotel, roomLabel, count, nights, packageTotal, bedCost, seatCost, ...r };
@@ -1315,13 +1323,24 @@ export function TripSheetTab() {
         <SettleRow k="إجمالي الإيراد" v={sar(round(revenue))} />
         <SettleRow k="إجمالي التكاليف" v={sar(round(totals.groupCost + totals.extensionCost))} />
         <SettleRow k="مجمل الربح" v={sar(round(totals.grossProfit))} strong />
-        <SettleRow k="حصة المناديب" v={sar(round(totals.repShare))} />
+     <SettleRow k="حصة مصادر الحجز والمناديب" v={sar(round(totals.repShare))} />
         <SettleRow k="حصة المؤسسة" v={sar(round(totals.companyShare))} strong />
       </div>
 
       {/* Reference data — persisted in the database */}
       <div className="rounded-xl border p-4 space-y-4">
         <h3 className="font-extrabold">بيانات الشيت المرجعي (محفوظة في قاعدة البيانات)</h3>
+
+        <div className="max-w-xs">
+          <Label htmlFor="return-company-rate" className="text-xs mb-1 block">نسبة المؤسسة من ربح مقعد العودة</Label>
+          <div className="relative">
+            <Input id="return-company-rate" type="number" min="0" max="100" step="1" className="pl-8" value={String(Math.round(ref.returnCompanyRate * 10000) / 100)} onChange={(e) => {
+              const value = Number(e.target.value);
+              if (Number.isFinite(value)) setRef((s) => ({ ...s, returnCompanyRate: Math.min(100, Math.max(0, value)) / 100 }));
+            }} />
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">٪</span>
+          </div>
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
           {(["ذهاب فقط", "ذهاب وعوده فقط", "ذهاب وعوده برحلة اخرى"] as const).map((k) => (

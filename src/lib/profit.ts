@@ -24,6 +24,10 @@ export interface ProfitInput {
   count: number;
   /** نسبة عمولة المندوب (0 → 1). */
   rate: number;
+  /** حجز مرتبط برحلة عودة أو عودة فقط. */
+  isReturn?: boolean;
+  /** نسبة المؤسسة من أرباح العودة (0 → 1). */
+  returnCompanyRate?: number;
 }
 
 export interface ProfitResult {
@@ -51,7 +55,8 @@ export function computeBookingProfit(i: ProfitInput): ProfitResult {
   // ملاحظة: لا نستخدم grandTotal هنا لأنه يشمل extensionTotal بالفعل،
   // واستخدامه هنا كان يجمع ربح التمديد مرتين.
   const grossProfit = i.packageTotal - groupCost + extensionProfit;
-  const repShare = grossProfit * i.rate;
+  const companyShare = i.isReturn ? grossProfit * (i.returnCompanyRate ?? 0) : grossProfit * (1 - i.rate);
+  const repShare = i.isReturn ? grossProfit - companyShare : grossProfit * i.rate;
   return {
     extensionTotal,
     grandTotal,
@@ -60,9 +65,9 @@ export function computeBookingProfit(i: ProfitInput): ProfitResult {
     extensionCost,
     extensionProfit,
     grossProfit,
-    rate: i.rate,
+    rate: i.isReturn ? 1 - (i.returnCompanyRate ?? 0) : i.rate,
     repShare,
-    companyShare: grossProfit - repShare,
+    companyShare: i.isReturn ? companyShare : grossProfit - repShare,
   };
 }
 
@@ -73,6 +78,7 @@ type RefRow = {
   bus_expenses?: Record<string, number> | null;
   /** تكلفة مقعد حجوزات «عودة فقط» — تُدخل يدويًا في الحسابات والتصفية. */
   return_seat_cost?: number | null;
+  return_trip_company_profit_rate?: number | null;
 };
 
 
@@ -93,7 +99,7 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     const { data: bRaw } = await supabase
       .from("bookings")
       .select(
-        "id,total_price,passenger_count,room_type,booking_type,extension_nights,booking_source,rep_profile_id,bus_id,package_id,trip_mode,packages(name)",
+        "id,total_price,passenger_count,room_type,booking_type,extension_nights,booking_source,rep_profile_id,bus_id,package_id,trip_mode,return_trip_id,packages(name)",
       )
       .eq("booking_code", bookingCode)
       .maybeSingle();
@@ -109,6 +115,7 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
       bus_id: string | null;
       package_id: string | null;
       trip_mode: string | null;
+      return_trip_id: string | null;
       packages: { name: string } | null;
     } | null;
     if (!b) return;
@@ -184,6 +191,8 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
       emptyBedShare: 0,
       count: n(b.passenger_count),
       rate,
+      isReturn: Boolean(b.return_trip_id) || b.trip_mode === "return",
+      returnCompanyRate: n(ref.return_trip_company_profit_rate),
     });
 
     await supabase

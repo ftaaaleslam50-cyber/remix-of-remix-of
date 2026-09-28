@@ -16,6 +16,7 @@ import { isCurrentWeek, isNextWeek } from "@/lib/week";
 import { formatTripDate, formatTripTime, isTripFinished, nextOccurrence } from "@/lib/trip-dates";
 
 export const Route = createFileRoute("/_authenticated/admin-trips")({
+  head: () => ({ meta: [{ title: "إدارة الرحلات | زهرة طيبة" }, { name: "description", content: "إدارة مواعيد رحلات الذهاب والعودة." }, { property: "og:title", content: "إدارة الرحلات | زهرة طيبة" }, { property: "og:description", content: "إدارة مواعيد رحلات الذهاب والعودة." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: AdminTrips,
 });
 

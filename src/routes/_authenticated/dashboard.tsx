@@ -85,6 +85,15 @@ import { customersTable, cleanPhone } from "@/lib/customers";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: () => ({ meta: [
+    { title: `لوحة التحكم | ${BRAND.name}` },
+    { name: "description", content: "إدارة الحجوزات والحافلات وحسابات رحلات زهرة طيبة." },
+    { property: "og:title", content: `لوحة التحكم | ${BRAND.name}` },
+    { property: "og:description", content: "إدارة الحجوزات والحافلات وحسابات رحلات زهرة طيبة." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: Dashboard,
 });
 
@@ -550,6 +559,7 @@ interface UBBusOpt {
   driver_phone?: string | null;
   driver_id_number?: string | null;
   assigned_date?: string | null;
+  direction?: string | null;
 }
 
 interface ImportBookingDraft {
@@ -660,7 +670,7 @@ function UnifiedBookingsTab(props: {
       // the admin can filter/report on any bus independently.
       // Only buses flagged active-for-booking are shown/counted.
       const COLS =
-        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,supervisor_name,driver_phone,driver_id_number,assigned_date";
+        "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,supervisor_name,driver_phone,driver_id_number,assigned_date,direction";
       if (tripId) {
         const returnId = tripId.startsWith("return:") ? tripId.slice(7) : null;
         const { data: links } = returnId
@@ -1652,7 +1662,7 @@ function UnifiedBookingsTab(props: {
               <TableHead>الإجمالي</TableHead>
               <TableHead>الحالة</TableHead>
               <TableHead>التاريخ</TableHead>
-              <TableHead>إجراءات</TableHead>
+               <TableHead className="min-w-40 text-center">إجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1740,8 +1750,8 @@ function UnifiedBookingsTab(props: {
                   )}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{formatDateTime(b.created_at)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1 flex-wrap">
+                <TableCell className="min-w-40">
+                  <div className="grid grid-cols-3 gap-1 justify-items-center w-max mx-auto [&_button]:size-9 [&_button]:p-0">
                     <Link to="/ticket/$code" params={{ code: b.booking_code }} title="عرض">
                       <Button size="sm" variant="outline">
                         <Ticket className="h-3 w-3" />
