@@ -148,7 +148,11 @@ function AdminBookings() {
     queryKey: ["admin-buses-list"],
     enabled: ok === true,
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number").order("bus_number");
+      const { data, error } = await supabase
+        .from("buses")
+        .select("id,name,bus_number,assigned_date")
+        .order("assigned_date", { ascending: true, nullsFirst: false })
+        .order("bus_number");
 
       if (error) throw error;
 
