@@ -11,8 +11,20 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sar, formatDateTime } from "@/lib/format";
 import { busDateLabel } from "@/components/admin/BusMultiSelect";
+import { BRAND } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/admin-bookings")({
+  head: () => ({
+    meta: [
+      { title: `إدارة الحجوزات | ${BRAND.name}` },
+      { name: "description", content: "إدارة حجوزات رحلات زهرة طيبة والحافلات وحالات الحضور." },
+      { property: "og:title", content: `إدارة الحجوزات | ${BRAND.name}` },
+      { property: "og:description", content: "إدارة حجوزات رحلات زهرة طيبة والحافلات وحالات الحضور." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: AdminBookings,
 });
 
