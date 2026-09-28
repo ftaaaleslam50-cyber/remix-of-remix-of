@@ -648,7 +648,7 @@ function UnifiedBookingsTab(props: {
           .select(COLS)
           .eq("active", true)
           .order("assigned_date", { ascending: true, nullsFirst: false })
-          .order("bus_number")) as { data: UBBusOpt[] }),
+          .order("bus_number")).data as UBBusOpt[]) ?? []
       );
     },
   });
