@@ -605,6 +605,7 @@ function AdminBuses() {
         })}
 
 
+        <DeletedBusesSection />
       </main>
 
 
