@@ -374,89 +374,43 @@ function AdminBuses() {
     });
   }
 
+  /** حذف فعلي بعد حفظ نسخة استرجاع كاملة (يتم في عملية واحدة؛ فشل النسخة يلغي الحذف). */
+  async function deleteWithSnapshot(ids: string[], withBookings: boolean): Promise<number> {
+    let ok = 0;
+    for (const id of ids) {
+      const deleteBookings = withBookings && (bookingCounts[id] ?? 0) > 0;
+      const { error } = await supabase.rpc("delete_bus_with_snapshot" as never, { _bus_id: id, _delete_bookings: deleteBookings } as never);
+      if (error) { toast.error(`تعذّر الحذف: ${error.message}`); continue; }
+      await untrackAssetUsage("bus", id);
+      ok++;
+    }
+    qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
+    qc.invalidateQueries({ queryKey: ["admin-buses-booking-counts"] });
+    qc.invalidateQueries({ queryKey: ["deleted-buses"] });
+    return ok;
+  }
+
   async function del(id: string) {
     const used = bookingCounts[id] ?? 0;
-
-    if (used > 0) {
-      if (
-        !confirm(
-          `تنبيه: هذه الحافلة تحتوي على ${used} مقعد محجوز ضمن حجوزات نشطة.\n\nهل تريد حذف الحافلة نهائياً مع إلغاء وحذف جميع حجوزاتها؟ لن يمكن التراجع.`,
-        )
-      ) {
-        return;
-      }
-
-      const { error: cancelErr } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled", deleted_at: new Date().toISOString() } as never)
-        .eq("bus_id", id);
-
-      if (cancelErr) {
-        toast.error(cancelErr.message);
-        return;
-      }
-
-      const { error: delErr } = await supabase.from("bookings").delete().eq("bus_id", id);
-
-      if (delErr) {
-        toast.error(delErr.message);
-        return;
-      }
-    } else if (!confirm("حذف الحافلة نهائياً؟ لن يمكن التراجع.")) {
-      return;
-    }
-
-    const { error } = await supabase.from("buses").delete().eq("id", id);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    await untrackAssetUsage("bus", id);
-
-    toast.success("تم الحذف");
-
-    qc.invalidateQueries({
-      queryKey: ["admin-buses-fleet"],
-    });
-
-    qc.invalidateQueries({
-      queryKey: ["admin-buses-booking-counts"],
-    });
+    const msg = used > 0
+      ? `تنبيه: هذه الحافلة تحتوي على ${used} مقعد محجوز ضمن حجوزات نشطة.\n\nسيتم حذف الحافلة وحجوزاتها، مع حفظ نسخة يمكن استرجاعها لاحقاً من «الحافلات المحذوفة». متابعة؟`
+      : "حذف الحافلة؟ يمكن استرجاعها لاحقاً من «الحافلات المحذوفة».";
+    if (!confirm(msg)) return;
+    if (await deleteWithSnapshot([id], true)) toast.success("تم الحذف وحفظ نسخة الاسترجاع");
   }
 
   /** حذف جماعي للحافلات المحددة عبر خانات التحديد. */
   async function delSelected() {
     const ids = selectedIds;
     if (ids.length === 0) return;
-
     const usedTotal = ids.reduce((s, id) => s + (bookingCounts[id] ?? 0), 0);
     const msg = usedTotal > 0
-      ? `تنبيه: الحافلات المحددة (${ids.length}) تحتوي على ${usedTotal} مقعد محجوز ضمن حجوزات نشطة.\n\nهل تريد حذفها نهائياً مع إلغاء وحذف جميع حجوزاتها؟ لن يمكن التراجع.`
-      : `حذف ${ids.length} حافلة نهائياً؟ لن يمكن التراجع.`;
+      ? `تنبيه: الحافلات المحددة (${ids.length}) تحتوي على ${usedTotal} مقعد محجوز.\n\nسيتم حذفها مع حجوزاتها، مع حفظ نسخة استرجاع لكل حافلة. متابعة؟`
+      : `حذف ${ids.length} حافلة؟ يمكن استرجاعها لاحقاً.`;
     if (!confirm(msg)) return;
-
-    if (usedTotal > 0) {
-      const { error: cancelErr } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled", deleted_at: new Date().toISOString() } as never)
-        .in("bus_id", ids);
-      if (cancelErr) return toast.error(cancelErr.message);
-
-      const { error: delErr } = await supabase.from("bookings").delete().in("bus_id", ids);
-      if (delErr) return toast.error(delErr.message);
-    }
-
-    const { error } = await supabase.from("buses").delete().in("id", ids);
-    if (error) return toast.error(error.message);
-
-    for (const id of ids) await untrackAssetUsage("bus", id);
-
+    const n = await deleteWithSnapshot(ids, true);
     setSelectedIds([]);
-    toast.success(`تم حذف ${ids.length} حافلة`);
-    qc.invalidateQueries({ queryKey: ["admin-buses-fleet"] });
-    qc.invalidateQueries({ queryKey: ["admin-buses-booking-counts"] });
+    if (n) toast.success(`تم حذف ${n} حافلة`);
   }
 
 
