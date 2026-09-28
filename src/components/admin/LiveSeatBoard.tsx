@@ -1,7 +1,7 @@
 // مخطط الحافلة الحي مع سحب وإفلات لتبديل/نقل المقاعد، ثم اعتماد التعديلات دفعة واحدة.
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, RotateCcw, Mars, Venus } from "lucide-react";
+import { Check, RotateCcw, Mars, Venus, UsersRound, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,7 @@ interface Occupant {
   bookingId: string;
   name: string;
   gender?: SeatGender;
-  rep?: string;
+  source?: string;
   bookingType?: string | null;
 }
 
@@ -44,14 +44,14 @@ export function LiveSeatBoard({
     const m: Record<string, Occupant> = {};
     for (const b of bookings) {
       const explicit = (b.seat_genders ?? {}) as Record<string, SeatGender>;
-      const rep = b.booking_source && b.booking_source !== "Admin" && b.booking_source !== "الموقع" ? b.booking_source : "";
-      const bt = b.booking_type === "family" ? "عوائل" : b.booking_type === "individual" ? "أفراد" : (b.booking_type ?? "");
+       const source = b.booking_source?.trim() || "الموقع";
+       const bt = b.booking_type === "family" ? "family" : b.booking_type === "individual" ? "individual" : null;
       (b.seat_numbers ?? []).forEach((seat, idx) => {
         m[seat] = {
           bookingId: b.id,
           name: shortName(b.customer_name),
           gender: explicit[seat] ?? (idx < Number(b.male_count ?? 0) ? "male" : "female"),
-          rep,
+           source,
           bookingType: bt,
         };
       });
@@ -228,7 +228,7 @@ export function LiveSeatBoard({
                 if (picked) return move(picked, label);
                 if (occ) setPicked(label);
               }}
-              title={occ ? `${label} — ${occ.name}` : label}
+               title={occ ? `${label} — ${occ.name} — ${occ.bookingType === "family" ? "عوائل" : occ.bookingType === "individual" ? "فردي" : ""} — ${occ.source}` : label}
               className={`min-h-[70px] sm:min-h-0 sm:aspect-square rounded-lg border-2 text-[11px] font-bold flex flex-col items-center justify-center gap-0 sm:gap-0.5 leading-tight px-0.5 py-1 overflow-hidden transition ${cls} ${
                 isPicked ? "ring-2 ring-primary scale-105" : ""
               } ${isHover ? "ring-2 ring-primary/70" : ""} ${moved ? "outline outline-2 outline-amber-400" : ""} ${
@@ -243,11 +243,11 @@ export function LiveSeatBoard({
               {occ && (
                 <span className="w-full text-center text-[9px] font-extrabold leading-[1.15]" style={{ overflowWrap: "anywhere" }} dir="rtl">
                   {occ.name}
-                  {(occ.rep || occ.bookingType) && (
-                    <span className="block text-[8px] font-bold opacity-90 leading-[1.15]">
-                      {occ.rep && <>· {occ.rep}</>}
-                      {occ.rep && occ.bookingType && " "}
-                      {occ.bookingType}
+                   {(occ.source || occ.bookingType) && (
+                     <span className="flex items-center justify-center gap-0.5 text-[8px] font-medium leading-[1.15] w-full min-w-0">
+                       {occ.bookingType === "family" && <UsersRound className="h-2.5 w-2.5 shrink-0" aria-label="عوائل" />}
+                       {occ.bookingType === "individual" && <UserRound className="h-2.5 w-2.5 shrink-0" aria-label="فردي" />}
+                       <span className="truncate" title={occ.source}>{occ.source}</span>
                     </span>
                   )}
                 </span>
