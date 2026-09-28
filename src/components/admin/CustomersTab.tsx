@@ -1,8 +1,8 @@
 // «العملاء» — قاعدة بيانات دائمة لعملاء المؤسسة، مستقلة عن الحجوزات.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Phone, MessageCircle, IdCard, Pencil, Trash2, Plus, Search, Loader2, Upload, Power } from "lucide-react";
+import { Phone, MessageCircle, IdCard, Pencil, Trash2, Plus, Search, Loader2, Upload, Power, Download, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,8 @@ import {
   customersTable, customerWhatsapp, idImageUrl, searchCustomers, uploadCustomerId, waLink, cleanPhone,
   type TravelCustomer,
 } from "@/lib/customers";
+import { makeCustomersWorkbook, parseCustomersWorkbook } from "@/lib/export/customers-sheet";
+import { downloadBlob } from "@/lib/export/official-bus-sheet";
 
 const PAGE = 25;
 
@@ -29,6 +31,8 @@ export function CustomersTab() {
   const [editing, setEditing] = useState<Partial<TravelCustomer> | null>(null);
   const [confirmDel, setConfirmDel] = useState<TravelCustomer | null>(null);
   const [idView, setIdView] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { const t = setTimeout(() => { setDebounced(q); setPage(0); }, 250); return () => clearTimeout(t); }, [q]);
 
@@ -40,6 +44,55 @@ export function CustomersTab() {
   const rows = data?.rows ?? [];
   const total = data?.count ?? 0;
   const refresh = () => qc.invalidateQueries({ queryKey: ["travel-customers"] });
+
+  async function downloadCustomers(template: boolean) {
+    setWorking(true);
+    try {
+      const all: TravelCustomer[] = [];
+      if (!template) {
+        // Export the complete list, including inactive customers and rows beyond the current page.
+        let offset = 0;
+        while (true) {
+          const chunk = await searchCustomers("", 500, offset, true);
+          all.push(...chunk.rows);
+          offset += chunk.rows.length;
+          if (offset >= chunk.count || chunk.rows.length === 0) break;
+        }
+      }
+      downloadBlob(await makeCustomersWorkbook(all), template ? "نموذج-العملاء.xlsx" : "قائمة-العملاء.xlsx");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "تعذر تنزيل الملف"); }
+    finally { setWorking(false); }
+  }
+
+  async function importCustomers(file?: File) {
+    if (!file) return;
+    setWorking(true);
+    try {
+      const { rows: incoming, errors } = await parseCustomersWorkbook(file);
+      if (errors.length) { toast.error(`${errors[0]}${errors.length > 1 ? ` (${errors.length} أخطاء)` : ""}`); return; }
+      if (!incoming.length) { toast.info("النموذج فارغ"); return; }
+      const existing = new Set<string>();
+      let offset = 0;
+      while (true) {
+        const chunk = await searchCustomers("", 500, offset, true);
+        chunk.rows.forEach((c) => existing.add(c.id_number.trim()));
+        offset += chunk.rows.length;
+        if (offset >= chunk.count || !chunk.rows.length) break;
+      }
+      let added = 0;
+      let skipped = 0;
+      for (const row of incoming) {
+        if (existing.has(row.id_number)) { skipped++; continue; }
+        const { error } = await customersTable().insert(row as never);
+        if (error?.code === "23505") { skipped++; continue; }
+        if (error) throw new Error(`بعد إضافة ${added} عميل: ${error.message}`);
+        added++;
+      }
+      toast.success(`تمت إضافة ${added} عميل${skipped ? `، وتخطي ${skipped} هوية مسجلة` : ""}`);
+      refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "تعذر استيراد الملف"); }
+    finally { setWorking(false); if (importRef.current) importRef.current.value = ""; }
+  }
 
   async function openId(c: TravelCustomer) {
     const url = await idImageUrl(c.id_image_url);
@@ -70,9 +123,15 @@ export function CustomersTab() {
     <div className="surface-card p-4 sm:p-6 space-y-4" dir="rtl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-extrabold">العملاء <span className="text-sm text-muted-foreground font-normal">({total})</span></h2>
-        <Button className="rounded-full font-bold" onClick={() => setEditing({ same_whatsapp: true, active: true })}>
-          <Plus className="h-4 w-4 ml-1" /> إضافة عميل جديد
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={working} onClick={() => downloadCustomers(false)}><Download className="h-4 w-4 ml-1" /> تنزيل القائمة</Button>
+          <Button variant="outline" disabled={working} onClick={() => downloadCustomers(true)}><FileDown className="h-4 w-4 ml-1" /> تنزيل النموذج</Button>
+          <input ref={importRef} type="file" accept=".xlsx" className="hidden" onChange={(e) => void importCustomers(e.target.files?.[0])} />
+          <Button variant="outline" disabled={working} onClick={() => importRef.current?.click()}><Upload className="h-4 w-4 ml-1" /> رفع النموذج</Button>
+          <Button className="rounded-full font-bold" onClick={() => setEditing({ same_whatsapp: true, active: true })}>
+            <Plus className="h-4 w-4 ml-1" /> إضافة عميل جديد
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3 flex-wrap items-center">
