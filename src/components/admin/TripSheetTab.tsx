@@ -396,7 +396,7 @@ export function TripSheetTab() {
     rows.forEach((b) => {
       if (b.status === "cancelled") return;
       if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return;
-      if (busIds.length === 0 && tripId && b.trip_id !== tripId) return;
+      if (busIds.length === 0 && tripId && !matchesTripFilter(b, tripId)) return;
       set.add(b.booking_source || "الموقع");
     });
     return [...set].sort((a, b) => a.localeCompare(b, "ar"));
@@ -404,7 +404,7 @@ export function TripSheetTab() {
 
   const bus = buses.find((b) => b.id === busId) ?? null;
 
-  const trip = trips.find((t) => t.id === tripId) ?? null;
+  const trip = trips.find((t) => t.id === tripId) ?? (returnTrips.find((t) => `return:${t.id}` === tripId) ?? null);
   const tripInfo = filtered.find((b) => b.trips)?.trips ?? null;
 
   const passengers = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);

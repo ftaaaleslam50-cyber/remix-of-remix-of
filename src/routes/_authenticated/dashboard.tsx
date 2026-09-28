@@ -662,7 +662,10 @@ function UnifiedBookingsTab(props: {
       const COLS =
         "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,supervisor_name,driver_phone,driver_id_number,assigned_date";
       if (tripId) {
-        const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
+        const returnId = tripId.startsWith("return:") ? tripId.slice(7) : null;
+        const { data: links } = returnId
+          ? await supabase.from("return_trip_buses").select("bus_id").eq("return_trip_id", returnId)
+          : await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
         const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
         let q = supabase
           .from("buses")
@@ -670,7 +673,10 @@ function UnifiedBookingsTab(props: {
           .eq("active", true)
           .order("assigned_date", { ascending: true, nullsFirst: false })
           .order("bus_number");
-        if (ids.length > 0) {
+        if (returnId) {
+          if (ids.length === 0) return [];
+          q = q.in("id", ids);
+        } else if (ids.length > 0) {
           q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
         } else {
           q = q.eq("trip_id", tripId);
@@ -1019,7 +1025,7 @@ function UnifiedBookingsTab(props: {
         room_type: roomTypeFromLabel(r.roomType),
         package_id: hotel?.id ?? null,
         extension_nights: noHotel ? 0 : Math.max(0, Number(r.extension_nights) || 0),
-        trip_id: tripId || null,
+        trip_id: tripId && !tripId.startsWith("return:") ? tripId : null,
         bus_id: busId || null,
         trip_mode: "round",
         seat_numbers: r.seat_numbers ?? [],
@@ -1058,7 +1064,7 @@ function UnifiedBookingsTab(props: {
 
   // Data handed to the official-template exporter (Excel / PDF).
   function exportPayload(): ExportPayload {
-    const tripName = trips.find((t) => t.id === tripId)?.name;
+    const tripName = trips.find((t) => t.id === tripId)?.name ?? returnTrips.find((t) => `return:${t.id}` === tripId)?.name;
     const busLabel = bus ? bus.name || `حافلة ${bus.bus_number}` : "";
     const totalPax = filtered.reduce((s, b) => s + (b.passenger_count || 0), 0);
     const info = filtered.find((b) => b.trips)?.trips ?? null;
@@ -1656,7 +1662,7 @@ function UnifiedBookingsTab(props: {
             {manualOpen && (
               <ManualBookingRow
                 colSpan={17}
-                defaultTripId={tripId}
+                defaultTripId={tripId.startsWith("return:") ? "" : tripId}
                 defaultBusId={busId}
                 onClose={() => setManualOpen(false)}
                 onSaved={() => {
