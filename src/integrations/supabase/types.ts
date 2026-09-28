@@ -1052,6 +1052,57 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_buses: {
+        Row: {
+          bus_id: string
+          bus_label: string | null
+          bus_number: number | null
+          deleted_at: string
+          deleted_by: string | null
+          deleted_by_name: string | null
+          driver_name: string | null
+          id: string
+          plate: string | null
+          restore_notes: string | null
+          restored_at: string | null
+          restored_bus_id: string | null
+          restored_by: string | null
+          snapshot: Json
+        }
+        Insert: {
+          bus_id: string
+          bus_label?: string | null
+          bus_number?: number | null
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_by_name?: string | null
+          driver_name?: string | null
+          id?: string
+          plate?: string | null
+          restore_notes?: string | null
+          restored_at?: string | null
+          restored_bus_id?: string | null
+          restored_by?: string | null
+          snapshot: Json
+        }
+        Update: {
+          bus_id?: string
+          bus_label?: string | null
+          bus_number?: number | null
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_by_name?: string | null
+          driver_name?: string | null
+          id?: string
+          plate?: string | null
+          restore_notes?: string | null
+          restored_at?: string | null
+          restored_bus_id?: string | null
+          restored_by?: string | null
+          snapshot?: Json
+        }
+        Relationships: []
+      }
       gallery_albums: {
         Row: {
           created_at: string
@@ -2378,6 +2429,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _insert_json_row: {
+        Args: { _row: Json; _table: string }
+        Returns: undefined
+      }
       advance_due_return_trips: { Args: never; Returns: number }
       advance_due_trips: { Args: never; Returns: number }
       arm_push_retry: { Args: never; Returns: boolean }
@@ -2420,6 +2475,10 @@ export type Database = {
       deactivate_push_subscription: {
         Args: { _endpoint: string }
         Returns: boolean
+      }
+      delete_bus_with_snapshot: {
+        Args: { _bus_id: string; _delete_bookings?: boolean }
+        Returns: string
       }
       emit_notification: {
         Args: {
@@ -2511,6 +2570,10 @@ export type Database = {
           priority: string
           title: string
         }[]
+      }
+      restore_deleted_bus: {
+        Args: { _mode?: string; _snapshot_id: string }
+        Returns: Json
       }
       run_notification_jobs: { Args: never; Returns: number }
       send_notification_broadcast: { Args: { _id: string }; Returns: number }
