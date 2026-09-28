@@ -5,10 +5,16 @@ import { GripVertical, Wand2, X, Bus as BusIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { mirrorLayout, type LayoutCell, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import type { ReturnBookingRow } from "@/components/admin/ReturnTripsManager";
 
-export interface BoardBus { id: string; name: string | null; bus_number: number; capacity: number; layout_id?: string | null }
+export interface BoardBus {
+  id: string;
+  name: string | null;
+  bus_number: number;
+  capacity: number;
+  layout_id?: string | null;
+}
 
 const busTitle = (b: BoardBus) => b.name || (b.bus_number ? `حافلة ${b.bus_number}` : "حافلة");
 
@@ -28,7 +34,11 @@ function fallbackLayout(capacity: number): LayoutJson {
 
 const cellLabel = (c: LayoutCell) => (c.label && c.label.trim() ? c.label : `${c.row}-${c.col}`);
 
-export function ReturnSeatBoard({ buses, bookings, onAssign }: {
+export function ReturnSeatBoard({
+  buses,
+  bookings,
+  onAssign,
+}: {
   buses: BoardBus[];
   bookings: ReturnBookingRow[];
   onAssign: (b: ReturnBookingRow, busId: string | null, seats: string[]) => Promise<void> | void;
@@ -49,8 +59,10 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
     },
   });
 
+  // نفس معالجة مخطط الذهاب الحي (LiveSeatBoard): نعكس الأعمدة بـ mirrorLayout حتى
+  // يطابق اتجاه العرض الفعلي للحافلة بدل الترتيب الخام المخزّن في layout_json.
   const layoutFor = (b: BoardBus): LayoutJson =>
-    (b.layout_id && layouts.data?.[b.layout_id]) || fallbackLayout(b.capacity);
+    mirrorLayout((b.layout_id && layouts.data?.[b.layout_id]) || fallbackLayout(b.capacity));
 
   const pax = (b: ReturnBookingRow) => Math.max(1, b.passenger_count || 1);
   const undistributed = bookings.filter((b) => !b.return_bus_id || (b.return_seat_numbers?.length ?? 0) === 0);
@@ -66,11 +78,13 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
     return m;
   }, [bookings]);
 
-  const pickedBooking = picked ? bookings.find((b) => b.id === picked) ?? null : null;
+  const pickedBooking = picked ? (bookings.find((b) => b.id === picked) ?? null) : null;
 
   /** المقاعد الحرة بدءًا من مقعد معيّن (أو من البداية) بعدد ركاب الحجز. */
   function seatsFrom(bus: BoardBus, startSeat: string | null, booking: ReturnBookingRow): string[] | null {
-    const all = layoutFor(bus).cells.filter((c) => c.kind === "seat" && !c.disabled).map(cellLabel);
+    const all = layoutFor(bus)
+      .cells.filter((c) => c.kind === "seat" && !c.disabled)
+      .map(cellLabel);
     const taken = occupancy[bus.id] ?? {};
     const free = all.filter((s) => !taken[s] || taken[s].id === booking.id);
     const need = pax(booking);
@@ -107,7 +121,9 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
     let queue = [...undistributed];
     const local: Record<string, Set<string>> = {};
     for (const bus of buses) {
-      const all = layoutFor(bus).cells.filter((c) => c.kind === "seat" && !c.disabled).map(cellLabel);
+      const all = layoutFor(bus)
+        .cells.filter((c) => c.kind === "seat" && !c.disabled)
+        .map(cellLabel);
       const taken = new Set(Object.keys(occupancy[bus.id] ?? {}));
       local[bus.id] = taken;
       const free = () => all.filter((s) => !taken.has(s));
@@ -130,7 +146,11 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
 
   const dragProps = (id: string) => ({
     draggable: true,
-    onDragStart: (e: React.DragEvent) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; setPicked(id); },
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.setData("text/plain", id);
+      e.dataTransfer.effectAllowed = "move";
+      setPicked(id);
+    },
     onDragEnd: () => setHover(null),
   });
 
@@ -143,7 +163,8 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
           <div className="flex items-center gap-2">
             {pickedBooking && (
               <Button size="sm" variant="ghost" className="rounded-full h-7 text-xs" onClick={() => setPicked(null)}>
-                <X className="h-3.5 w-3.5 ml-1" /> إلغاء اختيار «{pickedBooking.customer_name || pickedBooking.booking_code}»
+                <X className="h-3.5 w-3.5 ml-1" /> إلغاء اختيار «
+                {pickedBooking.customer_name || pickedBooking.booking_code}»
               </Button>
             )}
             {undistributed.length > 0 && buses.length > 0 && (
@@ -157,7 +178,9 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
           <p className="text-xs text-muted-foreground">جميع الركاب موزعون على الحافلات.</p>
         ) : (
           <>
-            <p className="text-[11px] text-muted-foreground mb-2">اسحب الراكب وأفلته على مقعد في الحافلة — أو اضغط عليه ثم اضغط المقعد المطلوب (للجوال).</p>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              اسحب الراكب وأفلته على مقعد في الحافلة — أو اضغط عليه ثم اضغط المقعد المطلوب (للجوال).
+            </p>
             <div className="flex flex-wrap gap-2">
               {undistributed.map((b) => (
                 <button
@@ -166,12 +189,16 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
                   {...dragProps(b.id)}
                   onClick={() => setPicked(picked === b.id ? null : b.id)}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold cursor-grab active:cursor-grabbing transition ${
-                    picked === b.id ? "bg-primary text-primary-foreground border-primary shadow" : "bg-background hover:bg-muted"
+                    picked === b.id
+                      ? "bg-primary text-primary-foreground border-primary shadow"
+                      : "bg-background hover:bg-muted"
                   }`}
                 >
                   <GripVertical className="h-3.5 w-3.5 opacity-60" />
                   {b.customer_name || b.booking_code}
-                  <Badge variant={picked === b.id ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0">{pax(b)}</Badge>
+                  <Badge variant={picked === b.id ? "secondary" : "outline"} className="text-[10px] px-1.5 py-0">
+                    {pax(b)}
+                  </Badge>
                 </button>
               ))}
             </div>
@@ -192,7 +219,7 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
             const cap = layout.cells.filter((c) => c.kind === "seat" && !c.disabled).length;
             const preview = new Set(
               hover && hover.startsWith(`${bus.id}:`) && pickedBooking
-                ? seatsFrom(bus, hover.slice(bus.id.length + 1), pickedBooking) ?? []
+                ? (seatsFrom(bus, hover.slice(bus.id.length + 1), pickedBooking) ?? [])
                 : [],
             );
             return (
@@ -200,14 +227,26 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
                 key={bus.id}
                 className={`rounded-2xl border p-3 transition ${picked ? "border-primary/60 border-dashed" : ""}`}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); drop(bus, null, e.dataTransfer.getData("text/plain")); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  drop(bus, null, e.dataTransfer.getData("text/plain"));
+                }}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-sm font-bold"><BusIcon className="h-4 w-4" /> {busTitle(bus)}</div>
+                  <div className="flex items-center gap-2 text-sm font-bold">
+                    <BusIcon className="h-4 w-4" /> {busTitle(bus)}
+                  </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[11px]">{used} / {cap}</Badge>
+                    <Badge variant="secondary" className="text-[11px]">
+                      {used} / {cap}
+                    </Badge>
                     {pickedBooking && (
-                      <Button size="sm" variant="outline" className="h-7 rounded-full text-xs" onClick={() => drop(bus, null)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 rounded-full text-xs"
+                        onClick={() => drop(bus, null)}
+                      >
                         إضافة هنا
                       </Button>
                     )}
@@ -225,8 +264,17 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
                     if (!cell || cell.kind === "empty") return <div key={i} className="aspect-square" />;
                     if (cell.kind !== "seat") {
                       return (
-                        <div key={i} className="aspect-square rounded-md border bg-muted/50 text-[9px] flex items-center justify-center text-muted-foreground">
-                          {cell.kind === "driver" ? "🚍" : cell.kind === "door" ? "🚪" : cell.kind === "restroom" ? "🚻" : "👤"}
+                        <div
+                          key={i}
+                          className="aspect-square rounded-md border bg-muted/50 text-[9px] flex items-center justify-center text-muted-foreground"
+                        >
+                          {cell.kind === "driver"
+                            ? "🚍"
+                            : cell.kind === "door"
+                              ? "🚪"
+                              : cell.kind === "restroom"
+                                ? "🚻"
+                                : "👤"}
                         </div>
                       );
                     }
@@ -242,26 +290,47 @@ export function ReturnSeatBoard({ buses, bookings, onAssign }: {
                         title={occ ? `${occ.customer_name || occ.booking_code} — اضغط للإزالة` : label}
                         disabled={disabled}
                         {...(occ ? dragProps(occ.id) : {})}
-                        onDragOver={(e) => { if (!occ || occ.id === picked) { e.preventDefault(); setHover(key); } }}
+                        onDragOver={(e) => {
+                          if (!occ || occ.id === picked) {
+                            e.preventDefault();
+                            setHover(key);
+                          }
+                        }}
                         onDragLeave={() => setHover((h) => (h === key ? null : h))}
-                        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); drop(bus, label, e.dataTransfer.getData("text/plain")); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          drop(bus, label, e.dataTransfer.getData("text/plain"));
+                        }}
                         onClick={() => {
                           if (picked && (!occ || occ.id === picked)) return void drop(bus, label);
                           if (occ) {
-                            if (confirm(`إزالة «${occ.customer_name || occ.booking_code}» من ${busTitle(bus)}؟\nسيعود إلى قائمة غير الموزعين.`))
+                            if (
+                              confirm(
+                                `إزالة «${occ.customer_name || occ.booking_code}» من ${busTitle(bus)}؟\nسيعود إلى قائمة غير الموزعين.`,
+                              )
+                            )
                               void onAssign(occ, null, []);
                           }
                         }}
                         className={`aspect-square rounded-md border text-[9px] leading-tight flex flex-col items-center justify-center overflow-hidden px-0.5 transition ${
-                          disabled ? "bg-muted/40 text-muted-foreground/50 cursor-not-allowed"
-                          : occ ? "bg-[color:var(--color-navy)] text-white border-[color:var(--color-navy)] cursor-grab"
-                          : isPreview ? "bg-primary/30 border-primary"
-                          : picked ? "bg-background hover:bg-primary/20 border-primary/50 cursor-pointer"
-                          : "bg-background"
+                          disabled
+                            ? "bg-muted/40 text-muted-foreground/50 cursor-not-allowed"
+                            : occ
+                              ? "bg-[color:var(--color-navy)] text-white border-[color:var(--color-navy)] cursor-grab"
+                              : isPreview
+                                ? "bg-primary/30 border-primary"
+                                : picked
+                                  ? "bg-background hover:bg-primary/20 border-primary/50 cursor-pointer"
+                                  : "bg-background"
                         }`}
                       >
                         <span className="font-bold">{label}</span>
-                        {occ && <span className="truncate w-full text-center text-[8px] font-normal" dir="rtl">{(occ.customer_name || "").split(" ")[0]}</span>}
+                        {occ && (
+                          <span className="truncate w-full text-center text-[8px] font-normal" dir="rtl">
+                            {(occ.customer_name || "").split(" ")[0]}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
