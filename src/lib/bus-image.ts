@@ -150,6 +150,204 @@ function drawText(
   ctx.fillText(text, x, cy);
 }
 
+// ---- لوحة سعودية (سطران + شريط أصفر) ----
+// حروف اللوحات السعودية المعتمدة: لاتيني ↔ عربي (17 حرفًا).
+const PLATE_LAT_TO_AR: Record<string, string> = {
+  A: "أ",
+  B: "ب",
+  J: "ح",
+  D: "د",
+  R: "ر",
+  S: "س",
+  X: "ص",
+  T: "ط",
+  E: "ع",
+  G: "ق",
+  K: "ك",
+  L: "ل",
+  Z: "م",
+  N: "ن",
+  H: "ه",
+  U: "و",
+  V: "ى",
+};
+const PLATE_AR_TO_LAT: Record<string, string> = {
+  أ: "A",
+  ا: "A",
+  إ: "A",
+  آ: "A",
+  ب: "B",
+  ح: "J",
+  د: "D",
+  ر: "R",
+  س: "S",
+  ص: "X",
+  ط: "T",
+  ع: "E",
+  ق: "G",
+  ك: "K",
+  ل: "L",
+  م: "Z",
+  ن: "N",
+  ه: "H",
+  ة: "H",
+  و: "U",
+  ى: "V",
+  ي: "V",
+};
+
+export interface ParsedPlate {
+  digits: string[]; // أرقام لاتينية بالترتيب من اليسار لليمين
+  letters: string[]; // حروف لاتينية بالترتيب من اليسار لليمين (كل حرف يقابله عربي فوقه)
+  unknown: string[]; // حروف غير معتمدة (تُتجاهل)
+}
+
+/** يقبل "8993 ZXA" أو "٨٩٩٣ أ ص م" ويرجع الأرقام والحروف مرتّبة بصريًا. */
+export function parsePlate(input: string): ParsedPlate {
+  const digits: string[] = [];
+  const letters: string[] = [];
+  const unknown: string[] = [];
+  let arabicMode = false;
+  for (const ch of input.replace(/\s+/g, "")) {
+    const code = ch.charCodeAt(0);
+    if (ch >= "0" && ch <= "9") digits.push(ch);
+    else if (code >= 0x660 && code <= 0x669) digits.push(String(code - 0x660));
+    else if (code >= 0x6f0 && code <= 0x6f9) digits.push(String(code - 0x6f0));
+    else if (ch === "ـ")
+      continue; // تطويل (مثل هـ)
+    else if (/[a-zA-Z]/.test(ch)) {
+      const u = ch.toUpperCase();
+      if (PLATE_LAT_TO_AR[u]) letters.push(u);
+      else unknown.push(ch);
+    } else if (PLATE_AR_TO_LAT[ch]) {
+      arabicMode = true;
+      letters.push(PLATE_AR_TO_LAT[ch]);
+    } else if (/[\u0600-\u06FF]/.test(ch)) unknown.push(ch);
+  }
+  // الإدخال العربي يُكتب منطقيًا من اليمين لليسار، فنعكسه ليطابق الترتيب البصري للاتيني.
+  if (arabicMode) letters.reverse();
+  return { digits, letters, unknown };
+}
+
+/** رسالة تنبيه للمعاينة (أو null لو كل شيء سليم). */
+export function plateIssue(input: string): string | null {
+  if (!input.trim()) return null;
+  const p = parsePlate(input);
+  if (p.unknown.length) return `حروف غير معتمدة في اللوحات السعودية: ${p.unknown.join(" ")}`;
+  if (!p.digits.length && !p.letters.length) return "تعذّر قراءة اللوحة (تُرسم كنص عادي)";
+  return null;
+}
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawSaudiPlate(
+  ctx: CanvasRenderingContext2D,
+  p: ParsedPlate,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  weight: number,
+  size: number,
+  color: string,
+) {
+  const x0 = cx - w / 2,
+    y0 = cy - h / 2;
+  const r = Math.min(h * 0.1, 8);
+  const line = Math.max(1, h * 0.028);
+  const stripW = w * 0.1;
+  const mainW = w - stripW;
+  const digitsW = mainW * 0.58;
+  const lettersW = mainW - digitsW;
+  const rowH = h / 2;
+
+  // الخلفية والإطار
+  roundRectPath(ctx, x0, y0, w, h, r);
+  ctx.fillStyle = "#f7f6f1";
+  ctx.fill();
+
+  // الشريط الأصفر (يمين)
+  ctx.save();
+  roundRectPath(ctx, x0, y0, w, h, r);
+  ctx.clip();
+  ctx.fillStyle = "#e9b421";
+  ctx.fillRect(x0 + mainW, y0, stripW, h);
+  ctx.restore();
+  // شعار مبسّط داخل الشريط
+  ctx.fillStyle = "#3a3a3a";
+  ctx.beginPath();
+  ctx.arc(x0 + mainW + stripW / 2, y0 + h * 0.3, stripW * 0.13, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  const tx = x0 + mainW + stripW / 2,
+    ty = y0 + h * 0.86,
+    ts = stripW * 0.2;
+  ctx.moveTo(tx, ty - ts);
+  ctx.lineTo(tx + ts, ty + ts * 0.7);
+  ctx.lineTo(tx - ts, ty + ts * 0.7);
+  ctx.closePath();
+  ctx.fill();
+
+  // الخطوط الفاصلة والإطار
+  ctx.strokeStyle = "#5a5a5a";
+  ctx.lineWidth = line;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0 + rowH);
+  ctx.lineTo(x0 + mainW, y0 + rowH);
+  ctx.moveTo(x0 + digitsW, y0);
+  ctx.lineTo(x0 + digitsW, y0 + h);
+  ctx.moveTo(x0 + mainW, y0);
+  ctx.lineTo(x0 + mainW, y0 + h);
+  ctx.stroke();
+  roundRectPath(ctx, x0, y0, w, h, r);
+  ctx.stroke();
+
+  // النصوص: كل حرف/رقم فوقه مقابله (عربي فوق، لاتيني تحت)
+  const DIGIT_SLOTS = Math.max(4, p.digits.length);
+  const LETTER_SLOTS = Math.max(3, p.letters.length);
+  const dSlot = (digitsW * 0.92) / DIGIT_SLOTS;
+  const lSlot = (lettersW * 0.92) / LETTER_SLOTS;
+  const fs = Math.min(size, rowH * 0.74, dSlot * 1.05, lSlot * 1.05);
+
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.direction = "ltr";
+  const put = (glyphs: string[], family: string, cellX: number, cellW: number, slot: number, y: number) => {
+    ctx.font = `${weight} ${fs}px ${family}`;
+    const start = cellX + (cellW - slot * glyphs.length) / 2;
+    glyphs.forEach((g, i) => ctx.fillText(g, start + slot * (i + 0.5), y));
+  };
+  const yTop = y0 + rowH * 0.52,
+    yBot = y0 + rowH * 1.5;
+  put(
+    p.digits.map((d) => ARABIC_DIGITS[Number(d)]),
+    FONT_ARABIC,
+    x0,
+    digitsW,
+    dSlot,
+    yTop,
+  );
+  put(p.digits, FONT_LATIN, x0, digitsW, dSlot, yBot);
+  put(
+    p.letters.map((l) => PLATE_LAT_TO_AR[l]),
+    FONT_ARABIC,
+    x0 + digitsW,
+    lettersW,
+    lSlot,
+    yTop,
+  );
+  put(p.letters, FONT_LATIN, x0 + digitsW, lettersW, lSlot, yBot);
+}
+
 /** Deterministic: same template + same bus data ⇒ identical image. */
 export async function renderBusImage(
   t: BusImageTemplate,
@@ -181,17 +379,32 @@ export async function renderBusImage(
   }
   const plate = (bus.plate ?? "").trim();
   if (plate) {
-    drawText(
-      ctx,
-      plate,
-      t.plate_x * W,
-      t.plate_y * H,
-      t.plate_width * W * 0.92,
-      t.plate_alignment,
-      t.plate_font_weight,
-      Math.min(t.plate_font_size * W, t.plate_height * H * 0.8),
-      t.plate_color,
-    );
+    const parsed = parsePlate(plate);
+    if (parsed.digits.length || parsed.letters.length) {
+      drawSaudiPlate(
+        ctx,
+        parsed,
+        t.plate_x * W,
+        t.plate_y * H,
+        t.plate_width * W,
+        t.plate_height * H,
+        t.plate_font_weight,
+        t.plate_font_size * W,
+        t.plate_color,
+      );
+    } else {
+      drawText(
+        ctx,
+        plate,
+        t.plate_x * W,
+        t.plate_y * H,
+        t.plate_width * W * 0.92,
+        t.plate_alignment,
+        t.plate_font_weight,
+        Math.min(t.plate_font_size * W, t.plate_height * H * 0.8),
+        t.plate_color,
+      );
+    }
   }
   return new Promise((res, rej) =>
     c.toBlob((b) => (b ? res(b) : rej(new Error("تعذّر إنشاء الصورة"))), "image/jpeg", 0.92),
