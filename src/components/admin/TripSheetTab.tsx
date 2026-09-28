@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sar } from "@/lib/format";
 import { useSheetLogo } from "@/components/admin/ExportSheetDialog";
+import { TripFilterOptions } from "@/components/admin/TripFilterOptions";
+import { matchesTripFilter } from "@/lib/trip-filter";
 import {
   buildSettlementWorkbook,
   printSettlementSheet,
@@ -47,6 +49,7 @@ interface SheetBooking {
   extension_nights?: number | null;
   trip_mode?: string | null;
   trip_id: string | null;
+  return_trip_id?: string | null;
   departure_date?: string | null;
   bus_id: string | null;
   package_id: string | null;
@@ -178,6 +181,14 @@ export function TripSheetTab() {
         name: string;
       }>,
   });
+  const { data: returnTrips = [] } = useQuery({
+    queryKey: ["ts-return-trip-options"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("return_trips").select("id,name").eq("active", true).order("display_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const { data: buses = [], refetch: refetchBuses } = useQuery({
     queryKey: ["ts-buses"],
@@ -298,7 +309,7 @@ export function TripSheetTab() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,bus_id,package_id,rep_profile_id,departure_date,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
+           "id,booking_code,customer_name,id_number,contact_phone,nationality,booking_source,passenger_count,room_type,booking_type,total_price,status,deleted_at,notes,actual_return_day,extension_nights,trip_mode,trip_id,return_trip_id,bus_id,package_id,rep_profile_id,departure_date,packages(name),trips(name,departure_day,return_day),buses!bookings_bus_id_fkey(id,name,bus_number,capacity,expenses)",
         )
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -367,7 +378,7 @@ export function TripSheetTab() {
       rows.filter((b) => {
         if (b.status === "cancelled") return false;
         if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
-        if (busIds.length === 0 && tripId && b.trip_id !== tripId) return false;
+         if (busIds.length === 0 && tripId && !matchesTripFilter(b, tripId)) return false;
         if (sourceFilter && (b.booking_source || "الموقع") !== sourceFilter) return false;
         if (search) {
           const q = search.trim().toLowerCase();
@@ -1028,11 +1039,7 @@ export function TripSheetTab() {
             className="h-10 w-full rounded-md border px-3 text-sm bg-white"
           >
             <option value="">— كل الرحلات —</option>
-            {trips.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
+             <TripFilterOptions outbound={trips} returning={returnTrips} />
           </select>
         </div>
         <div>
