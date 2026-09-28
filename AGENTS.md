@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep customer spreadsheet parsing/export in a client-safe `src/lib/export/` module so admin screens share one field mapping and validation.
+- Prefix return-trip select values with `return:` so independent outbound/return IDs filter by their respective booking fields without collisions.
