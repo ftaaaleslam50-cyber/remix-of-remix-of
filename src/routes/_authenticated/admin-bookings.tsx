@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sar, formatDateTime } from "@/lib/format";
+import { busDateLabel } from "@/components/admin/BusMultiSelect";
 
 export const Route = createFileRoute("/_authenticated/admin-bookings")({
   component: AdminBookings,
@@ -160,6 +161,7 @@ function AdminBookings() {
         id: string;
         name: string | null;
         bus_number: number;
+        assigned_date?: string | null;
       }>;
     },
   });
@@ -374,7 +376,7 @@ function AdminBookings() {
 
                 {buses.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.name ?? `حافلة ${b.bus_number}`}
+                    {b.name ?? `حافلة ${b.bus_number}`} — {busDateLabel(b.assigned_date)}
                   </option>
                 ))}
               </select>
