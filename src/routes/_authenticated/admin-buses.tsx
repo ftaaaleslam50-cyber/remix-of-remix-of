@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AssetField } from "@/components/admin/AssetField";
 import { trackAssetUsage, untrackAssetUsage } from "@/lib/asset-usage";
 import { startOfWeek as weekStart } from "@/lib/week";
+import { DeletedBusesSection } from "@/components/admin/DeletedBusesSection";
 
 export const Route = createFileRoute("/_authenticated/admin-buses")({
   component: AdminBuses,
