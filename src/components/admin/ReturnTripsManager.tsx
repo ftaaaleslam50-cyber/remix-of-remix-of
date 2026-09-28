@@ -6,8 +6,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2, Save, Bus as BusIcon,
-  AlertTriangle, Users, Copy,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  Save,
+  Bus as BusIcon,
+  AlertTriangle,
+  Users,
+  Copy,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
+import { CopyOutboundSeatsDialog } from "@/components/admin/CopyOutboundSeatsDialog";
 
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
 
@@ -39,8 +48,21 @@ export interface ReturnTripRow {
   clone_buses_on_advance: boolean;
 }
 
-interface ReturnBusRow { id: string; return_trip_id: string; trip_date: string; bus_id: string }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; direction: string | null; status: string; layout_id?: string | null }
+interface ReturnBusRow {
+  id: string;
+  return_trip_id: string;
+  trip_date: string;
+  bus_id: string;
+}
+interface BusRow {
+  id: string;
+  name: string | null;
+  bus_number: number;
+  capacity: number;
+  direction: string | null;
+  status: string;
+  layout_id?: string | null;
+}
 
 export interface ReturnBookingRow {
   id: string;
@@ -58,9 +80,10 @@ export interface ReturnBookingRow {
   trip_id?: string | null;
   booking_source?: string | null;
   rep_name?: string | null;
-
+  bus_id: string | null;
+  seat_numbers: string[] | null;
+  created_at: string;
 }
-
 
 export function todayIso(): string {
   const now = new Date(Date.now() + 3 * 3600_000); // Riyadh
@@ -83,12 +106,19 @@ export function ReturnDateBar({ date, onChange }: { date: string; onChange: (d: 
       </Button>
       <div className="text-center">
         <div className="text-base font-extrabold text-[color:var(--color-navy)]">{formatTripDate(date)}</div>
-        <Input type="date" className="h-9 w-44 mt-1" value={date} onChange={(e) => e.target.value && onChange(e.target.value)} />
+        <Input
+          type="date"
+          className="h-9 w-44 mt-1"
+          value={date}
+          onChange={(e) => e.target.value && onChange(e.target.value)}
+        />
       </div>
       <Button variant="outline" size="sm" className="rounded-full" onClick={() => onChange(addDays(date, 1))}>
         التالي <ChevronLeft className="h-4 w-4 mr-1" />
       </Button>
-      <Button variant="secondary" size="sm" className="rounded-full" onClick={() => onChange(todayIso())}>اليوم</Button>
+      <Button variant="secondary" size="sm" className="rounded-full" onClick={() => onChange(todayIso())}>
+        اليوم
+      </Button>
     </div>
   );
 }
@@ -97,7 +127,10 @@ export function useReturnData(date: string) {
   const templates = useQuery({
     queryKey: ["return-trips"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("return_trips" as never).select("*").order("display_order");
+      const { data, error } = await supabase
+        .from("return_trips" as never)
+        .select("*")
+        .order("display_order");
       if (error) throw error;
       return (data as unknown as ReturnTripRow[]) ?? [];
     },
@@ -106,7 +139,10 @@ export function useReturnData(date: string) {
   const buses = useQuery({
     queryKey: ["return-fleet"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status,layout_id").order("bus_number");
+      const { data, error } = await supabase
+        .from("buses")
+        .select("id,name,bus_number,capacity,direction,status,layout_id")
+        .order("bus_number");
       if (error) throw error;
       return (data as unknown as BusRow[]) ?? [];
     },
@@ -115,7 +151,10 @@ export function useReturnData(date: string) {
   const assignedBuses = useQuery({
     queryKey: ["return-trip-buses", date],
     queryFn: async () => {
-      const { data, error } = await supabase.from("return_trip_buses" as never).select("*").eq("trip_date", date);
+      const { data, error } = await supabase
+        .from("return_trip_buses" as never)
+        .select("*")
+        .eq("trip_date", date);
       if (error) throw error;
       return (data as unknown as ReturnBusRow[]) ?? [];
     },
@@ -127,7 +166,9 @@ export function useReturnData(date: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name")
+        .select(
+          "id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name,bus_id,seat_numbers,created_at",
+        )
         .eq("actual_return_date", date)
         .is("deleted_at", null)
         .neq("status", "cancelled")
@@ -150,7 +191,10 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
     queryFn: async () => {
       // تدوير رحلات العودة المنتهية إلى الأسبوع التالي (مثل رحلات الذهاب تمامًا)
       await supabase.rpc("advance_due_return_trips" as never);
-      const { data, error } = await supabase.from("return_trips" as never).select("*").order("display_order");
+      const { data, error } = await supabase
+        .from("return_trips" as never)
+        .select("*")
+        .order("display_order");
       if (error) throw error;
       return (data as unknown as ReturnTripRow[]) ?? [];
     },
@@ -159,7 +203,10 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
   const buses = useQuery({
     queryKey: ["return-fleet-all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("buses").select("id,name,bus_number,capacity,direction,status,layout_id").order("bus_number");
+      const { data, error } = await supabase
+        .from("buses")
+        .select("id,name,bus_number,capacity,direction,status,layout_id")
+        .order("bus_number");
       if (error) throw error;
       return ((data as unknown as BusRow[]) ?? []).filter((b) => (b.direction ?? "outbound") === "return");
     },
@@ -178,7 +225,8 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
     queryKey: ["return-occupancy"],
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data } = await supabase.from("bookings")
+      const { data } = await supabase
+        .from("bookings")
         .select("return_bus_id,return_seat_numbers")
         .not("return_bus_id", "is", null)
         .is("deleted_at", null)
@@ -228,7 +276,13 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
           key={t.id}
           trip={t}
           buses={buses.data ?? []}
-          assigned={new Set((links.data ?? []).filter((l) => l.return_trip_id === t.id && l.trip_date === (t.return_date ?? "")).map((l) => l.bus_id))}
+          assigned={
+            new Set(
+              (links.data ?? [])
+                .filter((l) => l.return_trip_id === t.id && l.trip_date === (t.return_date ?? ""))
+                .map((l) => l.bus_id),
+            )
+          }
           occupancy={occupancy.data ?? {}}
         />
       ))}
@@ -237,7 +291,12 @@ export function ReturnTripsManager({ ownerId: _ownerId }: { ownerId?: string }) 
 }
 
 /** بطاقة تحرير رحلة عودة واحدة — مطابقة في الأسلوب لبطاقة رحلة الذهاب. */
-function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
+function ReturnTripEditor({
+  trip,
+  buses,
+  assigned,
+  occupancy,
+}: {
   trip: ReturnTripRow;
   buses: BusRow[];
   assigned: Set<string>;
@@ -254,18 +313,29 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
 
   async function save() {
     const date = local.return_date || null;
-    const { error } = await supabase.from("return_trips" as never).update({
-      name: local.name, from_city: local.from_city, to_city: local.to_city,
-      return_date: date, weekday: date ? weekdayOf(date) : local.weekday,
-      return_time: local.return_time || null, active: local.active, display_order: local.display_order,
-      auto_advance: !!local.auto_advance, clone_buses_on_advance: !!local.clone_buses_on_advance,
-    } as never).eq("id", trip.id);
+    const { error } = await supabase
+      .from("return_trips" as never)
+      .update({
+        name: local.name,
+        from_city: local.from_city,
+        to_city: local.to_city,
+        return_date: date,
+        weekday: date ? weekdayOf(date) : local.weekday,
+        return_time: local.return_time || null,
+        active: local.active,
+        display_order: local.display_order,
+        auto_advance: !!local.auto_advance,
+        clone_buses_on_advance: !!local.clone_buses_on_advance,
+      } as never)
+      .eq("id", trip.id);
     if (error) return toast.error(error.message);
     // نقل ارتباطات الحافلات إلى التاريخ الجديد عند تغييره
     if (date && trip.return_date && date !== trip.return_date) {
-      await supabase.from("return_trip_buses" as never)
+      await supabase
+        .from("return_trip_buses" as never)
         .update({ trip_date: date } as never)
-        .eq("return_trip_id", trip.id).eq("trip_date", trip.return_date);
+        .eq("return_trip_id", trip.id)
+        .eq("trip_date", trip.return_date);
     }
     toast.success("تم الحفظ");
     refresh();
@@ -273,7 +343,10 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
 
   async function del() {
     if (!confirm("حذف رحلة العودة؟ (لن يتم حذف أي حجز)")) return;
-    const { error } = await supabase.from("return_trips" as never).delete().eq("id", trip.id);
+    const { error } = await supabase
+      .from("return_trips" as never)
+      .delete()
+      .eq("id", trip.id);
     if (error) return toast.error(error.message);
     refresh();
   }
@@ -282,12 +355,17 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
     const date = trip.return_date;
     if (!date) return toast.error("حدّد تاريخ رحلة العودة أولًا ثم احفظ.");
     if (add) {
-      const { error } = await supabase.from("return_trip_buses" as never)
+      const { error } = await supabase
+        .from("return_trip_buses" as never)
         .insert({ return_trip_id: trip.id, trip_date: date, bus_id: busId } as never);
       if (error) return toast.error(error.message);
     } else {
-      const { error } = await supabase.from("return_trip_buses" as never).delete()
-        .eq("return_trip_id", trip.id).eq("trip_date", date).eq("bus_id", busId);
+      const { error } = await supabase
+        .from("return_trip_buses" as never)
+        .delete()
+        .eq("return_trip_id", trip.id)
+        .eq("trip_date", date)
+        .eq("bus_id", busId);
       if (error) return toast.error(error.message);
     }
     refresh();
@@ -303,7 +381,9 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
               {formatTripDate(trip.return_date)}
               {trip.return_time ? ` — ${formatTripTime(trip.return_time)}` : ""}
             </div>
-            <div className="text-xs text-muted-foreground">{trip.from_city} ← {trip.to_city}</div>
+            <div className="text-xs text-muted-foreground">
+              {trip.from_city} ← {trip.to_city}
+            </div>
           </>
         ) : (
           <div className="text-xs text-destructive">لم يتم تحديد تاريخ فعلي لرحلة العودة بعد.</div>
@@ -311,12 +391,42 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
       </div>
 
       <div className="grid gap-3 md:grid-cols-6">
-        <div className="md:col-span-2"><Label className="text-xs">اسم رحلة العودة</Label><Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} /></div>
-        <div><Label className="text-xs">تاريخ العودة الفعلي</Label><Input type="date" value={local.return_date ?? ""} onChange={(e) => setLocal({ ...local, return_date: e.target.value })} /></div>
-        <div><Label className="text-xs">وقت العودة</Label><Input type="time" value={local.return_time ?? ""} onChange={(e) => setLocal({ ...local, return_time: e.target.value })} /></div>
-        <div><Label className="text-xs">من</Label><Input value={local.from_city} onChange={(e) => setLocal({ ...local, from_city: e.target.value })} /></div>
-        <div><Label className="text-xs">إلى</Label><Input value={local.to_city} onChange={(e) => setLocal({ ...local, to_city: e.target.value })} /></div>
-        <div><Label className="text-xs">الترتيب</Label><Input type="number" value={local.display_order} onChange={(e) => setLocal({ ...local, display_order: Number(e.target.value) })} /></div>
+        <div className="md:col-span-2">
+          <Label className="text-xs">اسم رحلة العودة</Label>
+          <Input value={local.name} onChange={(e) => setLocal({ ...local, name: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">تاريخ العودة الفعلي</Label>
+          <Input
+            type="date"
+            value={local.return_date ?? ""}
+            onChange={(e) => setLocal({ ...local, return_date: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">وقت العودة</Label>
+          <Input
+            type="time"
+            value={local.return_time ?? ""}
+            onChange={(e) => setLocal({ ...local, return_time: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">من</Label>
+          <Input value={local.from_city} onChange={(e) => setLocal({ ...local, from_city: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">إلى</Label>
+          <Input value={local.to_city} onChange={(e) => setLocal({ ...local, to_city: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">الترتيب</Label>
+          <Input
+            type="number"
+            value={local.display_order}
+            onChange={(e) => setLocal({ ...local, display_order: Number(e.target.value) })}
+          />
+        </div>
         <div className="flex items-end gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Switch checked={!!local.auto_advance} onCheckedChange={(v) => setLocal({ ...local, auto_advance: v })} />
@@ -336,20 +446,32 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
           </div>
         </div>
         <div className="flex items-end gap-2">
-          <div className="flex items-center gap-2"><Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} /><span className="text-xs">مفعّلة</span></div>
+          <div className="flex items-center gap-2">
+            <Switch checked={local.active} onCheckedChange={(v) => setLocal({ ...local, active: v })} />
+            <span className="text-xs">مفعّلة</span>
+          </div>
         </div>
       </div>
 
       <div>
-        <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> حافلات العودة المتاحة والإشغال</div>
+        <div className="text-sm font-bold flex items-center gap-2 mb-2">
+          <BusIcon className="h-4 w-4" /> حافلات العودة المتاحة والإشغال
+        </div>
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {buses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات عودة في الأسطول — أضف حافلة باتجاه «عودة».</div>}
+          {buses.length === 0 && (
+            <div className="text-xs text-muted-foreground">
+              لا توجد حافلات عودة في الأسطول — أضف حافلة باتجاه «عودة».
+            </div>
+          )}
           {buses.map((b) => {
             const used = occupancy[b.id] ?? 0;
             const pct = b.capacity > 0 ? Math.round((used / b.capacity) * 100) : 0;
             const on = assigned.has(b.id);
             return (
-              <div key={b.id} className={`flex items-center justify-between border rounded-xl p-3 ${on ? "border-primary bg-primary/5" : ""}`}>
+              <div
+                key={b.id}
+                className={`flex items-center justify-between border rounded-xl p-3 ${on ? "border-primary bg-primary/5" : ""}`}
+              >
                 <label className="flex items-center gap-2 cursor-pointer">
                   <Checkbox checked={on} onCheckedChange={(v) => toggleBus(b.id, !!v)} />
                   <div>
@@ -358,7 +480,9 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
                   </div>
                 </label>
                 <div className="text-left">
-                  <div className={`text-sm font-bold ${used >= b.capacity ? "text-destructive" : ""}`}>{used}/{b.capacity}</div>
+                  <div className={`text-sm font-bold ${used >= b.capacity ? "text-destructive" : ""}`}>
+                    {used}/{b.capacity}
+                  </div>
                   <div className="text-[11px] text-muted-foreground">{pct}%</div>
                 </div>
               </div>
@@ -368,15 +492,25 @@ function ReturnTripEditor({ trip, buses, assigned, occupancy }: {
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={del} className="rounded-full"><Trash2 className="h-4 w-4" /></Button>
-        <Button size="sm" onClick={save} className="rounded-full"><Save className="h-4 w-4 ml-1" /> حفظ</Button>
+        <Button size="sm" variant="outline" onClick={del} className="rounded-full">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <Button size="sm" onClick={save} className="rounded-full">
+          <Save className="h-4 w-4 ml-1" /> حفظ
+        </Button>
       </div>
     </div>
   );
 }
 
-
-export function ReturnTripCard({ template, date, buses, assigned, bookings, ownerId }: {
+export function ReturnTripCard({
+  template,
+  date,
+  buses,
+  assigned,
+  bookings,
+  ownerId,
+}: {
   template: ReturnTripRow;
   date: string;
   buses: BusRow[];
@@ -387,6 +521,7 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
   const qc = useQueryClient();
   const [addingBus, setAddingBus] = useState(false);
   const [newBooking, setNewBooking] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
 
   const assignedBusIds = assigned.map((a) => a.bus_id);
   const tripBuses = buses.filter((b) => assignedBusIds.includes(b.id));
@@ -408,7 +543,9 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
 
   async function addBus(busId: string) {
     const { error } = await supabase.from("return_trip_buses" as never).insert({
-      return_trip_id: template.id, trip_date: date, bus_id: busId,
+      return_trip_id: template.id,
+      trip_date: date,
+      bus_id: busId,
     } as never);
     if (error) return toast.error(error.message);
     setAddingBus(false);
@@ -420,29 +557,49 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
     const count = riders.reduce((s, b) => s + (b.return_seat_numbers?.length ?? 0), 0);
     const bus = buses.find((b) => b.id === busId);
     const label = bus?.name || `حافلة ${bus?.bus_number}`;
-    if (count > 0 && !confirm(`⚠️ تنبيه\n\n${label} مرتبطة برحلة عودة بتاريخ ${formatTripDate(date)} وبها ${count} راكبًا.\n\nسيتم إلغاء تخصيص هؤلاء الركاب (يبقون ضمن الحجوزات المرتبطة كـ«غير موزعين») ولن يُحذف أي حجز.\n\nهل تريد المتابعة؟`)) return;
+    if (
+      count > 0 &&
+      !confirm(
+        `⚠️ تنبيه\n\n${label} مرتبطة برحلة عودة بتاريخ ${formatTripDate(date)} وبها ${count} راكبًا.\n\nسيتم إلغاء تخصيص هؤلاء الركاب (يبقون ضمن الحجوزات المرتبطة كـ«غير موزعين») ولن يُحذف أي حجز.\n\nهل تريد المتابعة؟`,
+      )
+    )
+      return;
     if (count === 0 && !confirm(`إزالة ${label} من رحلة العودة بتاريخ ${formatTripDate(date)}؟`)) return;
 
     if (count > 0) {
-      const { error } = await supabase.from("bookings")
+      const { error } = await supabase
+        .from("bookings")
         .update({ return_bus_id: null, return_seat_numbers: [] } as never)
-        .in("id", riders.map((r) => r.id));
+        .in(
+          "id",
+          riders.map((r) => r.id),
+        );
       if (error) return toast.error(error.message);
     }
-    const { error } = await supabase.from("return_trip_buses" as never).delete()
-      .eq("return_trip_id", template.id).eq("trip_date", date).eq("bus_id", busId);
+    const { error } = await supabase
+      .from("return_trip_buses" as never)
+      .delete()
+      .eq("return_trip_id", template.id)
+      .eq("trip_date", date)
+      .eq("bus_id", busId);
     if (error) return toast.error(error.message);
     toast.success("تمت إزالة الحافلة من الرحلة");
     refresh();
   }
 
   async function assign(b: ReturnBookingRow, busId: string | null, seats: string[]) {
-    const { error } = await supabase.from("bookings").update({
-      return_trip_id: busId ? template.id : null,
-      return_bus_id: busId,
-      return_seat_numbers: seats,
-    } as never).eq("id", b.id);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        return_trip_id: busId ? template.id : null,
+        return_bus_id: busId,
+        return_seat_numbers: seats,
+      } as never)
+      .eq("id", b.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     refresh();
   }
 
@@ -450,10 +607,16 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
     <div className="surface-card p-5 space-y-5">
       <div className="rounded-xl border bg-muted/40 p-4">
         <div className="text-base font-extrabold">عودة {formatTripDate(date)}</div>
-        <div className="text-sm font-bold text-[color:var(--color-navy)]">{template.from_city} ← {template.to_city}</div>
-        {template.return_time && <div className="text-xs text-muted-foreground">{formatTripTime(template.return_time)}</div>}
+        <div className="text-sm font-bold text-[color:var(--color-navy)]">
+          {template.from_city} ← {template.to_city}
+        </div>
+        {template.return_time && (
+          <div className="text-xs text-muted-foreground">{formatTripTime(template.return_time)}</div>
+        )}
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <Badge variant="secondary">الحجوزات المرتبطة: {bookings.length} ({totalPax} راكب)</Badge>
+          <Badge variant="secondary">
+            الحجوزات المرتبطة: {bookings.length} ({totalPax} راكب)
+          </Badge>
           <Badge className="bg-success text-white">تم توزيعهم: {donePax}</Badge>
           <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
         </div>
@@ -461,16 +624,24 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
 
       {/* الحافلات المخصصة يدويًا لهذا التاريخ */}
       <div>
-        <div className="text-sm font-bold flex items-center gap-2 mb-2"><BusIcon className="h-4 w-4" /> حافلات العودة</div>
+        <div className="text-sm font-bold flex items-center gap-2 mb-2">
+          <BusIcon className="h-4 w-4" /> حافلات العودة
+        </div>
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {tripBuses.length === 0 && <div className="text-xs text-muted-foreground">لا توجد حافلات مضافة لهذه العودة بعد — الحجوزات تظهر كاملة رغم ذلك.</div>}
+          {tripBuses.length === 0 && (
+            <div className="text-xs text-muted-foreground">
+              لا توجد حافلات مضافة لهذه العودة بعد — الحجوزات تظهر كاملة رغم ذلك.
+            </div>
+          )}
           {tripBuses.map((b) => {
             const used = seatsOnBus(b.id).length;
             return (
               <div key={b.id} className="flex items-center justify-between border rounded-xl p-3">
                 <div>
                   <div className="text-sm font-bold">{b.name || `حافلة ${b.bus_number}`}</div>
-                  <div className="text-[11px] text-muted-foreground">{used} / {b.capacity}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {used} / {b.capacity}
+                  </div>
                 </div>
                 <Button size="sm" variant="outline" className="rounded-full" onClick={() => removeBus(b.id)}>
                   <Trash2 className="h-4 w-4" />
@@ -487,27 +658,39 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
       {/* الحجوزات المرتبطة */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-bold flex items-center gap-2"><Users className="h-4 w-4" /> الحجوزات المرتبطة بالعودة</div>
-          <Button size="sm" className="rounded-full" onClick={() => setNewBooking(true)}>
-            <Plus className="h-4 w-4 ml-1" /> إضافة حجز عودة
-          </Button>
+          <div className="text-sm font-bold flex items-center gap-2">
+            <Users className="h-4 w-4" /> الحجوزات المرتبطة بالعودة
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => setCopyOpen(true)}>
+              <Copy className="h-4 w-4 ml-1" /> نسخ مقاعد الذهاب
+            </Button>
+            <Button size="sm" className="rounded-full" onClick={() => setNewBooking(true)}>
+              <Plus className="h-4 w-4 ml-1" /> إضافة حجز عودة
+            </Button>
+          </div>
         </div>
 
         {newBooking && (
           <div className="mb-3 overflow-x-auto">
-            <table className="w-full"><tbody>
-              <ManualBookingRow
-                colSpan={1}
-                ownerId={ownerId}
-                initial={{ trip_mode: "return" }}
-                extraPayload={{
-                  return_date: date,
-                  return_trip_id: template.id,
-                }}
-                onClose={() => setNewBooking(false)}
-                onSaved={() => { setNewBooking(false); refresh(); }}
-              />
-            </tbody></table>
+            <table className="w-full">
+              <tbody>
+                <ManualBookingRow
+                  colSpan={1}
+                  ownerId={ownerId}
+                  initial={{ trip_mode: "return" }}
+                  extraPayload={{
+                    return_date: date,
+                    return_trip_id: template.id,
+                  }}
+                  onClose={() => setNewBooking(false)}
+                  onSaved={() => {
+                    setNewBooking(false);
+                    refresh();
+                  }}
+                />
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -526,7 +709,11 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
             </thead>
             <tbody>
               {bookings.length === 0 && (
-                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">لا توجد حجوزات مرتبطة بهذا التاريخ.</td></tr>
+                <tr>
+                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    لا توجد حجوزات مرتبطة بهذا التاريخ.
+                  </td>
+                </tr>
               )}
               {bookings.map((b) => (
                 <BookingAssignRow
@@ -546,20 +733,31 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
       <div className={`rounded-xl border p-4 ${undistributed.length > 0 ? "border-warning/50 bg-warning/5" : ""}`}>
         <div className="text-sm font-bold flex items-center gap-2 mb-3">
           <AlertTriangle className="h-4 w-4" /> توزيع الركاب على حافلات العودة
-          {undistributed.length > 0 && <Badge className="bg-warning text-white">غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</Badge>}
+          {undistributed.length > 0 && (
+            <Badge className="bg-warning text-white">غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</Badge>
+          )}
         </div>
         <ReturnSeatBoard buses={tripBuses} bookings={bookings} onAssign={assign} />
       </div>
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
         <DialogContent>
-          <DialogHeader><DialogTitle>إضافة حافلة عودة</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>إضافة حافلة عودة</DialogTitle>
+          </DialogHeader>
           <div className="space-y-2">
             {returnFleet.length === 0 && (
-              <p className="text-sm text-muted-foreground">لا توجد حافلات مصنّفة «عودة» متاحة. صنّف الحافلة كـ«عودة» من صفحة الأسطول أولًا.</p>
+              <p className="text-sm text-muted-foreground">
+                لا توجد حافلات مصنّفة «عودة» متاحة. صنّف الحافلة كـ«عودة» من صفحة الأسطول أولًا.
+              </p>
             )}
             {returnFleet.map((b) => (
-              <Button key={b.id} variant="outline" className="w-full justify-between rounded-xl" onClick={() => addBus(b.id)}>
+              <Button
+                key={b.id}
+                variant="outline"
+                className="w-full justify-between rounded-xl"
+                onClick={() => addBus(b.id)}
+              >
                 <span>{b.name || `حافلة ${b.bus_number}`}</span>
                 <span className="text-xs text-muted-foreground">{b.capacity} مقعد</span>
               </Button>
@@ -567,11 +765,26 @@ export function ReturnTripCard({ template, date, buses, assigned, bookings, owne
           </div>
         </DialogContent>
       </Dialog>
+
+      <CopyOutboundSeatsDialog
+        open={copyOpen}
+        onOpenChange={setCopyOpen}
+        bookings={bookings}
+        tripBuses={tripBuses}
+        allBuses={buses}
+        templateId={template.id}
+        onDone={refresh}
+      />
     </div>
   );
 }
 
-function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
+function BookingAssignRow({
+  booking,
+  buses,
+  takenSeats,
+  onAssign,
+}: {
   booking: ReturnBookingRow;
   buses: BusRow[];
   takenSeats: (busId: string) => string[];
@@ -595,21 +808,35 @@ function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
 
   return (
     <tr className="border-b align-top">
-      <td className="p-2 font-bold">{booking.customer_name || booking.booking_code}<div className="text-[11px] font-normal text-muted-foreground">{booking.passenger_count} راكب</div></td>
+      <td className="p-2 font-bold">
+        {booking.customer_name || booking.booking_code}
+        <div className="text-[11px] font-normal text-muted-foreground">{booking.passenger_count} راكب</div>
+      </td>
       <td className="p-2">{modeLabel(booking.trip_mode, booking.extension_nights)}</td>
       <td className="p-2">{formatTripDate(booking.actual_return_date)}</td>
       <td className="p-2">{booking.extension_nights ?? 0}</td>
       <td className="p-2">
-        <Select value={busId || "__none"} onValueChange={(v) => onAssign(v === "__none" ? null : v, v === busId ? seats : [])}>
-          <SelectTrigger className="h-8 w-36"><SelectValue placeholder="—" /></SelectTrigger>
+        <Select
+          value={busId || "__none"}
+          onValueChange={(v) => onAssign(v === "__none" ? null : v, v === busId ? seats : [])}
+        >
+          <SelectTrigger className="h-8 w-36">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none">— بدون —</SelectItem>
-            {buses.map((b) => <SelectItem key={b.id} value={b.id}>{b.name || `حافلة ${b.bus_number}`}</SelectItem>)}
+            {buses.map((b) => (
+              <SelectItem key={b.id} value={b.id}>
+                {b.name || `حافلة ${b.bus_number}`}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </td>
       <td className="p-2">
-        {!bus ? <span className="text-muted-foreground">—</span> : (
+        {!bus ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
           <div className="flex flex-wrap gap-1 max-w-[280px]">
             {freeSeats.map((s) => (
               <button
@@ -625,9 +852,11 @@ function BookingAssignRow({ booking, buses, takenSeats, onAssign }: {
         )}
       </td>
       <td className="p-2">
-        {distributed
-          ? <Badge className="bg-success text-white">موزع</Badge>
-          : <Badge className="bg-warning text-white">غير موزع</Badge>}
+        {distributed ? (
+          <Badge className="bg-success text-white">موزع</Badge>
+        ) : (
+          <Badge className="bg-warning text-white">غير موزع</Badge>
+        )}
       </td>
     </tr>
   );
@@ -648,10 +877,15 @@ function useReturnDateIndex() {
       const map: Record<string, { pax: number; done: number; count: number }> = {};
       let unscheduled = 0;
       for (const b of (data ?? []) as {
-        actual_return_date: string | null; passenger_count: number;
-        return_bus_id: string | null; return_seat_numbers: string[] | null;
+        actual_return_date: string | null;
+        passenger_count: number;
+        return_bus_id: string | null;
+        return_seat_numbers: string[] | null;
       }[]) {
-        if (!b.actual_return_date) { unscheduled += b.passenger_count || 1; continue; }
+        if (!b.actual_return_date) {
+          unscheduled += b.passenger_count || 1;
+          continue;
+        }
         const e = (map[b.actual_return_date] ??= { pax: 0, done: 0, count: 0 });
         e.pax += b.passenger_count || 1;
         e.count += 1;
@@ -670,10 +904,11 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   const index = useReturnDateIndex();
 
   const allTrips = useMemo(
-    () => (templates.data ?? [])
-      .filter((t) => t.active)
-      .slice()
-      .sort((a, b) => (a.return_date ?? "").localeCompare(b.return_date ?? "")),
+    () =>
+      (templates.data ?? [])
+        .filter((t) => t.active)
+        .slice()
+        .sort((a, b) => (a.return_date ?? "").localeCompare(b.return_date ?? "")),
     [templates.data],
   );
 
@@ -682,7 +917,9 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     const today = todayIso();
     const keys = new Set<string>(Object.keys(index.data?.map ?? {}));
     for (const t of allTrips) if (t.return_date) keys.add(t.return_date);
-    return Array.from(keys).sort().filter((d) => d >= addDays(today, -30));
+    return Array.from(keys)
+      .sort()
+      .filter((d) => d >= addDays(today, -30));
   }, [index.data, allTrips]);
 
   // أول تاريخ عودة قادم يُختار تلقائيًا بدل «اليوم» الفارغ
@@ -706,7 +943,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     return (buses.data ?? []).filter((b) => ids.has(b.id));
   }, [assignedBuses.data, buses.data]);
   const totalPax = rows.reduce((s, b) => s + (b.passenger_count || 1), 0);
-  const donePax = rows.reduce((s, b) => s + (b.return_bus_id ? b.return_seat_numbers?.length ?? 0 : 0), 0);
+  const donePax = rows.reduce((s, b) => s + (b.return_bus_id ? (b.return_seat_numbers?.length ?? 0) : 0), 0);
   const tripFor = (d: string) => allTrips.find((t) => t.return_date === d);
 
   return (
@@ -714,7 +951,9 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
       {/* شريط تواريخ العودة الحقيقية مع عدّاداتها */}
       <div className="surface-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="text-sm font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> تواريخ العودة</div>
+          <div className="text-sm font-bold flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" /> تواريخ العودة
+          </div>
           <div className="flex gap-2 text-xs">
             <Badge variant="secondary">إجمالي التواريخ: {dateList.length}</Badge>
             {(index.data?.unscheduled ?? 0) > 0 && (
@@ -726,7 +965,9 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
         {index.isLoading ? (
           <div className="text-xs text-muted-foreground">جارٍ التحميل…</div>
         ) : dateList.length === 0 ? (
-          <div className="text-xs text-muted-foreground">لا توجد تواريخ عودة — أضف تاريخ عودة للرحلات أو أنشئ رحلة عودة.</div>
+          <div className="text-xs text-muted-foreground">
+            لا توجد تواريخ عودة — أضف تاريخ عودة للرحلات أو أنشئ رحلة عودة.
+          </div>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1">
             {dateList.map((d) => {
@@ -755,14 +996,15 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
       <ReturnDateBar date={date} onChange={setDate} />
 
       <div className="surface-card p-4 flex flex-wrap items-center gap-2 text-xs">
-        <Badge variant="secondary">حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)</Badge>
+        <Badge variant="secondary">
+          حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)
+        </Badge>
         <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
         <div className="ms-auto flex flex-wrap gap-2">
           <ReturnNamesCopyButton bookings={rows} returnTripName={dayTrips.map((t) => t.name).join("، ")} />
           <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
         </div>
-
       </div>
 
       {bookings.isError && (
@@ -781,7 +1023,9 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
           </p>
           <div className="flex flex-wrap gap-2">
             {rows.map((b) => (
-              <Badge key={b.id} variant="outline">{b.customer_name || b.booking_code} — غير موزع</Badge>
+              <Badge key={b.id} variant="outline">
+                {b.customer_name || b.booking_code} — غير موزع
+              </Badge>
             ))}
           </div>
         </div>
@@ -802,10 +1046,14 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   );
 }
 
-
-
 /** زر نسخ أسماء العودات مجمّعة حسب رحلة الذهاب. */
-export function ReturnNamesCopyButton({ bookings, returnTripName }: { bookings: ReturnBookingRow[]; returnTripName?: string }) {
+export function ReturnNamesCopyButton({
+  bookings,
+  returnTripName,
+}: {
+  bookings: ReturnBookingRow[];
+  returnTripName?: string;
+}) {
   const tripIds = useMemo(
     () => Array.from(new Set(bookings.map((b) => b.trip_id).filter(Boolean) as string[])),
     [bookings],
@@ -822,8 +1070,7 @@ export function ReturnNamesCopyButton({ bookings, returnTripName }: { bookings: 
   });
 
   function buildText(): string {
-    const nameOf = (id?: string | null) =>
-      (id ? trips.data?.find((t) => t.id === id)?.name : "") || "بدون رحلة";
+    const nameOf = (id?: string | null) => (id ? trips.data?.find((t) => t.id === id)?.name : "") || "بدون رحلة";
     const pax = (b: ReturnBookingRow) => b.passenger_count || 1;
     const groups = new Map<string, ReturnBookingRow[]>();
     for (const b of bookings) {
@@ -833,10 +1080,7 @@ export function ReturnNamesCopyButton({ bookings, returnTripName }: { bookings: 
       groups.set(key, list);
     }
     const total = bookings.reduce((s, b) => s + pax(b), 0);
-    const parts: string[] = [
-      `أسماء العودات في رحلة العودة ( ${returnTripName || "—"} ) = ${total}`,
-      "",
-    ];
+    const parts: string[] = [`أسماء العودات في رحلة العودة ( ${returnTripName || "—"} ) = ${total}`, ""];
     for (const [tripName, list] of groups) {
       const sub = list.reduce((s, b) => s + pax(b), 0);
       parts.push(`من رحلة ( ${tripName} ) = ${sub}`, "");
@@ -849,7 +1093,6 @@ export function ReturnNamesCopyButton({ bookings, returnTripName }: { bookings: 
     }
     return parts.join("\n").trim();
   }
-
 
   async function copy() {
     if (bookings.length === 0) return toast.error("لا توجد عودات في هذا التاريخ");
