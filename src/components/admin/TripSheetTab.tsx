@@ -1088,10 +1088,10 @@ export function TripSheetTab() {
 
       {/* Main settlement table */}
       <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full text-xs border-collapse">
+        <table className="sheet-sticky-table w-full text-xs">
           <thead className="bg-muted">
             <tr>
-              <th className="border px-2 py-0.5 font-bold">
+              <th className="border px-2 py-0.5 font-bold sticky left-0 z-30 bg-muted w-10 min-w-10">
                 <SortHeader col={{ key: "index", label: "م" }} />
               </th>
               {COLUMN_DEFS.map((c) => (
@@ -1099,6 +1099,12 @@ export function TripSheetTab() {
                   key={c.key}
                   className={`border px-2 py-0.5 leading-tight whitespace-nowrap font-bold ${
                     c.key === "grossProfit" ? "bg-destructive text-destructive-foreground" : ""
+                  } ${
+                    c.key === "rep"
+                      ? "sticky left-10 z-30 bg-muted w-28 min-w-28"
+                      : c.key === "customer"
+                        ? "sticky left-[152px] z-30 bg-muted w-40 min-w-40"
+                        : ""
                   }`}
                 >
                   <SortHeader col={c} />
@@ -1107,7 +1113,10 @@ export function TripSheetTab() {
             </tr>
           </thead>
           <tbody>
-            {sortedComputed.map((r, i) => (
+            {sortedComputed.map((r, i) => {
+              const rowBg =
+                r.b.trip_mode === "return" ? "bg-blue-100" : i % 2 === 1 ? "sheet-stripe-even" : "bg-white";
+              return (
               <tr
                 key={r.b.id}
                 className={
@@ -1117,9 +1126,9 @@ export function TripSheetTab() {
                 }
               >
 
-                <td className="border px-2 py-0.5 text-center">{i + 1}</td>
-                <td className="border px-2 py-0.5 text-center">{r.rep}</td>
-                <td className="border px-2 py-0.5">{r.b.customer_name}</td>
+                <td className={`border px-2 py-0.5 text-center sticky left-0 z-20 w-10 min-w-10 ${rowBg}`}>{i + 1}</td>
+                <td className={`border px-2 py-0.5 text-center sticky left-10 z-20 w-28 min-w-28 ${rowBg}`}>{r.rep}</td>
+                <td className={`border px-2 py-0.5 sticky left-[152px] z-20 w-40 min-w-40 ${rowBg}`}>{r.b.customer_name}</td>
                 <td className="border px-2 py-0.5 text-center font-mono">{r.b.id_number}</td>
                 <td className="border px-2 py-0.5 text-center">{r.b.nationality ?? "—"}</td>
                 <td className="border px-2 py-0.5 text-center">{r.count}</td>
@@ -1157,7 +1166,8 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5 text-center">{round(r.repShare)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.companyShare)}</td>
               </tr>
-            ))}
+              );
+            })}
             {computed.length === 0 && (
               <tr>
                 <td colSpan={COLUMN_DEFS.length + 1} className="p-6 text-center text-muted-foreground">
@@ -1168,9 +1178,14 @@ export function TripSheetTab() {
           </tbody>
           <tfoot className="bg-muted font-bold">
             <tr>
-              <td className="border px-2 py-0.5 text-center" colSpan={5}>
+              <td className="border px-2 py-0.5 text-center sticky left-0 z-20 bg-muted w-10 min-w-10" />
+              <td
+                className="border px-2 py-0.5 text-center sticky left-10 z-20 bg-muted"
+                colSpan={2}
+              >
                 الإجمالي
               </td>
+              <td className="border px-2 py-0.5 text-center" colSpan={2} />
               <td className="border px-2 py-0.5 text-center">{totals.count}</td>
               <td className="border px-2 py-0.5" colSpan={5} />
               <td className="border px-2 py-0.5 text-center">{round(totals.packageTotal)}</td>
