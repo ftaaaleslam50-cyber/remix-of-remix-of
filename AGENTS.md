@@ -12,3 +12,4 @@
 - Keep customer spreadsheet parsing/export in a client-safe `src/lib/export/` module so admin screens share one field mapping and validation.
 - Prefix return-trip select values with `return:` so independent outbound/return IDs filter by their respective booking fields without collisions.
 - Store the return-seat company share in `settlement_reference.return_trip_company_profit_rate` and use it only for bookings with `return_trip_id` or `trip_mode = 'return'`, so regular commissions remain unchanged.
+- Use the shared client-side trip-notice sharing helper for outbound and return notices; it keeps passenger lists text-only and bus images attached only to notices.

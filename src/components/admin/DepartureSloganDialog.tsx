@@ -1,9 +1,9 @@
-// «تصدير شعار رحلة الذهاب» — يبني نص إشعار الذهاب من بيانات الرحلة/الحافلة/الحجوزات
-// المفلترة حاليًا في تبويب الذهاب، مع نسخ ومشاركة نصية.
+// إشعار الذهاب وقائمة الركاب منفصلان؛ صورة الباص للإشعار فقط.
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Share2, AlertTriangle, FileText, Download, Loader2 } from "lucide-react";
 import { loadBusTemplate, renderBusImage } from "@/lib/bus-image";
+import { copyTripText, shareTripText } from "@/lib/share-trip-notice";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -45,7 +45,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
 }) {
   const [open, setOpen] = useState(false);
 
-  const { text, missing } = useMemo(() => {
+  const { noticeText, passengerText, missing } = useMemo(() => {
     const gaps: string[] = [];
 
     // تاريخ الرحلة: الفعلي من الحجز ثم تاريخ الرحلة المسجّل
@@ -68,7 +68,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
       return `${i + 1}- ${[name, `/${r.passenger_count || 1}`, source ? `/${source}` : ""].filter(Boolean).join(" ")}`;
     });
 
-    const body = [
+    const noticeText = [
       "▪️*إشعار رحله الذهاب*",
       "",
       `* اليوم : ${dateIso ? arabicDay(dateIso) : "—"}`,
@@ -90,12 +90,10 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
       "*مسجد قباء - الساحة الجنوبية*",
       "",
       "*📍موقع مواقف الباصات*https://maps.app.goo.gl/6bXfTdJRgwQbXTbH8?g_st=iwb",
-      "",
-      "الركاب:",
-      ...lines,
     ].filter((l): l is string => l !== null).join("\n");
 
-    return { text: body, missing: Array.from(new Set(gaps)) };
+    const passengerText = [`أسماء ركاب الحافلة رقم (${bus?.bus_number || "—"})`, ...lines].join("\n");
+    return { noticeText, passengerText, missing: Array.from(new Set(gaps)) };
   }, [bookings, tripName, bus]);
 
   // صورة الباص: تُولَّد من جديد لكل فتح/تغيير باص، ولا يُعاد استخدام صورة باص سابق.
@@ -135,31 +133,23 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
     a.click();
   }
 
-  async function copy() {
+  async function copy(kind: "notice" | "passengers") {
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success("تم نسخ شعار الرحلة بنجاح");
+      const result = await copyTripText(kind === "notice" ? noticeText : passengerText, kind === "notice" ? busImg?.blob : null);
+      toast.success(kind === "passengers" ? "تم نسخ أسماء الركاب" : result === "text-and-image" ? "تم نسخ الإشعار وصورة الباص" : "تم نسخ الإشعار نصيًا؛ حمّل صورة الباص بشكل منفصل");
     } catch {
       toast.error("تعذّر النسخ من هذا المتصفح");
     }
   }
 
-  async function share() {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      const file = busImg ? new File([busImg.blob], fileName, { type: "image/jpeg" }) : null;
-      try {
-        if (file && navigator.canShare?.({ files: [file] })) {
-          await navigator.clipboard.writeText(text).catch(() => undefined);
-          await navigator.share({ files: [file], text });
-        } else {
-          await navigator.share({ text });
-        }
-        return;
-      } catch { /* المستخدم ألغى المشاركة */ }
-      return;
+  async function share(kind: "notice" | "passengers") {
+    try {
+      const result = await shareTripText(kind === "notice" ? noticeText : passengerText, kind === "notice" ? busImg?.blob : null, fileName);
+      if (result === "copied") toast.message(kind === "notice" ? "المشاركة غير مدعومة؛ نُسخ الإشعار، ويمكن تحميل الصورة منفصلة" : "المشاركة غير مدعومة؛ نُسخت أسماء الركاب");
+      if (result === "shared-text") toast.message("هذا الجهاز لا يدعم مشاركة الصورة؛ تمت مشاركة نص الإشعار فقط");
+    } catch {
+      toast.error("تعذّرت المشاركة");
     }
-    await copy();
-    toast.message("المشاركة المباشرة غير مدعومة على هذا الجهاز، تم نسخ الشعار ويمكنك لصقه في التطبيق المطلوب.");
   }
 
   return (
@@ -195,14 +185,22 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
               <div className="rounded-xl border p-4 text-center text-xs text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline ml-1" /> جارِ إنشاء صورة الباص…</div>
             )}
 
+            <div className="text-sm font-bold">إشعار الرحلة</div>
             <pre className="max-h-72 overflow-auto rounded-xl border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-sans leading-6">
-              {text}
+              {noticeText}
             </pre>
 
-            <div className="flex gap-2 flex-wrap">
-              <Button className="flex-1 rounded-xl font-bold" onClick={copy}><Copy className="h-4 w-4 ml-1" /> 📋 نسخ الشعار</Button>
-              <Button variant="outline" className="flex-1 rounded-xl font-bold" onClick={share}><Share2 className="h-4 w-4 ml-1" /> 📤 مشاركة</Button>
-              <Button variant="outline" className="flex-1 rounded-xl font-bold" disabled={!busImg} onClick={downloadImg}><Download className="h-4 w-4 ml-1" /> تحميل الصورة</Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="min-w-0 font-bold" disabled={!busImg && !imgNote} onClick={() => copy("notice")}><Copy className="h-4 w-4 ml-1 shrink-0" /> نسخ الإشعار</Button>
+              <Button variant="outline" className="min-w-0 font-bold" disabled={!busImg && !imgNote} onClick={() => share("notice")}><Share2 className="h-4 w-4 ml-1 shrink-0" /> مشاركة الإشعار</Button>
+            </div>
+            <Button variant="outline" className="w-full" disabled={!busImg} onClick={downloadImg}><Download className="h-4 w-4 ml-1" /> تحميل صورة الباص</Button>
+
+            <div className="border-t pt-3 text-sm font-bold">أسماء الركاب</div>
+            <pre className="max-h-72 overflow-auto rounded-xl border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-sans leading-6">{passengerText}</pre>
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="min-w-0 font-bold" onClick={() => copy("passengers")}><Copy className="h-4 w-4 ml-1 shrink-0" /> نسخ الأسماء</Button>
+              <Button variant="outline" className="min-w-0 font-bold" onClick={() => share("passengers")}><Share2 className="h-4 w-4 ml-1 shrink-0" /> مشاركة الأسماء</Button>
             </div>
           </div>
         </DialogContent>
