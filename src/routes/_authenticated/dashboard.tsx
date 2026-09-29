@@ -548,6 +548,7 @@ interface UBTripOpt {
 }
 interface UBBusOpt {
   id: string;
+  linked?: boolean;
   name: string | null;
   bus_number: number;
   capacity: number;
