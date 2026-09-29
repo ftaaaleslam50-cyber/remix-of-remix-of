@@ -1,3 +1,4 @@
+import { fetchTripBusesWithLinks } from "@/lib/trip-bus-links";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -671,28 +672,7 @@ function UnifiedBookingsTab(props: {
       // Only buses flagged active-for-booking are shown/counted.
       const COLS =
         "id,name,bus_number,capacity,trip_id,layout,layout_id,plate,driver_name,supervisor_name,driver_phone,driver_id_number,assigned_date,direction";
-      if (tripId) {
-        const returnId = tripId.startsWith("return:") ? tripId.slice(7) : null;
-        const { data: links } = returnId
-          ? await supabase.from("return_trip_buses").select("bus_id").eq("return_trip_id", returnId)
-          : await supabase.from("trip_buses").select("bus_id").eq("trip_id", tripId);
-        const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
-        let q = supabase
-          .from("buses")
-          .select(COLS)
-          .eq("active", true)
-          .order("assigned_date", { ascending: true, nullsFirst: false })
-          .order("bus_number");
-        if (returnId) {
-          if (ids.length === 0) return [];
-          q = q.in("id", ids);
-        } else if (ids.length > 0) {
-          q = q.or(`id.in.(${ids.join(",")}),trip_id.eq.${tripId}`);
-        } else {
-          q = q.eq("trip_id", tripId);
-        }
-        return ((await q).data as UBBusOpt[]) ?? [];
-      }
+      if (tripId) return fetchTripBusesWithLinks<UBBusOpt>(tripId, `${COLS}`, { activeOnly: true });
       return (
         ((await supabase
           .from("buses")
