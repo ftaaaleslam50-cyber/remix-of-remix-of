@@ -1088,7 +1088,7 @@ export function TripSheetTab() {
 
       {/* Main settlement table */}
       <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full text-xs border-collapse">
+        <table className="sheet-sticky-table w-full text-xs">
           <thead className="bg-muted">
             <tr>
               <th className="border px-2 py-0.5 font-bold sticky right-0 z-30 bg-muted w-10 min-w-10">
