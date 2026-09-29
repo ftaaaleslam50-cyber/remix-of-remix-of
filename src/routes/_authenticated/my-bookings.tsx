@@ -126,7 +126,8 @@ function MyBookingsPage() {
 
   // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
   // الافتراضي: الأسبوع الحالي (حسب تاريخ الحافلة المرتبطة بالحجز).
-  const [weekBack, setWeekBack] = useState(0);
+  // خيار "nodate": الحجوزات غير المرتبطة بتاريخ (بلا حافلة أو حافلتها بلا تاريخ).
+  const [weekBack, setWeekBack] = useState<string>("0");
 
   /** أسبوعان قادمان + الأسبوع الحالي + أسبوعان سابقان. */
   const weekOptions = useMemo(() => {
@@ -139,10 +140,10 @@ function MyBookingsPage() {
       end.setDate(start.getDate() + 7);
       const endLabel = new Date(end);
       endLabel.setDate(end.getDate() - 1);
-      return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
+      return { value: String(i), start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
     });
   }, []);
-  const activeWeek = weekOptions.find((w) => w.value === weekBack) ?? weekOptions[2];
+  const activeWeek = weekOptions.find((w) => w.value === weekBack);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
