@@ -74,11 +74,11 @@ function tripEnded(b: MyBooking) {
   return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
 }
 
-/** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
+/** التاريخ المرجعي للحجز = تاريخ الحافلة المرتبطة به (null إن لم يوجد). */
 function refTimeOf(b: MyBooking) {
-  const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
-  const t = new Date(s as string).getTime();
-  return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
+  const s = b.buses?.assigned_date;
+  if (!s) return NaN;
+  return new Date(`${s}T00:00:00`).getTime();
 }
 
 const dayMonth = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
@@ -125,14 +125,14 @@ function MyBookingsPage() {
 
 
   // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
-  // -1 = كل الحجوزات (الافتراضي) حتى لا يختفي أي حجز خارج نطاق الأسابيع.
-  const [weekBack, setWeekBack] = useState(-1);
+  // الافتراضي: الأسبوع الحالي (حسب تاريخ الحافلة المرتبطة بالحجز).
+  const [weekBack, setWeekBack] = useState(0);
 
-  /** 4 أسابيع قادمة + الأسبوع الحالي + 12 أسبوعًا سابقًا. */
+  /** أسبوعان قادمان + الأسبوع الحالي + أسبوعان سابقان. */
   const weekOptions = useMemo(() => {
     const base = startOfWeek(new Date());
-    return Array.from({ length: 17 }, (_, idx) => {
-      const i = idx - 4;
+    return Array.from({ length: 5 }, (_, idx) => {
+      const i = idx - 2;
       const start = new Date(base);
       start.setDate(base.getDate() - i * 7);
       const end = new Date(start);
@@ -142,7 +142,7 @@ function MyBookingsPage() {
       return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
     });
   }, []);
-  const activeWeek = weekBack === -1 ? null : weekOptions.find((w) => w.value === weekBack) ?? null;
+  const activeWeek = weekOptions.find((w) => w.value === weekBack) ?? weekOptions[2];
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -275,7 +275,6 @@ function MyBookingsPage() {
               value={weekBack}
               onChange={(e) => setWeekBack(Number(e.target.value))}
             >
-              <option value={-1}>كل الحجوزات</option>
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}
