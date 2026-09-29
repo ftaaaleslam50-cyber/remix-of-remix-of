@@ -126,7 +126,8 @@ function MyBookingsPage() {
 
   // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
   // الافتراضي: الأسبوع الحالي (حسب تاريخ الحافلة المرتبطة بالحجز).
-  const [weekBack, setWeekBack] = useState(0);
+  // خيار "nodate": الحجوزات غير المرتبطة بتاريخ (بلا حافلة أو حافلتها بلا تاريخ).
+  const [weekBack, setWeekBack] = useState<string>("0");
 
   /** أسبوعان قادمان + الأسبوع الحالي + أسبوعان سابقان. */
   const weekOptions = useMemo(() => {
@@ -139,10 +140,10 @@ function MyBookingsPage() {
       end.setDate(start.getDate() + 7);
       const endLabel = new Date(end);
       endLabel.setDate(end.getDate() - 1);
-      return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
+      return { value: String(i), start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
     });
   }, []);
-  const activeWeek = weekOptions.find((w) => w.value === weekBack) ?? weekOptions[2];
+  const activeWeek = weekOptions.find((w) => w.value === weekBack);
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -173,7 +174,10 @@ function MyBookingsPage() {
     const q = search.trim().toLowerCase();
     let list = sorted;
     // فلتر الأسبوع يتحكم في الصفحة كلها (الملخص + القائمة).
-    if (activeWeek) {
+    if (weekBack === "nodate") {
+      // الحجوزات غير المرتبطة بتاريخ: بلا حافلة أو حافلتها بلا تاريخ.
+      list = list.filter((b) => Number.isNaN(refTimeOf(b)));
+    } else if (activeWeek) {
       list = list.filter((b) => {
         const t = refTimeOf(b);
         return t >= activeWeek.start && t < activeWeek.end;
@@ -185,7 +189,7 @@ function MyBookingsPage() {
       (b.booking_code || "").toLowerCase().includes(q) ||
       (b.contact_phone || "").includes(q)
     );
-  }, [sorted, search, activeWeek]);
+  }, [sorted, search, activeWeek, weekBack]);
 
   const tripLabelOf = (b: MyBooking) =>
     b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
@@ -273,18 +277,19 @@ function MyBookingsPage() {
             <select
               className="h-9 w-full rounded-xl border bg-background px-3 text-sm sm:w-auto"
               value={weekBack}
-              onChange={(e) => setWeekBack(Number(e.target.value))}
+              onChange={(e) => setWeekBack(e.target.value)}
             >
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}
+              <option value="nodate">الحجوزات غير المرتبطة بتاريخ</option>
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {isRep && (
                <div className="rounded-xl bg-primary/5 border border-primary/15 p-2.5 text-center sm:p-4">
                  <p className="text-lg font-extrabold text-emerald-600 sm:text-2xl">{sar(summary.total)}</p>
-                <p className="text-[11px] text-muted-foreground font-semibold mt-1">{activeWeek ? `أرباح الأسبوع (${activeWeek.label})` : "إجمالي الأرباح"}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">{weekBack === "nodate" ? "أرباح الحجوزات غير المرتبطة بتاريخ" : activeWeek ? `أرباح الأسبوع (${activeWeek.label})` : "إجمالي الأرباح"}</p>
               </div>
             )}
              <div className="rounded-xl bg-primary/5 border border-primary/15 p-2.5 text-center sm:p-4">
