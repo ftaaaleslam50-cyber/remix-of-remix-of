@@ -174,7 +174,10 @@ function MyBookingsPage() {
     const q = search.trim().toLowerCase();
     let list = sorted;
     // فلتر الأسبوع يتحكم في الصفحة كلها (الملخص + القائمة).
-    if (activeWeek) {
+    if (weekBack === "nodate") {
+      // الحجوزات غير المرتبطة بتاريخ: بلا حافلة أو حافلتها بلا تاريخ.
+      list = list.filter((b) => Number.isNaN(refTimeOf(b)));
+    } else if (activeWeek) {
       list = list.filter((b) => {
         const t = refTimeOf(b);
         return t >= activeWeek.start && t < activeWeek.end;
@@ -186,7 +189,7 @@ function MyBookingsPage() {
       (b.booking_code || "").toLowerCase().includes(q) ||
       (b.contact_phone || "").includes(q)
     );
-  }, [sorted, search, activeWeek]);
+  }, [sorted, search, activeWeek, weekBack]);
 
   const tripLabelOf = (b: MyBooking) =>
     b.trips ? String(tripWithDate(b.trips.name, b.departure_date ?? b.trips.departure_date, b.trips.departure_day)) : "بدون رحلة";
