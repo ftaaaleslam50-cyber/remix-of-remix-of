@@ -282,3 +282,22 @@
 .sheet-stripe-even {
   background-color: color-mix(in oklab, var(--muted) 30%, white);
 }
+
+/* Accounts settlement table: sticky columns need border-separate (Chromium ignores
+   position: sticky on table cells when border-collapse: collapse is used) */
+.sheet-sticky-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sheet-sticky-table th,
+.sheet-sticky-table td {
+  border-width: 0;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.sheet-sticky-table thead th {
+  border-top: 1px solid var(--border);
+}
+.sheet-sticky-table tr > *:first-child {
+  border-right: 1px solid var(--border);
+}
