@@ -36,7 +36,7 @@ interface MyBooking {
   rep_share?: number | null;
   trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses: {
-    name: string | null; bus_number: number; capacity?: number | null; settled_at?: string | null;
+    name: string | null; bus_number: number; capacity?: number | null; assigned_date?: string | null; settled_at?: string | null;
     expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null;
     expense_supervisor?: number | null; expense_supervisor_bed?: number | null;
     expense_empty_beds?: number | null; expense_extra?: number | null;
@@ -74,11 +74,11 @@ function tripEnded(b: MyBooking) {
   return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
 }
 
-/** التاريخ المرجعي للحجز (تاريخ الرحلة، وإلا تاريخ الإنشاء). */
+/** التاريخ المرجعي للحجز = تاريخ الحافلة المرتبطة به (null إن لم يوجد). */
 function refTimeOf(b: MyBooking) {
-  const s = b.departure_date ?? b.trips?.departure_date ?? b.trips?.departure_day ?? b.created_at;
-  const t = new Date(s as string).getTime();
-  return Number.isNaN(t) ? new Date(b.created_at).getTime() : t;
+  const s = b.buses?.assigned_date;
+  if (!s) return NaN;
+  return new Date(`${s}T00:00:00`).getTime();
 }
 
 const dayMonth = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
@@ -125,14 +125,14 @@ function MyBookingsPage() {
 
 
   // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
-  // -1 = كل الحجوزات (الافتراضي) حتى لا يختفي أي حجز خارج نطاق الأسابيع.
-  const [weekBack, setWeekBack] = useState(-1);
+  // الافتراضي: الأسبوع الحالي (حسب تاريخ الحافلة المرتبطة بالحجز).
+  const [weekBack, setWeekBack] = useState(0);
 
-  /** 4 أسابيع قادمة + الأسبوع الحالي + 12 أسبوعًا سابقًا. */
+  /** أسبوعان قادمان + الأسبوع الحالي + أسبوعان سابقان. */
   const weekOptions = useMemo(() => {
     const base = startOfWeek(new Date());
-    return Array.from({ length: 17 }, (_, idx) => {
-      const i = idx - 4;
+    return Array.from({ length: 5 }, (_, idx) => {
+      const i = idx - 2;
       const start = new Date(base);
       start.setDate(base.getDate() - i * 7);
       const end = new Date(start);
@@ -142,7 +142,7 @@ function MyBookingsPage() {
       return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
     });
   }, []);
-  const activeWeek = weekBack === -1 ? null : weekOptions.find((w) => w.value === weekBack) ?? null;
+  const activeWeek = weekOptions.find((w) => w.value === weekBack) ?? weekOptions[2];
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -150,7 +150,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,assigned_date,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
         // الحجوزات التي أنشأها المستخدم + الحجوزات المسجّلة باسمه كمندوب (ولو أدخلها موظف آخر).
         .or(`created_by.eq.${uid},rep_profile_id.eq.${uid}`)
         .or("deleted_at.is.null,no_show.is.true")
@@ -275,7 +275,6 @@ function MyBookingsPage() {
               value={weekBack}
               onChange={(e) => setWeekBack(Number(e.target.value))}
             >
-              <option value={-1}>كل الحجوزات</option>
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}

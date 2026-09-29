@@ -172,6 +172,8 @@ interface BusOpt {
   outbound_price: number | null;
   return_price: number | null;
   open_return_price: number | null;
+  direction?: string | null;
+  assigned_date?: string | null;
 }
 
 function newCode(): string {
@@ -279,8 +281,9 @@ export function ManualBookingRow({
       const base = supabase
         .from("buses")
         .select(
-          "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price",
+          "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price,direction,assigned_date",
         )
+        .order("assigned_date", { ascending: true, nullsFirst: false })
         .order("bus_number");
       if (!d.trip_id) return ((await base).data as unknown as BusOpt[]) ?? [];
       const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", d.trip_id);
@@ -627,11 +630,26 @@ export function ManualBookingRow({
                 onChange={(e) => setD((p) => ({ ...p, bus_id: e.target.value || null, seat_numbers: [] }))}
               >
                 <option value="">بدون حافلة</option>
-                {buses.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name || `حافلة ${b.bus_number}`}
-                  </option>
-                ))}
+                {(() => {
+                  const byDate = (a: BusOpt, b: BusOpt) =>
+                    (a.assigned_date ?? "9999-12-31").localeCompare(b.assigned_date ?? "9999-12-31") || a.bus_number - b.bus_number;
+                  const out = buses.filter((b) => b.direction !== "return").sort(byDate);
+                  const ret = buses.filter((b) => b.direction === "return").sort(byDate);
+                  const opt = (b: BusOpt) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name || `حافلة ${b.bus_number}`}
+                      {b.assigned_date ? ` — ${b.assigned_date}` : ""}
+                    </option>
+                  );
+                  return (
+                    <>
+                      {out.length > 0 && <option disabled>── حافلات الذهاب ──</option>}
+                      {out.map(opt)}
+                      {ret.length > 0 && <option disabled>──────────── حافلات العودة ──</option>}
+                      {ret.map(opt)}
+                    </>
+                  );
+                })()}
               </select>
             </Field>
             <Field label="نوع الرحلة">
