@@ -1113,7 +1113,10 @@ export function TripSheetTab() {
             </tr>
           </thead>
           <tbody>
-            {sortedComputed.map((r, i) => (
+            {sortedComputed.map((r, i) => {
+              const rowBg =
+                r.b.trip_mode === "return" ? "bg-blue-100" : i % 2 === 1 ? "sheet-stripe-even" : "bg-white";
+              return (
               <tr
                 key={r.b.id}
                 className={
@@ -1123,9 +1126,9 @@ export function TripSheetTab() {
                 }
               >
 
-                <td className="border px-2 py-0.5 text-center">{i + 1}</td>
-                <td className="border px-2 py-0.5 text-center">{r.rep}</td>
-                <td className="border px-2 py-0.5">{r.b.customer_name}</td>
+                <td className={`border px-2 py-0.5 text-center sticky right-0 z-20 w-10 min-w-10 ${rowBg}`}>{i + 1}</td>
+                <td className={`border px-2 py-0.5 text-center sticky right-10 z-20 w-28 min-w-28 ${rowBg}`}>{r.rep}</td>
+                <td className={`border px-2 py-0.5 sticky right-[152px] z-20 w-40 min-w-40 ${rowBg}`}>{r.b.customer_name}</td>
                 <td className="border px-2 py-0.5 text-center font-mono">{r.b.id_number}</td>
                 <td className="border px-2 py-0.5 text-center">{r.b.nationality ?? "—"}</td>
                 <td className="border px-2 py-0.5 text-center">{r.count}</td>
