@@ -125,22 +125,24 @@ function MyBookingsPage() {
 
 
   // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
-  const [weekBack, setWeekBack] = useState(0);
+  // -1 = كل الحجوزات (الافتراضي) حتى لا يختفي أي حجز خارج نطاق الأسابيع.
+  const [weekBack, setWeekBack] = useState(-1);
 
-  /** آخر 12 أسبوعًا كخيارات تاريخية: «1 سبتمبر - 7 سبتمبر». */
+  /** 4 أسابيع قادمة + الأسبوع الحالي + 12 أسبوعًا سابقًا. */
   const weekOptions = useMemo(() => {
     const base = startOfWeek(new Date());
-    return Array.from({ length: 12 }, (_, i) => {
+    return Array.from({ length: 17 }, (_, idx) => {
+      const i = idx - 4;
       const start = new Date(base);
       start.setDate(base.getDate() - i * 7);
       const end = new Date(start);
       end.setDate(start.getDate() + 7);
       const endLabel = new Date(end);
       endLabel.setDate(end.getDate() - 1);
-      return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}` };
+      return { value: i, start: start.getTime(), end: end.getTime(), label: `${dayMonth(start)} - ${dayMonth(endLabel)}${i === 0 ? " (الحالي)" : ""}` };
     });
   }, []);
-  const activeWeek = weekOptions[weekBack] ?? weekOptions[0];
+  const activeWeek = weekBack === -1 ? null : weekOptions.find((w) => w.value === weekBack) ?? null;
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ["my-bookings", uid],
@@ -273,6 +275,7 @@ function MyBookingsPage() {
               value={weekBack}
               onChange={(e) => setWeekBack(Number(e.target.value))}
             >
+              <option value={-1}>كل الحجوزات</option>
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}
