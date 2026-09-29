@@ -1,3 +1,4 @@
+import { fetchTripBusesWithLinks } from "@/lib/trip-bus-links";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Table2, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
@@ -221,15 +222,23 @@ export function TripSheetTab() {
       }>,
   });
 
-  /** نفس قائمة الحافلات، لكن بعلامة "معتمدة/غير معتمدة" جنب الاسم — للعرض في الفلتر فقط. */
-  const busesForSelect = useMemo(
-    () =>
-      buses.map((b) => ({
+  const { data: tripBusLinks } = useQuery({
+    queryKey: ["ts-trip-bus-links", tripId],
+    enabled: !!tripId,
+    queryFn: () => fetchTripBusesWithLinks<{ id: string }>(tripId, "id,assigned_date,direction,trip_id"),
+  });
+
+  /** قائمة الحافلات بعلامة "معتمدة/غير معتمدة" — وعند اختيار رحلة: حافلات يومها مع "مرتبطة/غير مرتبطة". */
+  const busesForSelect = useMemo(() => {
+    const linkMap = tripId && tripBusLinks ? new Map(tripBusLinks.map((x) => [x.id, x.linked])) : null;
+    return buses
+      .filter((b) => !linkMap || linkMap.has(b.id))
+      .map((b) => ({
         ...b,
+        linked: linkMap ? linkMap.get(b.id) : undefined,
         name: `${b.name || `حافلة ${b.bus_number}`} — ${b.settled_at ? "معتمدة" : "غير معتمدة"}`,
-      })),
-    [buses],
-  );
+      }));
+  }, [buses, tripId, tripBusLinks]);
 
   const { data: hotelRows = [] } = useQuery({
     queryKey: ["ts-hotels"],

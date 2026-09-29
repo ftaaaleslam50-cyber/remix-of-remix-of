@@ -3,6 +3,7 @@
 // It mirrors every field of the public booking wizard: customer data, booking
 // type & passengers, trip / bus / trip-mode, seats, hotel + extension nights,
 // coupon & discount, representative data and notes.
+import { fetchTripBusesWithLinks } from "@/lib/trip-bus-links";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -173,6 +174,7 @@ interface BusOpt {
   return_price: number | null;
   open_return_price: number | null;
   direction?: string | null;
+  linked?: boolean;
   assigned_date?: string | null;
 }
 
@@ -275,21 +277,22 @@ export function ManualBookingRow({
       ).data as unknown as TripOpt[]) ?? [],
   });
 
+  const returnCtx = typeof extraPayload?.return_trip_id === "string" ? `return:${extraPayload.return_trip_id}` : "";
+  const busTripKey = returnCtx || d.trip_id || "";
   const { data: buses = [] } = useQuery({
-    queryKey: ["mb-buses", d.trip_id],
+    queryKey: ["mb-buses", busTripKey],
     queryFn: async () => {
-      const base = supabase
-        .from("buses")
-        .select(
-          "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price,direction,assigned_date",
-        )
-        .order("assigned_date", { ascending: true, nullsFirst: false })
-        .order("bus_number");
-      if (!d.trip_id) return ((await base).data as unknown as BusOpt[]) ?? [];
-      const { data: links } = await supabase.from("trip_buses").select("bus_id").eq("trip_id", d.trip_id);
-      const ids = (links ?? []).map((x: { bus_id: string }) => x.bus_id);
-      const q = ids.length ? base.or(`id.in.(${ids.join(",")}),trip_id.eq.${d.trip_id}`) : base.eq("trip_id", d.trip_id);
-      return ((await q).data as unknown as BusOpt[]) ?? [];
+      const COLS =
+        "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price,direction,assigned_date,trip_id";
+      if (!busTripKey) {
+        const { data } = await supabase
+          .from("buses")
+          .select(COLS)
+          .order("assigned_date", { ascending: true, nullsFirst: false })
+          .order("bus_number");
+        return (data as unknown as BusOpt[]) ?? [];
+      }
+      return fetchTripBusesWithLinks<BusOpt>(busTripKey, COLS);
     },
   });
 
@@ -639,6 +642,7 @@ export function ManualBookingRow({
                     <option key={b.id} value={b.id}>
                       {b.name || `حافلة ${b.bus_number}`}
                       {b.assigned_date ? ` — ${b.assigned_date}` : ""}
+                      {b.linked === undefined ? "" : b.linked ? " — مرتبطة" : " — غير مرتبطة"}
                     </option>
                   );
                   return (
