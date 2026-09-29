@@ -285,7 +285,7 @@ function MyBookingsPage() {
             {isRep && (
                <div className="rounded-xl bg-primary/5 border border-primary/15 p-2.5 text-center sm:p-4">
                  <p className="text-lg font-extrabold text-emerald-600 sm:text-2xl">{sar(summary.total)}</p>
-                <p className="text-[11px] text-muted-foreground font-semibold mt-1">أرباح الأسبوع ({activeWeek?.label})</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">{activeWeek ? `أرباح الأسبوع (${activeWeek.label})` : "إجمالي الأرباح"}</p>
               </div>
             )}
              <div className="rounded-xl bg-primary/5 border border-primary/15 p-2.5 text-center sm:p-4">
