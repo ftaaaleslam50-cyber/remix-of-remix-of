@@ -277,11 +277,12 @@ function MyBookingsPage() {
             <select
               className="h-9 w-full rounded-xl border bg-background px-3 text-sm sm:w-auto"
               value={weekBack}
-              onChange={(e) => setWeekBack(Number(e.target.value))}
+              onChange={(e) => setWeekBack(e.target.value)}
             >
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}
+              <option value="nodate">الحجوزات غير المرتبطة بتاريخ</option>
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
