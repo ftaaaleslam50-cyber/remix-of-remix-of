@@ -277,3 +277,8 @@
   }
 }
 
+
+/* Accounts sheet: opaque stripe color for frozen (sticky) cells */
+.sheet-stripe-even {
+  background-color: color-mix(in oklab, var(--muted) 30%, white);
+}
