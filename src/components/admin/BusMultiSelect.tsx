@@ -10,6 +10,8 @@ export interface BusOption {
   capacity?: number;
   assigned_date?: string | null;
   direction?: string | null;
+  /** undefined = لا تظهر علامة الارتباط */
+  linked?: boolean;
 }
 
 /** التاريخ بصيغة عربية مختصرة (ميلادي) */
@@ -21,7 +23,7 @@ export function busDateLabel(iso?: string | null) {
 }
 
 export function busOptionLabel(b: BusOption) {
-  return `${b.name || `حافلة ${b.bus_number}`} — ${busDateLabel(b.assigned_date)}`;
+  return `${b.name || `حافلة ${b.bus_number}`} — ${busDateLabel(b.assigned_date)}${b.linked === undefined ? "" : b.linked ? " — مرتبطة" : " — غير مرتبطة"}`;
 }
 
 /** فلتر حافلات باختيار متعدد مع عرض تاريخ كل حافلة */
@@ -59,6 +61,9 @@ export function BusMultiSelect({
         <span className="font-bold">{b.name || `حافلة ${b.bus_number}`}</span>
         <span className="text-muted-foreground"> — {busDateLabel(b.assigned_date)}</span>
         {b.capacity ? <span className="text-muted-foreground"> — سعة {b.capacity}</span> : null}
+        {b.linked !== undefined && (
+          <span className={b.linked ? "text-success font-bold" : "text-destructive font-bold"}> — {b.linked ? "مرتبطة" : "غير مرتبطة"}</span>
+        )}
       </span>
     </label>
   );
