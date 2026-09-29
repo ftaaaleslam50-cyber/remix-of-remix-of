@@ -1166,7 +1166,8 @@ export function TripSheetTab() {
                 <td className="border px-2 py-0.5 text-center">{round(r.repShare)}</td>
                 <td className="border px-2 py-0.5 text-center">{round(r.companyShare)}</td>
               </tr>
-            ))}
+              );
+            })}
             {computed.length === 0 && (
               <tr>
                 <td colSpan={COLUMN_DEFS.length + 1} className="p-6 text-center text-muted-foreground">
