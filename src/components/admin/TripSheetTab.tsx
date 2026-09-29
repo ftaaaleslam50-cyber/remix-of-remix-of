@@ -1178,9 +1178,14 @@ export function TripSheetTab() {
           </tbody>
           <tfoot className="bg-muted font-bold">
             <tr>
-              <td className="border px-2 py-0.5 text-center" colSpan={5}>
+              <td className="border px-2 py-0.5 text-center sticky right-0 z-20 bg-muted w-10 min-w-10" />
+              <td
+                className="border px-2 py-0.5 text-center sticky right-10 z-20 bg-muted"
+                colSpan={2}
+              >
                 الإجمالي
               </td>
+              <td className="border px-2 py-0.5 text-center" colSpan={2} />
               <td className="border px-2 py-0.5 text-center">{totals.count}</td>
               <td className="border px-2 py-0.5" colSpan={5} />
               <td className="border px-2 py-0.5 text-center">{round(totals.packageTotal)}</td>
