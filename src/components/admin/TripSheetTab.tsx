@@ -1091,7 +1091,7 @@ export function TripSheetTab() {
         <table className="w-full text-xs border-collapse">
           <thead className="bg-muted">
             <tr>
-              <th className="border px-2 py-0.5 font-bold">
+              <th className="border px-2 py-0.5 font-bold sticky right-0 z-30 bg-muted w-10 min-w-10">
                 <SortHeader col={{ key: "index", label: "م" }} />
               </th>
               {COLUMN_DEFS.map((c) => (
@@ -1099,6 +1099,12 @@ export function TripSheetTab() {
                   key={c.key}
                   className={`border px-2 py-0.5 leading-tight whitespace-nowrap font-bold ${
                     c.key === "grossProfit" ? "bg-destructive text-destructive-foreground" : ""
+                  } ${
+                    c.key === "rep"
+                      ? "sticky right-10 z-30 bg-muted w-28 min-w-28"
+                      : c.key === "customer"
+                        ? "sticky right-[152px] z-30 bg-muted w-40 min-w-40"
+                        : ""
                   }`}
                 >
                   <SortHeader col={c} />
