@@ -154,13 +154,34 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     if (!bus?.supervisor_name) gaps.push("اسم المشرف غير مسجّل لهذه الحافلة");
     if (rows.length === 0) gaps.push("لا توجد عودات مسندة لهذه الحافلة");
 
-    const lines = rows.map((r) => {
+    // لوحة أسماء الركاب: سطر لكل راكب بصيغة (الاسم \ العدد \ المصدر \ الفندق)،
+    // مجمّعة تحت عنوان رحلة الذهاب التي جاء منها الركاب.
+    const tripById = new Map((trips.data ?? []).map((t) => [t.id, t]));
+    const groups = new Map<string, { label: string; order: number; lines: string[] }>();
+    for (const r of rows) {
       const name = (r.customer_name || r.booking_code || "").trim();
       const source = (r.booking_source || r.rep_name || "").trim();
+      const hotel = r.hotel_id
+        ? (hotels.data ?? []).find((h) => h.id === r.hotel_id && !h.is_no_hotel)?.name
+        : undefined;
       if (!name) gaps.push("حجز بدون اسم صاحب الحجز");
       if (!source) gaps.push("حجز بدون مصدر رحلة");
-      return [name, `/${r.passenger_count || 1}`, source ? `/${source}` : ""].filter(Boolean).join(" ");
-    });
+      const line = [name, `${r.passenger_count || 1}`, source, hotel].filter((p) => p !== "" && p !== undefined).join(" \\ ");
+      const trip = r.trip_id ? tripById.get(r.trip_id) : undefined;
+      const key = trip?.id ?? "none";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          label: trip?.name || tripName?.trim() || "",
+          order: trip?.display_order ?? Number.MAX_SAFE_INTEGER,
+          lines: [],
+        });
+      }
+      groups.get(key)!.lines.push(line);
+    }
+    const orderedGroups = Array.from(groups.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "ar"));
+    const passengerBlocks = orderedGroups.map((g) => [`من رحلة ${g.label || "غير محددة"}`, ...g.lines].join("\n"));
+
+    const noticeText = [
 
     const noticeText = [
       "▪️بيانات العـوده",
