@@ -101,9 +101,9 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     queryKey: ["slogan-trips", tripIds.join(",")],
     enabled: open && tripIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase.from("trips").select("id,name").in("id", tripIds);
+      const { data, error } = await supabase.from("trips").select("id,name,display_order").in("id", tripIds);
       if (error) throw error;
-      return (data as { id: string; name: string }[]) ?? [];
+      return (data as { id: string; name: string; display_order: number }[]) ?? [];
     },
   });
 
