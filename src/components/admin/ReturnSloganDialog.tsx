@@ -214,7 +214,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
       "* التجمع في الباص  1:30م للتحرك",
     ].join("\n");
 
-    const passengerText = [`أسماء ركاب الحافلة رقم (${bus?.bus_number || "—"})`, ...lines].join("\n");
+    const passengerText = [`أسماء ركاب الحافلة رقم (${bus?.bus_number || "—"})`, "", ...passengerBlocks].join("\n\n");
     return { noticeText, passengerText, missing: Array.from(new Set(gaps)) };
   }, [bus, bookings.data, hotels.data, hotelIds, trips.data, tripIds, date, tripName]);
 
