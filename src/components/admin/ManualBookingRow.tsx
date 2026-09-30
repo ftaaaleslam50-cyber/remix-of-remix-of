@@ -433,6 +433,20 @@ export function ManualBookingRow({
   const total = priceOverride.trim() ? Number(priceOverride) || 0 : computedTotal;
 
   const selectedTrip = trips.find((x) => x.id === d.trip_id) ?? null;
+  // تواريخ كل حافلات العودة — مستقلة عن فلتر الرحلة حتى تظهر كل الخيارات.
+  const { data: returnBusDates = [] } = useQuery({
+    queryKey: ["mb-return-bus-dates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("buses")
+        .select("assigned_date")
+        .eq("direction", "return")
+        .not("assigned_date", "is", null)
+        .order("assigned_date", { ascending: true });
+      return ((data ?? []) as { assigned_date: string }[]).map((b) => b.assigned_date);
+    },
+  });
+
   const returnOptions = useMemo(() => {
     // خيارات العودة: خيارات الرحلة + تواريخ كل حافلات العودة (مرتبة تصاعديًا).
     const tripOpts = selectedTrip
@@ -441,12 +455,9 @@ export function ManualBookingRow({
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
-    const busDates = buses
-      .filter((b) => b.direction === "return" && b.assigned_date)
-      .map((b) => b.assigned_date as string)
-      .sort();
-    return Array.from(new Set([...busDates, ...tripOpts]));
-  }, [selectedTrip, buses]);
+    const dates = [...returnBusDates].sort();
+    return Array.from(new Set([...dates, ...tripOpts]));
+  }, [selectedTrip, returnBusDates]);
 
   // Gender map: the first male_count selected seats are male, the rest female.
   const seatGenders = useMemo(() => {
