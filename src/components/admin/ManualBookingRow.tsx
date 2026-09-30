@@ -434,12 +434,19 @@ export function ManualBookingRow({
 
   const selectedTrip = trips.find((x) => x.id === d.trip_id) ?? null;
   const returnOptions = useMemo(() => {
-    if (!selectedTrip) return [] as string[];
-    return [selectedTrip.return_day ?? "", ...((selectedTrip.return_options ?? []) as string[])]
-      .flatMap((s) => String(s).split(/[,،]/))
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }, [selectedTrip]);
+    // خيارات العودة: خيارات الرحلة + تواريخ كل حافلات العودة (مرتبة تصاعديًا).
+    const tripOpts = selectedTrip
+      ? [selectedTrip.return_day ?? "", ...((selectedTrip.return_options ?? []) as string[])]
+          .flatMap((s) => String(s).split(/[,،]/))
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+    const busDates = buses
+      .filter((b) => b.direction === "return" && b.assigned_date)
+      .map((b) => b.assigned_date as string)
+      .sort();
+    return Array.from(new Set([...busDates, ...tripOpts]));
+  }, [selectedTrip, buses]);
 
   // Gender map: the first male_count selected seats are male, the rest female.
   const seatGenders = useMemo(() => {
@@ -494,10 +501,8 @@ export function ManualBookingRow({
       status: d.status,
       notes: d.notes.trim() || null,
       actual_return_day: d.trip_mode === "outbound" ? null : d.actual_return_day || selectedTrip?.return_day || null,
-      // «ذهاب وعودة في رحلة أخرى»: تاريخ العودة المختار من التقويم يسري على كل النظام.
-      ...(d.trip_mode === "round_open" && /^\d{4}-\d{2}-\d{2}$/.test(d.actual_return_day)
-        ? { return_date: d.actual_return_day }
-        : {}),
+      // أي تاريخ عودة حقيقي (ISO) يُعتمد في كل النظام، لا في «رحلة أخرى» فقط.
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(d.actual_return_day) ? { return_date: d.actual_return_day } : {}),
       ...(extraPayload ?? {}),
     };
 
