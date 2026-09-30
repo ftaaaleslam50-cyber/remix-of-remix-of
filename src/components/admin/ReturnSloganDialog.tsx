@@ -182,8 +182,6 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     const passengerBlocks = orderedGroups.map((g) => [`من رحلة ${g.label || "غير محددة"}`, ...g.lines].join("\n"));
 
     const noticeText = [
-
-    const noticeText = [
       "▪️بيانات العـوده",
       "",
       `العودات من فندق: ${hotelNames.length ? hotelNames.join("، ") : "—"}`,
