@@ -237,7 +237,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
 
     const passengerText = [`أسماء ركاب الحافلة رقم (${bus?.bus_number || "—"})`, "", ...passengerBlocks].join("\n\n");
     return { noticeText, passengerText, missing: Array.from(new Set(gaps)) };
-  }, [bus, bookings.data, hotels.data, hotelIds, trips.data, tripIds, date, tripName]);
+  }, [bus, bookings.data, hotels.data, packagesQ.data, hotelIds, trips.data, tripIds, date, tripName]);
 
   async function copy(kind: "notice" | "passengers") {
     try {
