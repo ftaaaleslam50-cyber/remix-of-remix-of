@@ -186,9 +186,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     for (const r of rows) {
       const name = (r.customer_name || r.booking_code || "").trim();
       const source = (r.booking_source || r.rep_name || "").trim();
-      const hotel = r.hotel_id
-        ? (hotels.data ?? []).find((h) => h.id === r.hotel_id && !h.is_no_hotel)?.name
-        : undefined;
+      const hotel = hotelOf(r);
       if (!name) gaps.push("حجز بدون اسم صاحب الحجز");
       if (!source) gaps.push("حجز بدون مصدر رحلة");
       const line = [name, `${r.passenger_count || 1}`, source, hotel].filter((p) => p !== "" && p !== undefined).join(" \\ ");
