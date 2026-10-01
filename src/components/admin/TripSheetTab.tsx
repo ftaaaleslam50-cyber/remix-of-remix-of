@@ -618,7 +618,7 @@ export function TripSheetTab() {
           emptyBedShare: 0, // بقت متضمنة داخل seatCost (على مستوى كل حافلة)
           count,
           rate,
-          isReturn: Boolean(b.return_trip_id) || b.trip_mode === "return",
+          isReturn: b.trip_mode === "return",
           returnCompanyRate: ref.returnCompanyRate,
         });
 
@@ -758,8 +758,16 @@ export function TripSheetTab() {
 
   const repNames = useMemo(() => {
     const names = new Set<string>();
-    repProfiles.forEach((p) => p.full_name && names.add(p.full_name));
-    filtered.forEach((b) => names.add(b.booking_source || "الموقع"));
+    // أسماء المناديب ذوي الحسابات تظهر في قسمهم أعلاه — لا نكررها هنا.
+    const norm = (v: string) => v.replace(/\s+/g, " ").trim();
+    const seen = new Set<string>(repProfiles.map((p) => norm(p.full_name || "")).filter(Boolean));
+    filtered.forEach((b) => {
+      const name = b.booking_source || "الموقع";
+      const key = norm(name);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      names.add(name);
+    });
     return [...names];
   }, [repProfiles, filtered]);
 

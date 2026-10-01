@@ -191,7 +191,7 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
       emptyBedShare: 0,
       count: n(b.passenger_count),
       rate,
-      isReturn: Boolean(b.return_trip_id) || b.trip_mode === "return",
+      isReturn: b.trip_mode === "return",
       returnCompanyRate: n(ref.return_trip_company_profit_rate),
     });
 
