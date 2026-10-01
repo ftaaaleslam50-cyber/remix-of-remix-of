@@ -157,10 +157,18 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     const gaps: string[] = [];
 
     // الفنادق: نتجاهل من لا فندق له، ونعرض أسماء الفنادق الفعلية فقط
-    const hotelNames = hotelIds
-      .map((id) => (hotels.data ?? []).find((h) => h.id === id))
-      .filter((h): h is { id: string; name: string; is_no_hotel: boolean } => !!h && !h.is_no_hotel)
-      .map((h) => h.name);
+    const hotelOf = (r: SloganBooking): string | undefined => {
+      if (r.no_hotel) return undefined;
+      if (r.package_id) return (packagesQ.data ?? []).find((p) => p.id === r.package_id)?.name;
+      if (r.hotel_id) {
+        const h = (hotels.data ?? []).find((x) => x.id === r.hotel_id);
+        return h && !h.is_no_hotel ? h.name : undefined;
+      }
+      return undefined;
+    };
+    const hotelNames = Array.from(
+      new Set(rows.map(hotelOf).filter((n): n is string => !!n)),
+    );
 
     const tripNames = tripIds
       .map((id) => (trips.data ?? []).find((t) => t.id === id)?.name)
