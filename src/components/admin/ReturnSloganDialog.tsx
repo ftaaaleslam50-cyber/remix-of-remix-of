@@ -78,8 +78,13 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     },
   });
 
+  // الفنادق مسجّلة كباقات في جدول packages وتُربط عبر package_id (مع hotel_id احتياطاً)
   const hotelIds = useMemo(
     () => Array.from(new Set((bookings.data ?? []).map((b) => b.hotel_id).filter(Boolean) as string[])),
+    [bookings.data],
+  );
+  const packageIds = useMemo(
+    () => Array.from(new Set((bookings.data ?? []).map((b) => b.package_id).filter(Boolean) as string[])),
     [bookings.data],
   );
 
@@ -90,6 +95,16 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
       const { data, error } = await supabase.from("hotels").select("id,name,is_no_hotel").in("id", hotelIds);
       if (error) throw error;
       return (data as { id: string; name: string; is_no_hotel: boolean }[]) ?? [];
+    },
+  });
+
+  const packagesQ = useQuery({
+    queryKey: ["slogan-packages", packageIds.join(",")],
+    enabled: open && packageIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("packages").select("id,name").in("id", packageIds);
+      if (error) throw error;
+      return (data as { id: string; name: string }[]) ?? [];
     },
   });
 
