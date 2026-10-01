@@ -35,6 +35,8 @@ interface SloganBooking {
   booking_source: string | null;
   rep_name: string | null;
   hotel_id: string | null;
+  package_id: string | null;
+  no_hotel: boolean | null;
   trip_id: string | null;
 }
 
@@ -64,7 +66,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,customer_name,booking_code,passenger_count,booking_source,rep_name,hotel_id,trip_id")
+        .select("id,customer_name,booking_code,passenger_count,booking_source,rep_name,hotel_id,package_id,no_hotel,trip_id")
         .eq("actual_return_date", date)
         .eq("return_bus_id", selected!.id)
         .is("deleted_at", null)
@@ -76,8 +78,13 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     },
   });
 
+  // الفنادق مسجّلة كباقات في جدول packages وتُربط عبر package_id (مع hotel_id احتياطاً)
   const hotelIds = useMemo(
     () => Array.from(new Set((bookings.data ?? []).map((b) => b.hotel_id).filter(Boolean) as string[])),
+    [bookings.data],
+  );
+  const packageIds = useMemo(
+    () => Array.from(new Set((bookings.data ?? []).map((b) => b.package_id).filter(Boolean) as string[])),
     [bookings.data],
   );
 
@@ -88,6 +95,16 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
       const { data, error } = await supabase.from("hotels").select("id,name,is_no_hotel").in("id", hotelIds);
       if (error) throw error;
       return (data as { id: string; name: string; is_no_hotel: boolean }[]) ?? [];
+    },
+  });
+
+  const packagesQ = useQuery({
+    queryKey: ["slogan-packages", packageIds.join(",")],
+    enabled: open && packageIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("packages").select("id,name").in("id", packageIds);
+      if (error) throw error;
+      return (data as { id: string; name: string }[]) ?? [];
     },
   });
 
@@ -140,10 +157,18 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     const gaps: string[] = [];
 
     // الفنادق: نتجاهل من لا فندق له، ونعرض أسماء الفنادق الفعلية فقط
-    const hotelNames = hotelIds
-      .map((id) => (hotels.data ?? []).find((h) => h.id === id))
-      .filter((h): h is { id: string; name: string; is_no_hotel: boolean } => !!h && !h.is_no_hotel)
-      .map((h) => h.name);
+    const hotelOf = (r: SloganBooking): string | undefined => {
+      if (r.no_hotel) return undefined;
+      if (r.package_id) return (packagesQ.data ?? []).find((p) => p.id === r.package_id)?.name;
+      if (r.hotel_id) {
+        const h = (hotels.data ?? []).find((x) => x.id === r.hotel_id);
+        return h && !h.is_no_hotel ? h.name : undefined;
+      }
+      return undefined;
+    };
+    const hotelNames = Array.from(
+      new Set(rows.map(hotelOf).filter((n): n is string => !!n)),
+    );
 
     const tripNames = tripIds
       .map((id) => (trips.data ?? []).find((t) => t.id === id)?.name)
@@ -161,9 +186,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     for (const r of rows) {
       const name = (r.customer_name || r.booking_code || "").trim();
       const source = (r.booking_source || r.rep_name || "").trim();
-      const hotel = r.hotel_id
-        ? (hotels.data ?? []).find((h) => h.id === r.hotel_id && !h.is_no_hotel)?.name
-        : undefined;
+      const hotel = hotelOf(r);
       if (!name) gaps.push("حجز بدون اسم صاحب الحجز");
       if (!source) gaps.push("حجز بدون مصدر رحلة");
       const line = [name, `${r.passenger_count || 1}`, source, hotel].filter((p) => p !== "" && p !== undefined).join(" \\ ");
@@ -214,7 +237,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
 
     const passengerText = [`أسماء ركاب الحافلة رقم (${bus?.bus_number || "—"})`, "", ...passengerBlocks].join("\n\n");
     return { noticeText, passengerText, missing: Array.from(new Set(gaps)) };
-  }, [bus, bookings.data, hotels.data, hotelIds, trips.data, tripIds, date, tripName]);
+  }, [bus, bookings.data, hotels.data, packagesQ.data, hotelIds, trips.data, tripIds, date, tripName]);
 
   async function copy(kind: "notice" | "passengers") {
     try {
