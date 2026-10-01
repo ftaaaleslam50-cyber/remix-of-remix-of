@@ -35,6 +35,8 @@ interface SloganBooking {
   booking_source: string | null;
   rep_name: string | null;
   hotel_id: string | null;
+  package_id: string | null;
+  no_hotel: boolean | null;
   trip_id: string | null;
 }
 
@@ -64,7 +66,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,customer_name,booking_code,passenger_count,booking_source,rep_name,hotel_id,trip_id")
+        .select("id,customer_name,booking_code,passenger_count,booking_source,rep_name,hotel_id,package_id,no_hotel,trip_id")
         .eq("actual_return_date", date)
         .eq("return_bus_id", selected!.id)
         .is("deleted_at", null)
