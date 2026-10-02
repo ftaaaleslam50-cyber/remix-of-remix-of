@@ -100,7 +100,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
   const [img, setImg] = useState<{ key: string; url: string; blob: Blob } | null>(null);
   const [variant, setVariant] = useState<BusImageVariant>("day");
   const [imgNote, setImgNote] = useState<string>("");
-  const busKey = `${bus?.bus_number ?? ""}|${bus?.plate ?? ""}`;
+  const busKey = `${bus?.bus_number ?? ""}|${bus?.plate ?? ""}|${variant}`;
   useEffect(() => {
     if (!open) return;
     let alive = true;
@@ -112,7 +112,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
         const t = await loadBusTemplate();
         if (!t) { if (alive) setImgNote("لم يتم إعداد قالب صورة الباص بعد."); return; }
         if (!bus?.bus_number && !bus?.plate) { if (alive) setImgNote("لا توجد بيانات رقم باص أو لوحة لإنشاء صورة الباص."); return; }
-        const blob = await renderBusImage(t, { bus_number: bus?.bus_number, plate: bus?.plate });
+        const blob = await renderBusImage(t, { bus_number: bus?.bus_number, plate: bus?.plate }, variant);
         if (!alive) return;
         made = URL.createObjectURL(blob);
         setImg({ key: busKey, url: made, blob });
@@ -169,6 +169,10 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto" dir="rtl">
           <DialogHeader><DialogTitle>تصدير شعار رحلة الذهاب</DialogTitle></DialogHeader>
+          <div className="flex gap-2 justify-center">
+            <Button size="sm" variant={variant === "day" ? "default" : "outline"} onClick={() => setVariant("day")}>☀️ صورة الصباح</Button>
+            <Button size="sm" variant={variant === "night" ? "default" : "outline"} onClick={() => setVariant("night")}>🌙 صورة الليل</Button>
+          </div>
 
           <div className="space-y-3">
             {missing.length > 0 && (
