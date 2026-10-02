@@ -2,11 +2,15 @@
 // جميع المواضع نسب من أبعاد الصورة (0..1) وحجم الخط نسبة من العرض.
 import { supabase } from "@/integrations/supabase/client";
 import defaultTemplate from "@/assets/bus-template.png.asset.json";
+import nightTemplate from "@/assets/bus-template-night.png.asset.json";
+
+export type BusImageVariant = "day" | "night";
 
 export type Align = "left" | "center" | "right";
 
 export interface BusImageTemplate {
   template_image_url: string | null;
+  night_template_image_url?: string | null;
   bus_number_enabled: boolean;
   bus_number_x: number;
   bus_number_y: number;
@@ -29,6 +33,13 @@ export interface BusImageTemplate {
 }
 
 export const DEFAULT_TEMPLATE_URL = defaultTemplate.url;
+export const DEFAULT_NIGHT_TEMPLATE_URL = nightTemplate.url;
+
+export function templateUrlFor(t: BusImageTemplate, variant: BusImageVariant = "day") {
+  return variant === "night"
+    ? t.night_template_image_url || DEFAULT_NIGHT_TEMPLATE_URL
+    : t.template_image_url || DEFAULT_TEMPLATE_URL;
+}
 
 export const templateTable = () => supabase.from("bus_image_template" as never);
 
@@ -352,9 +363,10 @@ function drawSaudiPlate(
 export async function renderBusImage(
   t: BusImageTemplate,
   bus: { bus_number?: number | null; plate?: string | null },
+  variant: BusImageVariant = "day",
 ): Promise<Blob> {
   await ensureFonts();
-  const im = await loadImage(t.template_image_url || DEFAULT_TEMPLATE_URL);
+  const im = await loadImage(templateUrlFor(t, variant));
   const W = im.naturalWidth,
     H = im.naturalHeight;
   const c = document.createElement("canvas");
