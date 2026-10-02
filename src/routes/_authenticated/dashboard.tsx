@@ -695,14 +695,27 @@ function UnifiedBookingsTab(props: {
     ...new Set(bookings.map((b) => b.packages?.name?.trim() || "بدون فندق")),
   ].sort((a, z) => a.localeCompare(z, "ar"));
 
-  // مواعيد العودة الفعلية الموجودة (للرحلات ذات أكثر من عودة).
+  // موعد العودة الفعلي (بعد ليالي التمديد) — يطابق تبويب العودة.
+  const origReturn = (b: (typeof bookings)[number]) => b.return_date ?? b.trips?.return_date ?? "";
+  const effReturn = (b: (typeof bookings)[number]) => b.actual_return_date ?? origReturn(b);
   const returnOptions: string[] = [
-    ...new Set(
-      bookings
-        .map((b) => b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "")
-        .filter((d) => !!d),
-    ),
+    ...new Set(bookings.map(effReturn).filter((d) => !!d)),
   ].sort();
+  // حركة التمديد لموعد العودة المختار (عدد الركاب).
+  const returnMove = (() => {
+    if (!returnPick) return null;
+    const live = bookings.filter((b) => !b.deleted_at && b.status !== "cancelled");
+    const pax = (b: (typeof bookings)[number]) => b.passenger_count ?? 0;
+    let original = 0, actual = 0, out = 0, inn = 0;
+    for (const b of live) {
+      const o = origReturn(b) === returnPick, a = effReturn(b) === returnPick;
+      if (o) original += pax(b);
+      if (a) actual += pax(b);
+      if (o && !a) out += pax(b);
+      if (a && !o) inn += pax(b);
+    }
+    return { original, actual, out, inn };
+  })();
 
   const { data: importHotels = [] } = useQuery({
     queryKey: ["ub-import-hotels"],
@@ -721,7 +734,7 @@ function UnifiedBookingsTab(props: {
     if (hotel && (b.packages?.name?.trim() || "بدون فندق") !== hotel) return false;
     if (tripMode && (b.trip_mode ?? "round") !== tripMode) return false;
     if (bookingType && (b.booking_type ?? "family") !== bookingType) return false;
-    if (returnPick && (b.return_date ?? b.actual_return_date ?? b.trips?.return_date ?? "") !== returnPick) return false;
+    if (returnPick && effReturn(b) !== returnPick) return false;
     if (tripId && !matchesTripFilter(b, tripId)) return false;
     if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
     if (search) {
@@ -1231,6 +1244,11 @@ function UnifiedBookingsTab(props: {
               </option>
             ))}
           </select>
+          {returnPick && returnMove && (returnMove.out > 0 || returnMove.inn > 0) && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {returnMove.actual} راكب فعلي ({returnMove.original} أصلي − {returnMove.out} مُرحَّل بتمديد + {returnMove.inn} قادم بتمديد)
+            </p>
+          )}
         </div>
         <div>
           <Label className="text-xs mb-1 block">نوع الحجز</Label>
