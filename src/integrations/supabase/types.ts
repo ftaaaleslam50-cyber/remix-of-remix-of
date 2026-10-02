@@ -647,6 +647,7 @@ export type Database = {
           bus_number2_x: number
           bus_number2_y: number
           id: number
+          night_template_image_url: string | null
           plate_alignment: string
           plate_color: string
           plate_font_size: number
@@ -671,6 +672,7 @@ export type Database = {
           bus_number2_x?: number
           bus_number2_y?: number
           id?: number
+          night_template_image_url?: string | null
           plate_alignment?: string
           plate_color?: string
           plate_font_size?: number
@@ -695,6 +697,7 @@ export type Database = {
           bus_number2_x?: number
           bus_number2_y?: number
           id?: number
+          night_template_image_url?: string | null
           plate_alignment?: string
           plate_color?: string
           plate_font_size?: number
