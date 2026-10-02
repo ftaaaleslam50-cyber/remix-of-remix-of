@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { loadBusTemplate, renderBusImage, templateTable, templateUrlFor, type BusImageTemplate, type BusImageVariant } from "@/lib/bus-image";
 
-type NumKey = { [K in keyof BusImageTemplate]: BusImageTemplate[K] extends number ? K : never }[keyof BusImageTemplate];
+type NumKey = { [K in keyof BusImageTemplate]-?: BusImageTemplate[K] extends number ? K : never }[keyof BusImageTemplate];
 
 export function BusTemplateTab() {
   const [t, setT] = useState<BusImageTemplate | null>(null);
