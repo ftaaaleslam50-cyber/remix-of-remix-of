@@ -125,9 +125,9 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
   });
 
   const bus = busDetail.data ?? selected;
+  const [variant, setVariant] = useState<BusImageVariant>("day");
   const imageKey = `${selected?.id ?? ""}|${bus?.bus_number ?? ""}|${bus?.plate ?? ""}|${variant}`;
   const [img, setImg] = useState<{ key: string; url: string; blob: Blob } | null>(null);
-  const [variant, setVariant] = useState<BusImageVariant>("day");
   const [imgNote, setImgNote] = useState("");
   useEffect(() => {
     if (!open || !selected?.id || busDetail.isLoading) return;
