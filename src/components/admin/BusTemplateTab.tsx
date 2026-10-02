@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
-import { loadBusTemplate, renderBusImage, templateTable, DEFAULT_TEMPLATE_URL, type BusImageTemplate } from "@/lib/bus-image";
+import { loadBusTemplate, renderBusImage, templateTable, templateUrlFor, type BusImageTemplate, type BusImageVariant } from "@/lib/bus-image";
 
 type NumKey = { [K in keyof BusImageTemplate]: BusImageTemplate[K] extends number ? K : never }[keyof BusImageTemplate];
 
@@ -15,6 +15,8 @@ export function BusTemplateTab() {
   const [t, setT] = useState<BusImageTemplate | null>(null);
   const [preview, setPreview] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [variant, setVariant] = useState<BusImageVariant>("day");
+  const urlKey = variant === "night" ? "night_template_image_url" : "template_image_url";
   const [sample, setSample] = useState({ bus_number: 25, plate: "1234 ABC" });
 
   useEffect(() => { void loadBusTemplate().then(setT); }, []);
@@ -23,10 +25,10 @@ export function BusTemplateTab() {
     if (!t) return;
     let url = "";
     const h = setTimeout(() => {
-      renderBusImage(t, sample).then((b) => { url = URL.createObjectURL(b); setPreview(url); }).catch((e) => toast.error(e.message));
+      renderBusImage(t, sample, variant).then((b) => { url = URL.createObjectURL(b); setPreview(url); }).catch((e) => toast.error(e.message));
     }, 150);
     return () => { clearTimeout(h); if (url) URL.revokeObjectURL(url); };
-  }, [t, sample]);
+  }, [t, sample, variant]);
 
   if (!t) return <div className="surface-card p-6 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>;
 
@@ -50,7 +52,7 @@ export function BusTemplateTab() {
     const path = `bus-template/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const { error } = await supabase.storage.from("assets").upload(path, file);
     if (error) return toast.error(error.message);
-    set("template_image_url", supabase.storage.from("assets").getPublicUrl(path).data.publicUrl);
+    set(urlKey, supabase.storage.from("assets").getPublicUrl(path).data.publicUrl);
   }
 
   async function save() {
@@ -66,13 +68,18 @@ export function BusTemplateTab() {
       <div className="space-y-4">
         <h2 className="text-xl font-extrabold">قالب صورة الباص</h2>
         <p className="text-xs text-muted-foreground">المواضع نسب من أبعاد الصورة (0 = البداية، 1 = النهاية). حجم الخط نسبة من عرض الصورة.</p>
+        <div className="flex gap-2">
+          <Button size="sm" variant={variant === "day" ? "default" : "outline"} onClick={() => setVariant("day")}>☀️ صورة الصباح</Button>
+          <Button size="sm" variant={variant === "night" ? "default" : "outline"} onClick={() => setVariant("night")}>🌙 صورة الليل</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">مواضع الرقم واللوحة مشتركة بين الصورتين.</p>
         <div className="flex gap-2 flex-wrap">
           <label className="cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
             <Button asChild variant="outline" size="sm"><span><Upload className="h-4 w-4 ml-1" /> رفع قالب جديد</span></Button>
           </label>
-          {t.template_image_url && (
-            <Button variant="ghost" size="sm" onClick={() => set("template_image_url", null)}><RotateCcw className="h-4 w-4 ml-1" /> القالب الافتراضي</Button>
+          {t[urlKey] && (
+            <Button variant="ghost" size="sm" onClick={() => set(urlKey, null)}><RotateCcw className="h-4 w-4 ml-1" /> القالب الافتراضي</Button>
           )}
         </div>
 
@@ -107,7 +114,7 @@ export function BusTemplateTab() {
         <Button className="w-full font-bold" onClick={save} disabled={saving}>{saving && <Loader2 className="h-4 w-4 ml-1 animate-spin" />} حفظ الإعدادات</Button>
       </div>
       <div>
-        {preview ? <img src={preview} alt="معاينة صورة الباص" className="w-full rounded-xl border" /> : <img src={DEFAULT_TEMPLATE_URL} alt="" className="w-full rounded-xl border opacity-50" />}
+        {preview ? <img src={preview} alt="معاينة صورة الباص" className="w-full rounded-xl border" /> : <img src={templateUrlFor(t, variant)} alt="" className="w-full rounded-xl border opacity-50" />}
       </div>
     </div>
   );

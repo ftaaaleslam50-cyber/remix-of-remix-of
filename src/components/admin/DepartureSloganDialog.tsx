@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Share2, AlertTriangle, FileText, Download, Loader2 } from "lucide-react";
-import { loadBusTemplate, renderBusImage } from "@/lib/bus-image";
+import { loadBusTemplate, renderBusImage, type BusImageVariant } from "@/lib/bus-image";
 import { copyTripText, shareTripText } from "@/lib/share-trip-notice";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -98,6 +98,7 @@ export function DepartureSloganDialog({ bookings, tripName, bus, disabled, disab
 
   // صورة الباص: تُولَّد من جديد لكل فتح/تغيير باص، ولا يُعاد استخدام صورة باص سابق.
   const [img, setImg] = useState<{ key: string; url: string; blob: Blob } | null>(null);
+  const [variant, setVariant] = useState<BusImageVariant>("day");
   const [imgNote, setImgNote] = useState<string>("");
   const busKey = `${bus?.bus_number ?? ""}|${bus?.plate ?? ""}`;
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Share2, AlertTriangle, FileText, Download, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { loadBusTemplate, renderBusImage } from "@/lib/bus-image";
+import { loadBusTemplate, renderBusImage, type BusImageVariant } from "@/lib/bus-image";
 import { copyTripText, shareTripText } from "@/lib/share-trip-notice";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -127,6 +127,7 @@ export function ReturnSloganDialog({ date, tripName, buses }: {
   const bus = busDetail.data ?? selected;
   const imageKey = `${selected?.id ?? ""}|${bus?.bus_number ?? ""}|${bus?.plate ?? ""}`;
   const [img, setImg] = useState<{ key: string; url: string; blob: Blob } | null>(null);
+  const [variant, setVariant] = useState<BusImageVariant>("day");
   const [imgNote, setImgNote] = useState("");
   useEffect(() => {
     if (!open || !selected?.id || busDetail.isLoading) return;
