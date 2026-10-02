@@ -1287,7 +1287,7 @@ function UnifiedBookingsTab(props: {
           "4": "رباعي",
           "5": "خماسي",
         };
-        const byHotel = new Map<string, { rooms: Record<string, number>; shared: number }>();
+        const byHotel = new Map<string, { rooms: Record<string, number>; extensionNights: Record<string, number>; shared: number; sharedNights: number }>();
         let noHotelPeople = 0;
         let noHotelBookings = 0;
         for (const b of filtered) {
@@ -1297,12 +1297,15 @@ function UnifiedBookingsTab(props: {
             noHotelBookings += 1;
             continue;
           }
-          const entry = byHotel.get(hotel) ?? { rooms: {}, shared: 0 };
+          const entry = byHotel.get(hotel) ?? { rooms: {}, extensionNights: {}, shared: 0, sharedNights: 0 };
+          const nights = Math.max(0, Number(b.extension_nights) || 0);
           if (b.booking_type === "individual") {
             entry.shared += b.passenger_count || 0;
+            entry.sharedNights += nights;
           } else {
             const key = String(b.room_type ?? "-");
             entry.rooms[key] = (entry.rooms[key] ?? 0) + 1;
+            entry.extensionNights[key] = (entry.extensionNights[key] ?? 0) + nights;
           }
           byHotel.set(hotel, entry);
         }
@@ -1310,10 +1313,11 @@ function UnifiedBookingsTab(props: {
           .map(([hotel, e]) => ({
             hotel,
             shared: e.shared,
+            sharedNights: e.sharedNights,
             total: Object.values(e.rooms).reduce((s, n) => s + n, 0),
             lines: Object.entries(e.rooms)
               .sort((a, z) => Number(a[0]) - Number(z[0]))
-              .map(([k, n]) => `${roomLabels[k] ?? k}:${n}`),
+              .map(([k, n]) => `${roomLabels[k] ?? k}:${n}${e.extensionNights[k] > 0 ? ` + ${e.extensionNights[k]} ${e.extensionNights[k] === 1 ? "ليلة" : "ليال"} تمديد` : ""}`),
           }))
           .sort((a, z) => z.total - a.total);
         const rooms = hotelStats.reduce((s, h) => s + h.total, 0);
@@ -1345,7 +1349,7 @@ function UnifiedBookingsTab(props: {
                          `اجمالي غرف فندق ${h.hotel}= ${h.total} غرفة`,
                          "بيانها:",
                          ...h.lines,
-                         ...(h.shared > 0 ? [`+ أفراد مشترك: ${h.shared}`] : []),
+                         ...(h.shared > 0 ? [`+ أفراد مشترك: ${h.shared}${h.sharedNights > 0 ? ` + ${h.sharedNights} ${h.sharedNights === 1 ? "ليلة" : "ليال"} تمديد` : ""}`] : []),
                        ].join("\n"),
                     ),
                     `بدون فندق: ${noHotelPeople} فرد (${noHotelBookings} حجز)`,
@@ -1428,7 +1432,7 @@ function UnifiedBookingsTab(props: {
                             `اجمالي غرف فندق ${h.hotel}= ${h.total} غرفة`,
                             "بيانها:",
                             ...h.lines,
-                            ...(h.shared > 0 ? [`+ أفراد مشترك: ${h.shared}`] : []),
+                            ...(h.shared > 0 ? [`+ أفراد مشترك: ${h.shared}${h.sharedNights > 0 ? ` + ${h.sharedNights} ${h.sharedNights === 1 ? "ليلة" : "ليال"} تمديد` : ""}`] : []),
                           ].join("\n"),
                         ),
                       ];
@@ -1465,7 +1469,7 @@ function UnifiedBookingsTab(props: {
                             {l}
                           </li>
                         ))}
-                        {h.shared > 0 && <li className="text-muted-foreground">+ {h.shared} أفراد مشترك</li>}
+                        {h.shared > 0 && <li className="text-muted-foreground">+ {h.shared} أفراد مشترك{h.sharedNights > 0 ? ` + ${h.sharedNights} ${h.sharedNights === 1 ? "ليلة" : "ليال"} تمديد` : ""}</li>}
                       </ul>
                     </div>
                   ))}
