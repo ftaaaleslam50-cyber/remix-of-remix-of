@@ -2,7 +2,7 @@
 // القوالب أسبوعية، لكن التشغيل والإدارة يتمّان بالتاريخ الفعلي.
 // الحجوزات ترتبط بالرحلة عبر «تاريخ العودة الفعلي» المحسوب مسبقًا في قاعدة البيانات
 // (تاريخ العودة + ليالي التمديد)، ولا علاقة للسعة بظهور الحجوزات.
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,10 @@ import {
   AlertTriangle,
   Users,
   Copy,
+  Filter,
+  X,
+  Hotel,
+  ClipboardList,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +87,199 @@ export interface ReturnBookingRow {
   bus_id: string | null;
   seat_numbers: string[] | null;
   created_at: string;
+  booking_type?: string | null;
+  package_id?: string | null;
+  no_hotel?: boolean | null;
+  male_count?: number | null;
+  female_count?: number | null;
+  notes?: string | null;
+}
+
+// ---------- فلاتر وأدوات تبويب العودة ----------
+export interface ReturnFilters {
+  search: string;
+  hotel: string;
+  trip: string;
+  outBus: string;
+  retBus: string;
+  type: string;
+  source: string;
+  mode: string;
+  ext: string;
+}
+const EMPTY_FILTERS: ReturnFilters = {
+  search: "",
+  hotel: "",
+  trip: "",
+  outBus: "",
+  retBus: "",
+  type: "",
+  source: "",
+  mode: "",
+  ext: "",
+};
+const MODE_NAMES: Record<string, string> = {
+  round: "ذهاب وعودة",
+  round_open: "عودة مفتوحة",
+  return: "عودة فقط",
+  outbound: "ذهاب فقط",
+};
+function hotelKeyOf(b: ReturnBookingRow): string {
+  if (b.no_hotel || !b.package_id) return "__none";
+  return b.package_id;
+}
+function sourceOf(b: ReturnBookingRow): string {
+  return (b.rep_name || b.booking_source || "الموقع").trim() || "الموقع";
+}
+export interface ReturnLookups {
+  hotelName: (b: ReturnBookingRow) => string;
+  tripName: (id: string) => string;
+  busLabel: (id: string) => string;
+}
+function useReturnLookups(rows: ReturnBookingRow[]): ReturnLookups {
+  const pkgs = useQuery({
+    queryKey: ["return-lookup-packages"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("packages").select("id,name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+  const tripIds = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.trip_id).filter(Boolean) as string[])).sort(),
+    [rows],
+  );
+  const busIds = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.bus_id).filter(Boolean) as string[])).sort(),
+    [rows],
+  );
+  const trips = useQuery({
+    queryKey: ["return-lookup-trips", tripIds],
+    enabled: tripIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trips").select("id,name").in("id", tripIds);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+  const bs = useQuery({
+    queryKey: ["return-lookup-buses", busIds],
+    enabled: busIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("buses")
+        .select("id,name,bus_number,assigned_date")
+        .in("id", busIds);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string | null; bus_number: number; assigned_date: string | null }[];
+    },
+  });
+  return useMemo(() => {
+    const pm = new Map((pkgs.data ?? []).map((p) => [p.id, p.name]));
+    const tm = new Map((trips.data ?? []).map((t) => [t.id, t.name]));
+    const bm = new Map((bs.data ?? []).map((b) => [b.id, b]));
+    return {
+      hotelName: (b) => (hotelKeyOf(b) === "__none" ? "بدون فندق" : (pm.get(b.package_id!) ?? "فندق غير معروف")),
+      tripName: (id) => tm.get(id) ?? "—",
+      busLabel: (id) => {
+        const b = bm.get(id);
+        if (!b) return "—";
+        return `${b.name || `حافلة ${b.bus_number}`}${b.assigned_date ? ` (${formatTripDate(b.assigned_date)})` : ""}`;
+      },
+    };
+  }, [pkgs.data, trips.data, bs.data]);
+}
+function applyReturnFilters(rows: ReturnBookingRow[], f: ReturnFilters, lk: ReturnLookups): ReturnBookingRow[] {
+  const q = f.search.trim().toLowerCase();
+  return rows.filter((b) => {
+    if (f.hotel && hotelKeyOf(b) !== f.hotel) return false;
+    if (f.trip && (b.trip_id ?? "__none") !== f.trip) return false;
+    if (f.outBus && (b.bus_id ?? "__none") !== f.outBus) return false;
+    if (f.retBus) {
+      const assigned = b.return_bus_id && (b.return_seat_numbers?.length ?? 0) > 0;
+      if (f.retBus === "__none" ? assigned : b.return_bus_id !== f.retBus) return false;
+    }
+    if (f.type && (b.booking_type === "family" ? "family" : "individual") !== f.type) return false;
+    if (f.source && sourceOf(b) !== f.source) return false;
+    if (f.mode && (b.trip_mode ?? "round") !== f.mode) return false;
+    if (f.ext === "yes" && !((b.extension_nights ?? 0) > 0)) return false;
+    if (f.ext === "no" && (b.extension_nights ?? 0) > 0) return false;
+    if (q) {
+      const hay = `${b.customer_name ?? ""} ${b.booking_code} ${lk.hotelName(b)}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { v: string; l: string }[];
+}) {
+  return (
+    <Select value={value || "__all"} onValueChange={(v) => onChange(v === "__all" ? "" : v)}>
+      <SelectTrigger className={`h-9 ${value ? "border-primary" : ""}`}>
+        <SelectValue placeholder={label} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__all">{label}: الكل</SelectItem>
+        {options.map((o) => (
+          <SelectItem key={o.v} value={o.v}>
+            {o.l}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** كشف استلام الركاب من الفنادق لكل حافلة عودة — نسخ نصي للسائق. */
+function PickupSheetButton({
+  bookings,
+  buses,
+  lookups,
+  date,
+}: {
+  bookings: ReturnBookingRow[];
+  buses: BusRow[];
+  lookups: ReturnLookups;
+  date: string;
+}) {
+  async function copy() {
+    const lines: string[] = [`كشف استلام العودة — ${formatTripDate(date)}`];
+    for (const bus of buses) {
+      const riders = bookings.filter((b) => b.return_bus_id === bus.id && (b.return_seat_numbers?.length ?? 0) > 0);
+      if (riders.length === 0) continue;
+      const total = riders.reduce((s, b) => s + (b.passenger_count || 1), 0);
+      lines.push("", `🚌 ${bus.name || `حافلة ${bus.bus_number}`} — ${total} راكب`);
+      const byHotel = new Map<string, ReturnBookingRow[]>();
+      for (const r of riders) {
+        const h = lookups.hotelName(r);
+        byHotel.set(h, [...(byHotel.get(h) ?? []), r]);
+      }
+      let stop = 1;
+      for (const [h, rs] of Array.from(byHotel.entries()).sort((a, b) => a[0].localeCompare(b[0], "ar"))) {
+        const n = rs.reduce((s, b) => s + (b.passenger_count || 1), 0);
+        lines.push(`المحطة ${stop++}: ${h} (${n})`);
+        for (const r of rs)
+          lines.push(`  - ${r.customer_name || r.booking_code} \\ ${r.passenger_count} \\ مقاعد ${(r.return_seat_numbers ?? []).join("، ")}`);
+      }
+    }
+    if (lines.length === 1) return toast.error("لا يوجد ركاب موزعون على حافلات العودة بعد");
+    await navigator.clipboard.writeText(lines.join("\n"));
+    toast.success("تم نسخ كشف الاستلام");
+  }
+  return (
+    <Button size="sm" variant="outline" className="rounded-full" onClick={copy}>
+      <ClipboardList className="h-4 w-4 ml-1" /> كشف استلام الفنادق
+    </Button>
+  );
 }
 
 export function todayIso(): string {
@@ -167,7 +364,7 @@ export function useReturnData(date: string) {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name,bus_id,seat_numbers,created_at",
+          "id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name,bus_id,seat_numbers,created_at,booking_type,package_id,no_hotel,male_count,female_count,notes",
         )
         .eq("actual_return_date", date)
         .is("deleted_at", null)
@@ -509,6 +706,8 @@ export function ReturnTripCard({
   buses,
   assigned,
   bookings,
+  allBookings,
+  lookups,
   ownerId,
 }: {
   template: ReturnTripRow;
@@ -516,12 +715,17 @@ export function ReturnTripCard({
   buses: BusRow[];
   assigned: ReturnBusRow[];
   bookings: ReturnBookingRow[];
+  allBookings?: ReturnBookingRow[];
+  lookups?: ReturnLookups;
   ownerId?: string;
 }) {
   const qc = useQueryClient();
   const [addingBus, setAddingBus] = useState(false);
   const [newBooking, setNewBooking] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [groupByHotel, setGroupByHotel] = useState(true);
+  const [bulkOut, setBulkOut] = useState("");
+  const all = allBookings ?? bookings;
 
   const assignedBusIds = assigned.map((a) => a.bus_id);
   const tripBuses = buses.filter((b) => assignedBusIds.includes(b.id));
@@ -533,8 +737,72 @@ export function ReturnTripCard({
   const totalPax = bookings.reduce((s, b) => s + pax(b), 0);
   const donePax = distributed.reduce((s, b) => s + (b.return_seat_numbers?.length ?? 0), 0);
 
+  // المقاعد المحجوزة تُحسب دائمًا من كل حجوزات التاريخ (لا من نتيجة الفلتر)
   const seatsOnBus = (busId: string) =>
-    bookings.filter((b) => b.return_bus_id === busId).flatMap((b) => b.return_seat_numbers ?? []);
+    all.filter((b) => b.return_bus_id === busId).flatMap((b) => b.return_seat_numbers ?? []);
+
+  const outBusIds = useMemo(
+    () => Array.from(new Set(bookings.map((b) => b.bus_id).filter(Boolean) as string[])),
+    [bookings],
+  );
+
+  const groups = useMemo(() => {
+    const isPending = (b: ReturnBookingRow) => !b.return_bus_id || (b.return_seat_numbers?.length ?? 0) === 0;
+    if (!groupByHotel) {
+      return [
+        {
+          key: "__all",
+          name: "",
+          items: bookings,
+          pax: totalPax,
+          pending: bookings.filter(isPending).reduce((s, b) => s + pax(b), 0),
+        },
+      ];
+    }
+    const m = new Map<string, { key: string; name: string; items: ReturnBookingRow[]; pax: number; pending: number }>();
+    for (const b of bookings) {
+      const key = hotelKeyOf(b);
+      const g = m.get(key) ?? { key, name: lookups?.hotelName(b) ?? key, items: [], pax: 0, pending: 0 };
+      g.items.push(b);
+      g.pax += pax(b);
+      if (isPending(b)) g.pending += pax(b);
+      m.set(key, g);
+    }
+    return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings, groupByHotel, lookups, totalPax]);
+
+  /** تسكين مجموعة حجوزات غير موزعة في حافلة واحدة بأول المقاعد المتاحة. */
+  async function bulkAssign(items: ReturnBookingRow[], busId: string) {
+    const bus = tripBuses.find((b) => b.id === busId);
+    if (!bus) return;
+    const pending = items.filter((b) => !b.return_bus_id || (b.return_seat_numbers?.length ?? 0) === 0);
+    if (pending.length === 0) return toast.info("لا يوجد ركاب غير موزعين في هذه المجموعة");
+    const taken = new Set(seatsOnBus(busId));
+    const free = Array.from({ length: bus.capacity }, (_, i) => String(i + 1)).filter((s) => !taken.has(s));
+    const need = pending.reduce((s, b) => s + pax(b), 0);
+    if (need > free.length) {
+      if (!confirm(`المقاعد المتاحة ${free.length} والمطلوب ${need}. سيتم تسكين من تتسع لهم الحافلة فقط. متابعة؟`))
+        return;
+    }
+    let done = 0;
+    for (const b of pending) {
+      const n = pax(b);
+      if (free.length < n) break;
+      const seats = free.splice(0, n);
+      const { error } = await supabase
+        .from("bookings")
+        .update({ return_trip_id: template.id, return_bus_id: busId, return_seat_numbers: seats } as never)
+        .eq("id", b.id);
+      if (error) {
+        toast.error(error.message);
+        break;
+      }
+      done += n;
+    }
+    toast.success(`تم تسكين ${done} راكب في ${bus.name || `حافلة ${bus.bus_number}`}`);
+    refresh();
+  }
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["return-bookings", date] });
@@ -694,15 +962,25 @@ export function ReturnTripCard({
           </div>
         )}
 
+        <div className="flex items-center gap-2 mb-2 text-xs">
+          <Switch checked={groupByHotel} onCheckedChange={setGroupByHotel} id={`gh-${template.id}`} />
+          <Label htmlFor={`gh-${template.id}`} className="text-xs">
+            تجميع حسب الفندق مع التسكين الجماعي
+          </Label>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-muted-foreground border-b">
                 <th className="p-2 text-right">الراكب</th>
-                <th className="p-2 text-right">نوع الحجز</th>
-                <th className="p-2 text-right">العودة الفعلية</th>
-                <th className="p-2 text-right">ليالي التمديد</th>
-                <th className="p-2 text-right">الحافلة</th>
+                <th className="p-2 text-right">الفندق</th>
+                <th className="p-2 text-right">النوع والتركيب</th>
+                <th className="p-2 text-right">حافلة ومقاعد الذهاب</th>
+                <th className="p-2 text-right">رحلة الذهاب والمصدر</th>
+                <th className="p-2 text-right">نوع الرحلة والعودة الفعلية</th>
+                <th className="p-2 text-right">ملاحظات</th>
+                <th className="p-2 text-right">حافلة العودة</th>
                 <th className="p-2 text-right">المقاعد</th>
                 <th className="p-2 text-right">الحالة</th>
               </tr>
@@ -710,23 +988,96 @@ export function ReturnTripCard({
             <tbody>
               {bookings.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                    لا توجد حجوزات مرتبطة بهذا التاريخ.
+                  <td colSpan={10} className="p-6 text-center text-muted-foreground">
+                    لا توجد حجوزات مطابقة.
                   </td>
                 </tr>
               )}
-              {bookings.map((b) => (
-                <BookingAssignRow
-                  key={b.id}
-                  booking={b}
-                  buses={tripBuses}
-                  takenSeats={(busId) => seatsOnBus(busId).filter((s) => !(b.return_seat_numbers ?? []).includes(s))}
-                  onAssign={(busId, seats) => assign(b, busId, seats)}
-                />
+              {groups.map((g) => (
+                <Fragment key={g.key}>
+                  {groupByHotel && (
+                    <tr className="bg-muted/60">
+                      <td colSpan={10} className="p-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-extrabold text-sm">
+                            🏨 {g.name} ({g.pax} راكب
+                            {g.pending > 0 ? ` • ${g.pending} غير موزع` : " • تم التوزيع"})
+                          </span>
+                          {g.pending > 0 && tripBuses.length > 0 && (
+                            <Select onValueChange={(v) => bulkAssign(g.items, v)}>
+                              <SelectTrigger className="h-8 w-48 ms-auto">
+                                <SelectValue placeholder="تسكين الكل في حافلة…" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {tripBuses.map((b) => (
+                                  <SelectItem key={b.id} value={b.id}>
+                                    {b.name || `حافلة ${b.bus_number}`} ({b.capacity - seatsOnBus(b.id).length} متاح)
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {g.items.map((b) => (
+                    <BookingAssignRow
+                      key={b.id}
+                      booking={b}
+                      buses={tripBuses}
+                      lookups={lookups}
+                      takenSeats={(busId) =>
+                        seatsOnBus(busId).filter((s) => !(b.return_seat_numbers ?? []).includes(s))
+                      }
+                      onAssign={(busId, seats) => assign(b, busId, seats)}
+                    />
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
+
+        {tripBuses.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-bold">تسكين جماعي حسب حافلة الذهاب:</span>
+            <Select value={bulkOut} onValueChange={setBulkOut}>
+              <SelectTrigger className="h-8 w-44">
+                <SelectValue placeholder="حافلة الذهاب" />
+              </SelectTrigger>
+              <SelectContent>
+                {outBusIds.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {lookups?.busLabel(id) ?? id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span>←</span>
+            <Select
+              value=""
+              onValueChange={(v) => {
+                if (!bulkOut) return toast.error("اختر حافلة الذهاب أولًا");
+                bulkAssign(
+                  bookings.filter((b) => b.bus_id === bulkOut),
+                  v,
+                );
+              }}
+            >
+              <SelectTrigger className="h-8 w-44">
+                <SelectValue placeholder="حافلة العودة" />
+              </SelectTrigger>
+              <SelectContent>
+                {tripBuses.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name || `حافلة ${b.bus_number}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* لوحة التوزيع بالسحب والإفلات على مخطط حافلات العودة */}
@@ -737,7 +1088,7 @@ export function ReturnTripCard({
             <Badge className="bg-warning text-white">غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</Badge>
           )}
         </div>
-        <ReturnSeatBoard buses={tripBuses} bookings={bookings} onAssign={assign} />
+        <ReturnSeatBoard buses={tripBuses} bookings={all} onAssign={assign} />
       </div>
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
@@ -784,11 +1135,13 @@ function BookingAssignRow({
   buses,
   takenSeats,
   onAssign,
+  lookups,
 }: {
   booking: ReturnBookingRow;
   buses: BusRow[];
   takenSeats: (busId: string) => string[];
   onAssign: (busId: string | null, seats: string[]) => void;
+  lookups?: ReturnLookups;
 }) {
   const busId = booking.return_bus_id ?? "";
   const seats = booking.return_seat_numbers ?? [];
@@ -806,15 +1159,47 @@ function BookingAssignRow({
     onAssign(busId || null, next);
   }
 
+  const isFamily = booking.booking_type === "family";
+  const m = booking.male_count ?? 0;
+  const fe = booking.female_count ?? 0;
+
   return (
     <tr className="border-b align-top">
       <td className="p-2 font-bold">
         {booking.customer_name || booking.booking_code}
-        <div className="text-[11px] font-normal text-muted-foreground">{booking.passenger_count} راكب</div>
+        <div className="text-[11px] font-normal text-muted-foreground">
+          {booking.booking_code} • {booking.passenger_count} راكب
+        </div>
       </td>
-      <td className="p-2">{modeLabel(booking.trip_mode, booking.extension_nights)}</td>
-      <td className="p-2">{formatTripDate(booking.actual_return_date)}</td>
-      <td className="p-2">{booking.extension_nights ?? 0}</td>
+      <td className="p-2 text-xs font-bold whitespace-nowrap">{lookups?.hotelName(booking) ?? "—"}</td>
+      <td className="p-2 text-xs whitespace-nowrap">
+        <Badge variant={isFamily ? "default" : "secondary"}>{isFamily ? "عائلة" : "أفراد"}</Badge>
+        {(m > 0 || fe > 0) && (
+          <div className="text-[11px] text-muted-foreground mt-1">
+            {m > 0 ? `ذكور ${m}` : ""}
+            {m > 0 && fe > 0 ? " • " : ""}
+            {fe > 0 ? `إناث ${fe}` : ""}
+          </div>
+        )}
+      </td>
+      <td className="p-2 text-xs whitespace-nowrap">
+        {booking.bus_id ? lookups?.busLabel(booking.bus_id) : "—"}
+        {(booking.seat_numbers?.length ?? 0) > 0 && (
+          <div className="text-[11px] text-muted-foreground">مقاعد {booking.seat_numbers!.join("، ")}</div>
+        )}
+      </td>
+      <td className="p-2 text-xs whitespace-nowrap">
+        {booking.trip_id ? lookups?.tripName(booking.trip_id) : "—"}
+        <div className="text-[11px] text-muted-foreground">{sourceOf(booking)}</div>
+      </td>
+      <td className="p-2 text-xs whitespace-nowrap">
+        {modeLabel(booking.trip_mode, booking.extension_nights)}
+        <div className="text-[11px] text-muted-foreground">
+          {formatTripDate(booking.actual_return_date)}
+          {(booking.extension_nights ?? 0) > 0 ? ` • تمديد ${booking.extension_nights}` : ""}
+        </div>
+      </td>
+      <td className="p-2 text-[11px] max-w-[160px] text-muted-foreground">{booking.notes || "—"}</td>
       <td className="p-2">
         <Select
           value={busId || "__none"}
@@ -936,7 +1321,25 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     [allTrips, date],
   );
 
-  const rows = bookings.data ?? [];
+  const allRows = bookings.data ?? [];
+  const lookups = useReturnLookups(allRows);
+  const [f, setF] = useState<ReturnFilters>(EMPTY_FILTERS);
+  const rows = useMemo(() => applyReturnFilters(allRows, f, lookups), [allRows, f, lookups]);
+  const filterActive = Object.values(f).some(Boolean);
+
+  // ملخص الفنادق (على كل حجوزات التاريخ)
+  const hotelSummary = useMemo(() => {
+    const m = new Map<string, { key: string; name: string; pax: number; done: number }>();
+    for (const b of allRows) {
+      const key = hotelKeyOf(b);
+      const e = m.get(key) ?? { key, name: lookups.hotelName(b), pax: 0, done: 0 };
+      e.pax += b.passenger_count || 1;
+      if (b.return_bus_id) e.done += b.return_seat_numbers?.length ?? 0;
+      m.set(key, e);
+    }
+    return Array.from(m.values()).sort((a, b) => b.pax - a.pax);
+  }, [allRows, lookups]);
+
   // حافلات رحلات العودة المرتبطة بهذا التاريخ (مصدر قائمة الحافلات في شعار الرحلة)
   const dateBuses = useMemo(() => {
     const ids = new Set((assignedBuses.data ?? []).map((a) => a.bus_id));
@@ -945,6 +1348,23 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   const totalPax = rows.reduce((s, b) => s + (b.passenger_count || 1), 0);
   const donePax = rows.reduce((s, b) => s + (b.return_bus_id ? (b.return_seat_numbers?.length ?? 0) : 0), 0);
   const tripFor = (d: string) => allTrips.find((t) => t.return_date === d);
+
+  const uniq = <T,>(arr: T[]) => Array.from(new Set(arr));
+  const hotelOpts = hotelSummary.map((h) => ({ v: h.key, l: h.name }));
+  const tripOpts = uniq(allRows.map((b) => b.trip_id ?? "__none")).map((v) => ({
+    v,
+    l: v === "__none" ? "بدون رحلة ذهاب" : lookups.tripName(v),
+  }));
+  const outBusOpts = uniq(allRows.map((b) => b.bus_id ?? "__none")).map((v) => ({
+    v,
+    l: v === "__none" ? "بدون حافلة ذهاب" : lookups.busLabel(v),
+  }));
+  const retBusOpts = [
+    { v: "__none", l: "غير موزع على حافلة" },
+    ...dateBuses.map((b) => ({ v: b.id, l: b.name || `حافلة ${b.bus_number}` })),
+  ];
+  const sourceOpts = uniq(allRows.map((b) => sourceOf(b))).map((v) => ({ v, l: v }));
+  const modeOpts = uniq(allRows.map((b) => b.trip_mode ?? "round")).map((v) => ({ v, l: MODE_NAMES[v] ?? v }));
 
   return (
     <div className="space-y-4">
@@ -995,13 +1415,85 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
 
       <ReturnDateBar date={date} onChange={setDate} />
 
+      {/* ملخص الفنادق — النقر يفلتر */}
+      {hotelSummary.length > 0 && (
+        <div className="surface-card p-4 space-y-2">
+          <div className="text-sm font-bold flex items-center gap-2">
+            <Hotel className="h-4 w-4" /> ركاب الفنادق في هذا التاريخ
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {hotelSummary.map((h) => {
+              const on = f.hotel === h.key;
+              return (
+                <button
+                  key={h.key}
+                  type="button"
+                  onClick={() => setF({ ...f, hotel: on ? "" : h.key })}
+                  className={`rounded-full border px-3 py-1 text-xs font-bold transition ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  {h.name}: {h.pax} راكب
+                  {h.pax > h.done ? ` • ${h.pax - h.done} غير موزع` : " ✓"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* شريط الفلاتر */}
+      <div className="surface-card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-bold flex items-center gap-2">
+            <Filter className="h-4 w-4" /> الفلاتر
+          </div>
+          {filterActive && (
+            <Button size="sm" variant="ghost" className="rounded-full h-7" onClick={() => setF(EMPTY_FILTERS)}>
+              <X className="h-4 w-4 ml-1" /> مسح الفلاتر
+            </Button>
+          )}
+        </div>
+        <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
+          <Input
+            className="h-9 col-span-2 md:col-span-4"
+            placeholder="بحث بالاسم أو رقم الحجز…"
+            value={f.search}
+            onChange={(e) => setF({ ...f, search: e.target.value })}
+          />
+          <FilterSelect label="الفندق" value={f.hotel} onChange={(v) => setF({ ...f, hotel: v })} options={hotelOpts} />
+          <FilterSelect label="رحلة الذهاب" value={f.trip} onChange={(v) => setF({ ...f, trip: v })} options={tripOpts} />
+          <FilterSelect label="حافلة الذهاب" value={f.outBus} onChange={(v) => setF({ ...f, outBus: v })} options={outBusOpts} />
+          <FilterSelect label="حافلة العودة" value={f.retBus} onChange={(v) => setF({ ...f, retBus: v })} options={retBusOpts} />
+          <FilterSelect
+            label="نوع الحجز"
+            value={f.type}
+            onChange={(v) => setF({ ...f, type: v })}
+            options={[
+              { v: "family", l: "عائلة" },
+              { v: "individual", l: "أفراد" },
+            ]}
+          />
+          <FilterSelect label="مصدر الحجز" value={f.source} onChange={(v) => setF({ ...f, source: v })} options={sourceOpts} />
+          <FilterSelect label="نوع الرحلة" value={f.mode} onChange={(v) => setF({ ...f, mode: v })} options={modeOpts} />
+          <FilterSelect
+            label="التمديد"
+            value={f.ext}
+            onChange={(v) => setF({ ...f, ext: v })}
+            options={[
+              { v: "yes", l: "عليه تمديد" },
+              { v: "no", l: "بدون تمديد" },
+            ]}
+          />
+        </div>
+      </div>
+
       <div className="surface-card p-4 flex flex-wrap items-center gap-2 text-xs">
         <Badge variant="secondary">
-          حجوزات هذا التاريخ: {rows.length} ({totalPax} راكب)
+          {filterActive ? "نتيجة الفلتر" : "حجوزات هذا التاريخ"}: {rows.length} ({totalPax} راكب)
         </Badge>
         <Badge className="bg-success text-white">موزعون: {donePax}</Badge>
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
         <div className="ms-auto flex flex-wrap gap-2">
+          <PickupSheetButton bookings={allRows} buses={dateBuses} lookups={lookups} date={date} />
           <ReturnNamesCopyButton bookings={rows} returnTripName={dayTrips.map((t) => t.name).join("، ")} />
           <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
         </div>
@@ -1038,6 +1530,8 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
             buses={buses.data ?? []}
             assigned={(assignedBuses.data ?? []).filter((x) => x.return_trip_id === t.id)}
             bookings={rows}
+            allBookings={allRows}
+            lookups={lookups}
             ownerId={ownerId}
           />
         ))
