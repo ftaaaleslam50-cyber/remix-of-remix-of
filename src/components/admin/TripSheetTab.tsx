@@ -577,6 +577,21 @@ export function TripSheetTab() {
 
   const headlineSeatCost = busId ? seatCostForBus(busId) : 0;
 
+  /** توحيد متوسط تكلفة المقعد على الحافلات المحددة (عند اختيار أكثر من حافلة). */
+  const [poolSeatCost, setPoolSeatCost] = useState(false);
+  const pooledActive = poolSeatCost && busIds.length > 1;
+  const pooledSeatCost = useMemo(() => {
+    if (busIds.length < 2) return 0;
+    let total = 0;
+    let pax = 0;
+    for (const id of busIds) {
+      total += busTotalOf(id);
+      pax += busPassengerMap.get(id) ?? 0;
+    }
+    return pax > 0 ? total / pax : 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busIds, buses, busPassengerMap]);
+
   /** تكلفة سرير راكب معيّن (فردي/عائلي) — من مناسبة رحلته إن وُجدت، وإلا القيمة العامة. */
   function bedCostFor(b: SheetBooking, hotel: string, roomLabel: string): number {
     if (hotel === NO_HOTEL) return 0;
@@ -605,7 +620,12 @@ export function TripSheetTab() {
         // تكلفة المقعد: من مصاريف حافلة هذا الحجز بالذات (شاملة سرير المشرف والأسرّة
         // الفارغة الخاصة بها) ÷ ركاب هذه الحافلة فقط.
         // أما حجوزات «عودة فقط» فتأخذ القيمة اليدوية «تكلفة مقعد العودة فقط».
-        const seatCost = b.trip_mode === "return" ? n(ref.returnSeatCost) : seatCostForBus(b.bus_id);
+        const seatCost =
+          b.trip_mode === "return"
+            ? n(ref.returnSeatCost)
+            : pooledActive && b.bus_id && busIds.includes(b.bus_id)
+              ? pooledSeatCost
+              : seatCostForBus(b.bus_id);
 
         // تكلفة السرير الخاص بهذا الراكب فقط (غير سرير المشرف والأسرّة الفارغة، دول
         // بقوا جزء من تكلفة المقعد أعلاه).
@@ -630,7 +650,7 @@ export function TripSheetTab() {
         return { idx, b, rep, hotel, roomLabel, count, nights, packageTotal, bedCost, seatCost, ...r };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filtered, hotelRows, ref, busPassengerMap, buses, busId, busExp, occByKey, repRates],
+    [filtered, hotelRows, ref, busPassengerMap, buses, busId, busExp, occByKey, repRates, pooledActive, pooledSeatCost, busIds],
   );
 
   /** ترتيب الجدول بالنقر على أي عنوان عمود. */
@@ -1337,9 +1357,26 @@ export function TripSheetTab() {
             </>
           ) : selectedBuses.length > 1 ? (
             <div className="space-y-2">
+              <label className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm font-bold cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={poolSeatCost}
+                  onChange={(e) => setPoolSeatCost(e.target.checked)}
+                />
+                توحيد متوسط تكلفة المقعد للحافلات المحددة
+              </label>
+              {pooledActive && (
+                <p className="text-sm font-bold text-primary">
+                  تكلفة المقعد الموحدة: {sar(round(pooledSeatCost))}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
-                محدد {selectedBuses.length} حافلات — كل حافلة تُحسب بمصاريفها وتكلفة مقعدها الخاصة بها في الجدول. اختر
-                حافلة واحدة فقط من الفلتر لتعديل أو اعتماد مصاريفها.
+                محدد {selectedBuses.length} حافلات —{" "}
+                {pooledActive
+                  ? "تُجمع مصاريف كل الحافلات المحددة وتُقسم على مجموع ركابها، وتُطبّق التكلفة الموحدة على الجدول والتصدير."
+                  : "كل حافلة تُحسب بمصاريفها وتكلفة مقعدها الخاصة بها في الجدول."}{" "}
+                اختر حافلة واحدة فقط من الفلتر لتعديل أو اعتماد مصاريفها.
               </p>
               <div className="space-y-1">
                 {selectedBuses.map((sb) => (
