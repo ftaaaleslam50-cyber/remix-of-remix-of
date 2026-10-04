@@ -74,6 +74,7 @@ type BusExpenses = {
   busCost: number;
   driverTip: number;
   taxi: number;
+  parking: number;
   supervisor: number;
   supervisorBed: number;
   emptyBeds: number;
@@ -95,6 +96,7 @@ const EMPTY_BUS_EXP: BusExpenses = {
   busCost: 0,
   driverTip: 0,
   taxi: 0,
+  parking: 0,
   supervisor: 0,
   supervisorBed: 0,
   emptyBeds: 0,
@@ -200,7 +202,7 @@ export function TripSheetTab() {
         await supabase
           .from("buses")
           .select(
-            "id,name,bus_number,capacity,assigned_date,direction,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra,settled_at",
+            "id,name,bus_number,capacity,assigned_date,direction,expense_bus_cost,expense_driver_tip,expense_taxi,expense_parking,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra,settled_at",
           )
           .order("assigned_date", { ascending: true, nullsFirst: false })
           .order("bus_number")
@@ -214,6 +216,7 @@ export function TripSheetTab() {
         expense_bus_cost?: number | null;
         expense_driver_tip?: number | null;
         expense_taxi?: number | null;
+        expense_parking?: number | null;
         expense_supervisor?: number | null;
         expense_supervisor_bed?: number | null;
         expense_empty_beds?: number | null;
@@ -531,6 +534,7 @@ export function TripSheetTab() {
       busCost: n(bus.expense_bus_cost),
       driverTip: n(bus.expense_driver_tip),
       taxi: n(bus.expense_taxi),
+      parking: n(bus.expense_parking),
       supervisor: n(bus.expense_supervisor),
       supervisorBed: n(bus.expense_supervisor_bed),
       emptyBeds: suggestedEmpty,
@@ -549,6 +553,7 @@ export function TripSheetTab() {
       busCost: n(busRow.expense_bus_cost),
       driverTip: n(busRow.expense_driver_tip),
       taxi: n(busRow.expense_taxi),
+      parking: n(busRow.expense_parking),
       supervisor: n(busRow.expense_supervisor),
       supervisorBed: n(busRow.expense_supervisor_bed),
       emptyBeds: n(busRow.expense_empty_beds),
@@ -558,7 +563,7 @@ export function TripSheetTab() {
 
   function busTotalOf(rowBusId: string | null): number {
     const e = busExpensesOf(rowBusId);
-    return e.busCost + e.driverTip + e.taxi + e.supervisor + e.supervisorBed + e.emptyBeds + e.extra;
+    return e.busCost + e.driverTip + e.taxi + e.parking + e.supervisor + e.supervisorBed + e.emptyBeds + e.extra;
   }
 
   /** تكلفة المقعد الفعلية لحافلة معينة — إجمالي مصاريفها (شاملة سرير المشرف والأسرّة
@@ -737,6 +742,7 @@ export function TripSheetTab() {
           expense_bus_cost: busExp.busCost,
           expense_driver_tip: busExp.driverTip,
           expense_taxi: busExp.taxi,
+          expense_parking: busExp.parking,
           expense_supervisor: busExp.supervisor,
           expense_supervisor_bed: busExp.supervisorBed,
           expense_empty_beds: busExp.emptyBeds,
@@ -853,6 +859,7 @@ export function TripSheetTab() {
         round(e.busCost),
         round(e.driverTip),
         round(e.taxi),
+        round(e.parking),
         round(e.supervisor),
         round(e.supervisorBed),
         round(e.emptyBeds),
@@ -864,7 +871,7 @@ export function TripSheetTab() {
     });
 
     const sum = (idx: number) => round(busRows.reduce((s, r) => s + (Number(r[idx]) || 0), 0));
-    const busExpensesTotal = busRows.reduce((s, r) => s + (Number(r[11]) || 0), 0);
+    const busExpensesTotal = busRows.reduce((s, r) => s + (Number(r[12]) || 0), 0);
     const bedTotal = computed.reduce((s, r) => s + r.bedCost * r.count, 0);
 
     const busSection = {
@@ -877,6 +884,7 @@ export function TripSheetTab() {
         "أجرة الباص",
         "إكرامية السائق",
         "التاكسي",
+        "مواقف",
         "المشرف",
         "سرير المشرف",
         "الأسرّة الفارغة",
@@ -898,6 +906,7 @@ export function TripSheetTab() {
         sum(8),
         sum(9),
         sum(10),
+        sum(11),
         round(busExpensesTotal),
         "",
         "",
@@ -1301,6 +1310,7 @@ export function TripSheetTab() {
                     ["تكلفة الباص", "busCost"],
                     ["إكرامية السائق", "driverTip"],
                     ["تاكسي", "taxi"],
+                    ["مواقف", "parking"],
                     ["المشرف (إكرامية/أجرة)", "supervisor"],
                     ["سرير المشرف", "supervisorBed"],
                     ["الأسرة الفارغة", "emptyBeds"],

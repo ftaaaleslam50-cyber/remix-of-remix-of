@@ -37,7 +37,7 @@ interface MyBooking {
   trips: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses: {
     name: string | null; bus_number: number; capacity?: number | null; assigned_date?: string | null; settled_at?: string | null;
-    expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null;
+    expense_bus_cost?: number | null; expense_driver_tip?: number | null; expense_taxi?: number | null; expense_parking?: number | null;
     expense_supervisor?: number | null; expense_supervisor_bed?: number | null;
     expense_empty_beds?: number | null; expense_extra?: number | null;
   } | null;
@@ -51,7 +51,7 @@ function seatCostOf(b: MyBooking) {
   const bus = b.buses;
   if (!bus || !bus.capacity) return 0;
   const total =
-    n(bus.expense_bus_cost) + n(bus.expense_driver_tip) + n(bus.expense_taxi) +
+    n(bus.expense_bus_cost) + n(bus.expense_driver_tip) + n(bus.expense_taxi) + n(bus.expense_parking) +
     n(bus.expense_supervisor) + n(bus.expense_supervisor_bed) + n(bus.expense_empty_beds) +
     n(bus.expense_extra);
   return total ? total / bus.capacity : 0;
@@ -151,7 +151,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,assigned_date,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,assigned_date,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_parking,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
         // الحجوزات التي أنشأها المستخدم + الحجوزات المسجّلة باسمه كمندوب (ولو أدخلها موظف آخر).
         .or(`created_by.eq.${uid},rep_profile_id.eq.${uid}`)
         .or("deleted_at.is.null,no_show.is.true")
