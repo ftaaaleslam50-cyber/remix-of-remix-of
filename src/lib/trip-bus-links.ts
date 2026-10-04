@@ -39,23 +39,8 @@ export async function fetchTripBusesWithLinks<T extends { id: string; assigned_d
     .map((b) => ({ ...b, linked: linked.has(b.id) || (!returnId && b.trip_id === tripId) }))
     .filter((b) => {
       if (b.linked) return true;
-      if (!b.assigned_date) return false;
       if ((b.direction === "return") !== Boolean(returnId)) return false;
-      if (date) {
-        // نفس يوم الأسبوع في أسبوع الرحلة والأسبوعين المجاورين (قبل/بعد 7 أيام).
-        const base = new Date(`${date}T00:00:00`);
-        const targets = new Set(
-          [-7, 0, 7].map((off) => {
-            const t = new Date(base);
-            t.setDate(t.getDate() + off);
-            const y = t.getFullYear();
-            const m = String(t.getMonth() + 1).padStart(2, "0");
-            const d = String(t.getDate()).padStart(2, "0");
-            return `${y}-${m}-${d}`;
-          }),
-        );
-        return targets.has(b.assigned_date);
-      }
-      return weekday !== null && weekdayOf(b.assigned_date) === weekday;
+      // كل حافلات نفس الاتجاه تظهر (غير مرتبطة) بلا حصر بنطاق زمني.
+      return true;
     });
 }
