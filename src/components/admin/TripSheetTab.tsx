@@ -782,6 +782,31 @@ export function TripSheetTab() {
     }
   }
 
+  /** اعتماد كل الحافلات المحددة دفعة واحدة بتكلفة مقعد موحدة (مصاريفها مجمعة ÷ ركابها). */
+  async function approvePooledBuses() {
+    if (selectedBuses.length < 2) return;
+    setApproving(true);
+    try {
+      const now = new Date().toISOString();
+      const ids = selectedBuses.map((sb) => sb.id);
+      const { error } = await supabase
+        .from("buses")
+        .update({ settled_at: now } as never)
+        .in("id", ids);
+      if (error) throw error;
+      const { error: rpcErr } = await supabase.rpc("recalc_pooled_settled_profits" as never, {
+        _bus_ids: ids,
+      } as never);
+      if (rpcErr) throw rpcErr;
+      await refetchBuses();
+      toast.success(`تم اعتماد ${selectedBuses.length} حافلات بتكلفة مقعد موحدة وإعادة حساب الأرباح`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر الاعتماد الجماعي");
+    } finally {
+      setApproving(false);
+    }
+  }
+
   const repNames = useMemo(() => {
     const names = new Set<string>();
     // أسماء المناديب ذوي الحسابات تظهر في قسمهم أعلاه — لا نكررها هنا.
