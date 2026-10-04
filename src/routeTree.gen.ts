@@ -9,59 +9,43 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PackagesRouteImport } from './routes/packages'
-import { Route as GalleryRouteImport } from './routes/gallery'
-import { Route as DrawRouteImport } from './routes/draw'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as BookingRouteImport } from './routes/booking'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TicketCodeRouteImport } from './routes/ticket.$code'
-import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
-import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
-import { Route as AuthenticatedMyBookingsRouteImport } from './routes/_authenticated/my-bookings'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
-import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin-users'
-import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
-import { Route as AuthenticatedAdminPackagesRouteImport } from './routes/_authenticated/admin-packages'
-import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin-notifications'
-import { Route as AuthenticatedAdminHotelsRouteImport } from './routes/_authenticated/admin-hotels'
-import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
-import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
-import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
-import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
-import { Route as AuthenticatedAdminBookingsRouteImport } from './routes/_authenticated/admin-bookings'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BookingRouteImport } from './routes/booking'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DrawRouteImport } from './routes/draw'
+import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as AuthenticatedAdminAssetsRouteImport } from './routes/_authenticated/admin-assets'
-import { Route as ApiTicketCodeDownloadRouteImport } from './routes/api/ticket.$code.download'
-import { Route as ApiPublicPushVapidKeyRouteImport } from './routes/api/public/push.vapid-key'
+import { Route as AuthenticatedAdminBookingsRouteImport } from './routes/_authenticated/admin-bookings'
+import { Route as AuthenticatedAdminBusLayoutsRouteImport } from './routes/_authenticated/admin-bus-layouts'
+import { Route as AuthenticatedAdminBusesRouteImport } from './routes/_authenticated/admin-buses'
+import { Route as AuthenticatedAdminGalleryRouteImport } from './routes/_authenticated/admin-gallery'
+import { Route as AuthenticatedAdminHomepageRouteImport } from './routes/_authenticated/admin-homepage'
+import { Route as AuthenticatedAdminHotelsRouteImport } from './routes/_authenticated/admin-hotels'
+import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin-notifications'
+import { Route as AuthenticatedAdminPackagesRouteImport } from './routes/_authenticated/admin-packages'
+import { Route as AuthenticatedAdminTripsRouteImport } from './routes/_authenticated/admin-trips'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin-users'
+import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedMyBookingsRouteImport } from './routes/_authenticated/my-bookings'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as TicketCodeRouteImport } from './routes/ticket.$code'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push.dispatch'
+import { Route as ApiPublicPushVapidKeyRouteImport } from './routes/api/public/push.vapid-key'
+import { Route as ApiTicketCodeDownloadRouteImport } from './routes/api/ticket.$code.download'
 import { Route as ApiPublicTicketCodeDownloadRouteImport } from './routes/api/public/ticket.$code.download'
 
-const PackagesRoute = PackagesRouteImport.update({
-  id: '/packages',
-  path: '/packages',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GalleryRoute = GalleryRouteImport.update({
-  id: '/gallery',
-  path: '/gallery',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DrawRoute = DrawRouteImport.update({
-  id: '/draw',
-  path: '/draw',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BookingRoute = BookingRouteImport.update({
-  id: '/booking',
-  path: '/booking',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -69,95 +53,35 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const BookingRoute = BookingRouteImport.update({
+  id: '/booking',
+  path: '/booking',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TicketCodeRoute = TicketCodeRouteImport.update({
-  id: '/ticket/$code',
-  path: '/ticket/$code',
+const DrawRoute = DrawRouteImport.update({
+  id: '/draw',
+  path: '/draw',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedNotificationsRoute =
-  AuthenticatedNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedMyBookingsRoute = AuthenticatedMyBookingsRouteImport.update({
-  id: '/my-bookings',
-  path: '/my-bookings',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const PackagesRoute = PackagesRouteImport.update({
+  id: '/packages',
+  path: '/packages',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
-  id: '/admin-users',
-  path: '/admin-users',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminTripsRoute = AuthenticatedAdminTripsRouteImport.update({
-  id: '/admin-trips',
-  path: '/admin-trips',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminPackagesRoute =
-  AuthenticatedAdminPackagesRouteImport.update({
-    id: '/admin-packages',
-    path: '/admin-packages',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminNotificationsRoute =
-  AuthenticatedAdminNotificationsRouteImport.update({
-    id: '/admin-notifications',
-    path: '/admin-notifications',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminHotelsRoute =
-  AuthenticatedAdminHotelsRouteImport.update({
-    id: '/admin-hotels',
-    path: '/admin-hotels',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminHomepageRoute =
-  AuthenticatedAdminHomepageRouteImport.update({
-    id: '/admin-homepage',
-    path: '/admin-homepage',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminGalleryRoute =
-  AuthenticatedAdminGalleryRouteImport.update({
-    id: '/admin-gallery',
-    path: '/admin-gallery',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminBusesRoute = AuthenticatedAdminBusesRouteImport.update({
-  id: '/admin-buses',
-  path: '/admin-buses',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminBusLayoutsRoute =
-  AuthenticatedAdminBusLayoutsRouteImport.update({
-    id: '/admin-bus-layouts',
-    path: '/admin-bus-layouts',
+const AuthenticatedAdminAssetsRoute =
+  AuthenticatedAdminAssetsRouteImport.update({
+    id: '/admin-assets',
+    path: '/admin-assets',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminBookingsRoute =
@@ -166,15 +90,91 @@ const AuthenticatedAdminBookingsRoute =
     path: '/admin-bookings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminAssetsRoute =
-  AuthenticatedAdminAssetsRouteImport.update({
-    id: '/admin-assets',
-    path: '/admin-assets',
+const AuthenticatedAdminBusLayoutsRoute =
+  AuthenticatedAdminBusLayoutsRouteImport.update({
+    id: '/admin-bus-layouts',
+    path: '/admin-bus-layouts',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const ApiTicketCodeDownloadRoute = ApiTicketCodeDownloadRouteImport.update({
-  id: '/api/ticket/$code/download',
-  path: '/api/ticket/$code/download',
+const AuthenticatedAdminBusesRoute = AuthenticatedAdminBusesRouteImport.update({
+  id: '/admin-buses',
+  path: '/admin-buses',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminGalleryRoute =
+  AuthenticatedAdminGalleryRouteImport.update({
+    id: '/admin-gallery',
+    path: '/admin-gallery',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminHomepageRoute =
+  AuthenticatedAdminHomepageRouteImport.update({
+    id: '/admin-homepage',
+    path: '/admin-homepage',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminHotelsRoute =
+  AuthenticatedAdminHotelsRouteImport.update({
+    id: '/admin-hotels',
+    path: '/admin-hotels',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminNotificationsRoute =
+  AuthenticatedAdminNotificationsRouteImport.update({
+    id: '/admin-notifications',
+    path: '/admin-notifications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminPackagesRoute =
+  AuthenticatedAdminPackagesRouteImport.update({
+    id: '/admin-packages',
+    path: '/admin-packages',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminTripsRoute = AuthenticatedAdminTripsRouteImport.update({
+  id: '/admin-trips',
+  path: '/admin-trips',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin-users',
+  path: '/admin-users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMyBookingsRoute = AuthenticatedMyBookingsRouteImport.update({
+  id: '/my-bookings',
+  path: '/my-bookings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const TicketCodeRoute = TicketCodeRouteImport.update({
+  id: '/ticket/$code',
+  path: '/ticket/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
+  id: '/api/public/push/dispatch',
+  path: '/api/public/push/dispatch',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPushVapidKeyRoute = ApiPublicPushVapidKeyRouteImport.update({
@@ -182,9 +182,9 @@ const ApiPublicPushVapidKeyRoute = ApiPublicPushVapidKeyRouteImport.update({
   path: '/api/public/push/vapid-key',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
-  id: '/api/public/push/dispatch',
-  path: '/api/public/push/dispatch',
+const ApiTicketCodeDownloadRoute = ApiTicketCodeDownloadRouteImport.update({
+  id: '/api/ticket/$code/download',
+  path: '/api/ticket/$code/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTicketCodeDownloadRoute =
@@ -398,46 +398,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/packages': {
-      id: '/packages'
-      path: '/packages'
-      fullPath: '/packages'
-      preLoaderRoute: typeof PackagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gallery': {
-      id: '/gallery'
-      path: '/gallery'
-      fullPath: '/gallery'
-      preLoaderRoute: typeof GalleryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/draw': {
-      id: '/draw'
-      path: '/draw'
-      fullPath: '/draw'
-      preLoaderRoute: typeof DrawRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/booking': {
-      id: '/booking'
-      path: '/booking'
-      fullPath: '/booking'
-      preLoaderRoute: typeof BookingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -447,116 +412,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ticket/$code': {
-      id: '/ticket/$code'
-      path: '/ticket/$code'
-      fullPath: '/ticket/$code'
-      preLoaderRoute: typeof TicketCodeRouteImport
+    '/booking': {
+      id: '/booking'
+      path: '/booking'
+      fullPath: '/booking'
+      preLoaderRoute: typeof BookingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/profile': {
-      id: '/_authenticated/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AuthenticatedProfileRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/notifications': {
-      id: '/_authenticated/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/draw': {
+      id: '/draw'
+      path: '/draw'
+      fullPath: '/draw'
+      preLoaderRoute: typeof DrawRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/my-bookings': {
-      id: '/_authenticated/my-bookings'
-      path: '/my-bookings'
-      fullPath: '/my-bookings'
-      preLoaderRoute: typeof AuthenticatedMyBookingsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/packages': {
+      id: '/packages'
+      path: '/packages'
+      fullPath: '/packages'
+      preLoaderRoute: typeof PackagesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/audit': {
-      id: '/_authenticated/audit'
-      path: '/audit'
-      fullPath: '/audit'
-      preLoaderRoute: typeof AuthenticatedAuditRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-users': {
-      id: '/_authenticated/admin-users'
-      path: '/admin-users'
-      fullPath: '/admin-users'
-      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-trips': {
-      id: '/_authenticated/admin-trips'
-      path: '/admin-trips'
-      fullPath: '/admin-trips'
-      preLoaderRoute: typeof AuthenticatedAdminTripsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-packages': {
-      id: '/_authenticated/admin-packages'
-      path: '/admin-packages'
-      fullPath: '/admin-packages'
-      preLoaderRoute: typeof AuthenticatedAdminPackagesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-notifications': {
-      id: '/_authenticated/admin-notifications'
-      path: '/admin-notifications'
-      fullPath: '/admin-notifications'
-      preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-hotels': {
-      id: '/_authenticated/admin-hotels'
-      path: '/admin-hotels'
-      fullPath: '/admin-hotels'
-      preLoaderRoute: typeof AuthenticatedAdminHotelsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-homepage': {
-      id: '/_authenticated/admin-homepage'
-      path: '/admin-homepage'
-      fullPath: '/admin-homepage'
-      preLoaderRoute: typeof AuthenticatedAdminHomepageRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-gallery': {
-      id: '/_authenticated/admin-gallery'
-      path: '/admin-gallery'
-      fullPath: '/admin-gallery'
-      preLoaderRoute: typeof AuthenticatedAdminGalleryRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-buses': {
-      id: '/_authenticated/admin-buses'
-      path: '/admin-buses'
-      fullPath: '/admin-buses'
-      preLoaderRoute: typeof AuthenticatedAdminBusesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin-bus-layouts': {
-      id: '/_authenticated/admin-bus-layouts'
-      path: '/admin-bus-layouts'
-      fullPath: '/admin-bus-layouts'
-      preLoaderRoute: typeof AuthenticatedAdminBusLayoutsRouteImport
+    '/_authenticated/admin-assets': {
+      id: '/_authenticated/admin-assets'
+      path: '/admin-assets'
+      fullPath: '/admin-assets'
+      preLoaderRoute: typeof AuthenticatedAdminAssetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin-bookings': {
@@ -566,18 +468,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBookingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin-assets': {
-      id: '/_authenticated/admin-assets'
-      path: '/admin-assets'
-      fullPath: '/admin-assets'
-      preLoaderRoute: typeof AuthenticatedAdminAssetsRouteImport
+    '/_authenticated/admin-bus-layouts': {
+      id: '/_authenticated/admin-bus-layouts'
+      path: '/admin-bus-layouts'
+      fullPath: '/admin-bus-layouts'
+      preLoaderRoute: typeof AuthenticatedAdminBusLayoutsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/ticket/$code/download': {
-      id: '/api/ticket/$code/download'
-      path: '/api/ticket/$code/download'
-      fullPath: '/api/ticket/$code/download'
-      preLoaderRoute: typeof ApiTicketCodeDownloadRouteImport
+    '/_authenticated/admin-buses': {
+      id: '/_authenticated/admin-buses'
+      path: '/admin-buses'
+      fullPath: '/admin-buses'
+      preLoaderRoute: typeof AuthenticatedAdminBusesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-gallery': {
+      id: '/_authenticated/admin-gallery'
+      path: '/admin-gallery'
+      fullPath: '/admin-gallery'
+      preLoaderRoute: typeof AuthenticatedAdminGalleryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-homepage': {
+      id: '/_authenticated/admin-homepage'
+      path: '/admin-homepage'
+      fullPath: '/admin-homepage'
+      preLoaderRoute: typeof AuthenticatedAdminHomepageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-hotels': {
+      id: '/_authenticated/admin-hotels'
+      path: '/admin-hotels'
+      fullPath: '/admin-hotels'
+      preLoaderRoute: typeof AuthenticatedAdminHotelsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-notifications': {
+      id: '/_authenticated/admin-notifications'
+      path: '/admin-notifications'
+      fullPath: '/admin-notifications'
+      preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-packages': {
+      id: '/_authenticated/admin-packages'
+      path: '/admin-packages'
+      fullPath: '/admin-packages'
+      preLoaderRoute: typeof AuthenticatedAdminPackagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-trips': {
+      id: '/_authenticated/admin-trips'
+      path: '/admin-trips'
+      fullPath: '/admin-trips'
+      preLoaderRoute: typeof AuthenticatedAdminTripsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin-users': {
+      id: '/_authenticated/admin-users'
+      path: '/admin-users'
+      fullPath: '/admin-users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/audit': {
+      id: '/_authenticated/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthenticatedAuditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/my-bookings': {
+      id: '/_authenticated/my-bookings'
+      path: '/my-bookings'
+      fullPath: '/my-bookings'
+      preLoaderRoute: typeof AuthenticatedMyBookingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/ticket/$code': {
+      id: '/ticket/$code'
+      path: '/ticket/$code'
+      fullPath: '/ticket/$code'
+      preLoaderRoute: typeof TicketCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/push/dispatch': {
+      id: '/api/public/push/dispatch'
+      path: '/api/public/push/dispatch'
+      fullPath: '/api/public/push/dispatch'
+      preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/push/vapid-key': {
@@ -587,11 +587,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPushVapidKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/push/dispatch': {
-      id: '/api/public/push/dispatch'
-      path: '/api/public/push/dispatch'
-      fullPath: '/api/public/push/dispatch'
-      preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
+    '/api/ticket/$code/download': {
+      id: '/api/ticket/$code/download'
+      path: '/api/ticket/$code/download'
+      fullPath: '/api/ticket/$code/download'
+      preLoaderRoute: typeof ApiTicketCodeDownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ticket/$code/download': {
