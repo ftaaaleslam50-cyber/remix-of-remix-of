@@ -55,8 +55,13 @@ export function computeBookingProfit(i: ProfitInput): ProfitResult {
   // ملاحظة: لا نستخدم grandTotal هنا لأنه يشمل extensionTotal بالفعل،
   // واستخدامه هنا كان يجمع ربح التمديد مرتين.
   const grossProfit = i.packageTotal - groupCost + extensionProfit;
-  const companyShare = i.isReturn ? grossProfit * (i.returnCompanyRate ?? 0) : grossProfit * (1 - i.rate);
-  const repShare = i.isReturn ? grossProfit - companyShare : grossProfit * i.rate;
+  // «عودة فقط»: تكلفة المقعد حق للمؤسسة (هي من دفعت الحافلة) فتُضاف لحصتها،
+  // والمندوب يأخذ نصيبه من الربح الزائد فقط.
+  const returnRate = i.returnCompanyRate ?? 0;
+  const repShare = i.isReturn ? grossProfit * (1 - returnRate) : grossProfit * i.rate;
+  const companyShare = i.isReturn
+    ? grossProfit * returnRate + i.seatCost * i.count
+    : grossProfit - repShare;
   return {
     extensionTotal,
     grandTotal,
@@ -65,9 +70,9 @@ export function computeBookingProfit(i: ProfitInput): ProfitResult {
     extensionCost,
     extensionProfit,
     grossProfit,
-    rate: i.isReturn ? 1 - (i.returnCompanyRate ?? 0) : i.rate,
+    rate: i.isReturn ? 1 - returnRate : i.rate,
     repShare,
-    companyShare: i.isReturn ? companyShare : grossProfit - repShare,
+    companyShare,
   };
 }
 

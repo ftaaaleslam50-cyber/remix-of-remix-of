@@ -15,6 +15,13 @@
       "when": 1791108993532,
       "tag": "0001_recalc_pooled_settled_profits",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791113308223,
+      "tag": "0002_return_seat_cost_to_company_share",
+      "breakpoints": true
     }
   ]
 }
