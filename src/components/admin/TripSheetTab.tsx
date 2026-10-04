@@ -1392,9 +1392,14 @@ export function TripSheetTab() {
                 توحيد متوسط تكلفة المقعد للحافلات المحددة
               </label>
               {pooledActive && (
-                <p className="text-sm font-bold text-primary">
-                  تكلفة المقعد الموحدة: {sar(round(pooledSeatCost))}
-                </p>
+                <>
+                  <p className="text-sm font-bold text-primary">
+                    تكلفة المقعد الموحدة: {sar(round(pooledSeatCost))}
+                  </p>
+                  <Button className="rounded-full" disabled={approving} onClick={() => void approvePooledBuses()}>
+                    اعتمد حساب الحافلات سوياً
+                  </Button>
+                </>
               )}
               <p className="text-xs text-muted-foreground">
                 محدد {selectedBuses.length} حافلات —{" "}
