@@ -2556,6 +2556,10 @@ export type Database = {
         Returns: boolean
       }
       push_retry_kick: { Args: never; Returns: boolean }
+      recalc_pooled_settled_profits: {
+        Args: { _bus_ids: string[] }
+        Returns: number
+      }
       recalc_settled_profits: {
         Args: { _bus_id?: string; _departure_date?: string; _trip_id?: string }
         Returns: number
