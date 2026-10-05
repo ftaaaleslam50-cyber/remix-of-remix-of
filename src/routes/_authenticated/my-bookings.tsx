@@ -62,7 +62,10 @@ function profitSettled(b: MyBooking) {
   return !!b.buses?.settled_at && b.rep_share != null;
 }
 /** ربح المندوب المعتمد فقط (غير المعتمد = 0 حتى لا يظهر رقم غير نهائي). */
+let CURRENT_UID = "";
 function repProfitOf(b: MyBooking) {
+  // ربح المندوب يُحتسب فقط للحجوزات المسجلة باسمه (لا لحجوزات أدخلها لمندوبين آخرين).
+  if ((b as { rep_profile_id?: string | null }).rep_profile_id !== CURRENT_UID) return 0;
   return profitSettled(b) && b.status !== "cancelled" ? n(b.rep_share) : 0;
 }
 
@@ -104,6 +107,7 @@ function MyBookingsPage() {
   // page permanently empty for representatives).
   const { user } = useAuth();
   const uid = user?.id ?? "";
+  CURRENT_UID = uid;
   const [isRep, setIsRep] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);

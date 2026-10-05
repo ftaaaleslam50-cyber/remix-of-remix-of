@@ -162,7 +162,7 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     // نصيب الفرد من مصاريف الحافلة = إجمالي المصاريف ÷ ركاب نفس الحافلة،
     // مع استبعاد حجوزات «عودة فقط» تمامًا من هذه القسمة.
     const be = ref.bus_expenses ?? {};
-    const busTotal = n(be["busCost"]) + n(be["driverTip"]) + n(be["taxi"]) + n(be["supervisor"]) + n(be["extra"]);
+    const busTotal = n(be["busCost"]) + n(be["driverTip"]) + n(be["taxi"]) + n(be["parking"]) + n(be["supervisor"]) + n(be["supervisorBed"]) + n(be["emptyBeds"]) + n(be["extra"]);
     let seatCost = 0;
     if (b.trip_mode === "return") {
       // حجوزات العودة فقط: تكلفة المقعد قيمة يدوية مستقلة.
