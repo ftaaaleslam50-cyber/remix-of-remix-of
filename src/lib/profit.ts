@@ -125,6 +125,17 @@ export async function storeBookingProfit(bookingCode: string): Promise<void> {
     } | null;
     if (!b) return;
 
+    // الحافلة المعتمدة: نعيد نفس حساب الاعتماد (مصاريف الحافلة الفعلية + تكاليف الأسرة)
+    // بدل التقدير التقريبي هنا، حتى لا تُستبدل أرباح المندوب المعتمدة بقيم خاطئة.
+    if (b.bus_id) {
+      const { data: bus } = await supabase.from("buses").select("settled_at").eq("id", b.bus_id).maybeSingle();
+      if ((bus as { settled_at?: string | null } | null)?.settled_at) {
+        await supabase.rpc("recalc_settled_profits" as never, { _bus_id: b.bus_id } as never);
+        return;
+      }
+    }
+
+
 
     const [{ data: refRaw }, { data: hotelRaw }] = await Promise.all([
       supabase.from("settlement_reference").select("*").eq("id", 1).maybeSingle(),
