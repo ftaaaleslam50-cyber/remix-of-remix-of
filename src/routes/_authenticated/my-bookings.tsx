@@ -214,6 +214,16 @@ function MyBookingsPage() {
     return { total, count: filtered.length };
   }, [filtered]);
 
+  /** الديون اليدوية المسجلة على المندوب (تُخصم من الربح). */
+  const { data: myDebt = 0 } = useQuery({
+    queryKey: ["my-debt", uid],
+    enabled: !!uid,
+    queryFn: async () => {
+      const { data } = await supabase.from("rep_debts").select("amount").eq("rep_profile_id", uid!);
+      return (data ?? []).reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    },
+  });
+
 
 
 
@@ -296,6 +306,18 @@ function MyBookingsPage() {
                <p className="text-lg font-extrabold text-primary sm:text-2xl">{summary.count}</p>
               <p className="text-[11px] text-muted-foreground font-semibold mt-1">الحجوزات</p>
             </div>
+            {isRep && (
+              <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-2.5 text-center sm:p-4">
+                <p className="text-lg font-extrabold text-destructive sm:text-2xl">{sar(myDebt)}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">الديون</p>
+              </div>
+            )}
+            {isRep && (
+              <div className="rounded-xl bg-primary/10 border border-primary/30 p-2.5 text-center sm:p-4">
+                <p className="text-lg font-extrabold text-primary sm:text-2xl">{sar(summary.total - myDebt)}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold mt-1">الربح النهائي</p>
+              </div>
+            )}
           </div>
         </section>
 
