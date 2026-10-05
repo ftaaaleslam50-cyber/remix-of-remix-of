@@ -1892,6 +1892,47 @@ export type Database = {
         }
         Relationships: []
       }
+      rep_debts: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          rep_key: string
+          rep_profile_id: string | null
+          source_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rep_key: string
+          rep_profile_id?: string | null
+          source_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rep_key?: string
+          rep_profile_id?: string | null
+          source_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_debts_rep_profile_id_fkey"
+            columns: ["rep_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       representatives: {
         Row: {
           active: boolean
