@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { ROOM_ROWS, ROOM_CAPACITY } from "@/lib/export/rooming";
 import { computeBookingProfit } from "@/lib/profit";
 import { BusMultiSelect } from "@/components/admin/BusMultiSelect";
+import { RepProfitsTable } from "@/components/admin/RepProfitsTable";
 
 /**
  * "الحسابات والتصفية" — accounting / settlement workspace.
@@ -1275,6 +1276,8 @@ export function TripSheetTab() {
           </tfoot>
         </table>
       </div>
+
+      <RepProfitsTable rows={computed} buses={busesForSelect} repProfiles={repProfiles} />
 
       {/* Rooming statistics */}
       <div>
