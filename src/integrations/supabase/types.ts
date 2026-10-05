@@ -2483,6 +2483,7 @@ export type Database = {
         Args: { _row: Json; _table: string }
         Returns: undefined
       }
+      _room_cap: { Args: { _label: string }; Returns: number }
       advance_due_return_trips: { Args: never; Returns: number }
       advance_due_trips: { Args: never; Returns: number }
       arm_push_retry: { Args: never; Returns: boolean }
