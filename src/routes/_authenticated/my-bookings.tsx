@@ -65,7 +65,9 @@ function profitSettled(b: MyBooking) {
 let CURRENT_UID = "";
 function repProfitOf(b: MyBooking) {
   // ربح المندوب يُحتسب فقط للحجوزات المسجلة باسمه (لا لحجوزات أدخلها لمندوبين آخرين).
-  if ((b as { rep_profile_id?: string | null }).rep_profile_id !== CURRENT_UID) return 0;
+  const rp = (b as { rep_profile_id?: string | null }).rep_profile_id;
+  const cb = (b as { created_by?: string | null }).created_by;
+  if (rp ? rp !== CURRENT_UID : cb !== CURRENT_UID) return 0;
   return profitSettled(b) && b.status !== "cancelled" ? n(b.rep_share) : 0;
 }
 
@@ -106,8 +108,23 @@ function MyBookingsPage() {
   // session hydrates a moment after the page mounts (this used to leave the
   // page permanently empty for representatives).
   const { user } = useAuth();
-  const uid = user?.id ?? "";
+  const selfUid = user?.id ?? "";
+  const [isStaff, setIsStaff] = useState(false);
+  const [viewUid, setViewUid] = useState("");
+  const uid = viewUid || selfUid;
   CURRENT_UID = uid;
+  useEffect(() => {
+    if (!selfUid) return;
+    supabase.rpc("my_staff_role").then(({ data }) => setIsStaff(["admin", "manager", "supervisor"].includes(String(data ?? ""))));
+  }, [selfUid]);
+  const { data: repList = [] } = useQuery({
+    queryKey: ["my-bookings-reps"],
+    enabled: isStaff,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id,full_name").eq("account_type", "representative").order("full_name");
+      return (data ?? []) as { id: string; full_name: string | null }[];
+    },
+  });
   const [isRep, setIsRep] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [details, setDetails] = useState<MyBooking | null>(null);
@@ -155,7 +172,7 @@ function MyBookingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,assigned_date,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_parking,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
+        .select("id,booking_code,status,no_show,created_at,customer_name,passenger_count,total_price,room_type,trip_id,bus_id,no_hotel,no_bus,seat_numbers,contact_phone,whatsapp_phone,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,rep_share,rep_profile_id,created_by,trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(name,bus_number,capacity,assigned_date,settled_at,expense_bus_cost,expense_driver_tip,expense_taxi,expense_parking,expense_supervisor,expense_supervisor_bed,expense_empty_beds,expense_extra),packages(name)")
         // الحجوزات التي أنشأها المستخدم + الحجوزات المسجّلة باسمه كمندوب (ولو أدخلها موظف آخر).
         .or(`created_by.eq.${uid},rep_profile_id.eq.${uid}`)
         .or("deleted_at.is.null,no_show.is.true")
@@ -181,7 +198,7 @@ function MyBookingsPage() {
     if (weekBack === "nodate") {
       // الحجوزات غير المرتبطة بتاريخ: بلا حافلة أو حافلتها بلا تاريخ.
       list = list.filter((b) => Number.isNaN(refTimeOf(b)));
-    } else if (activeWeek) {
+    } else if (weekBack !== "all" && activeWeek) {
       list = list.filter((b) => {
         const t = refTimeOf(b);
         return t >= activeWeek.start && t < activeWeek.end;
@@ -288,6 +305,18 @@ function MyBookingsPage() {
             <h2 className="flex items-center gap-2 text-base font-extrabold sm:text-lg">
               <TrendingUp className="h-5 w-5 text-primary" /> ملخص الأسبوع
             </h2>
+            {isStaff && (
+              <select
+                className="h-9 w-full rounded-xl border bg-background px-3 text-sm sm:w-auto"
+                value={viewUid}
+                onChange={(e) => setViewUid(e.target.value)}
+              >
+                <option value="">حسابي</option>
+                {repList.map((r) => (
+                  <option key={r.id} value={r.id}>عرض كشف: {r.full_name || "مندوب"}</option>
+                ))}
+              </select>
+            )}
             <select
               className="h-9 w-full rounded-xl border bg-background px-3 text-sm sm:w-auto"
               value={weekBack}
@@ -296,6 +325,7 @@ function MyBookingsPage() {
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}
+              <option value="all">جميع الأسابيع (الكل)</option>
               <option value="nodate">الحجوزات غير المرتبطة بتاريخ</option>
             </select>
           </div>
