@@ -425,7 +425,7 @@ export function ManualBookingRow({
   const busPerPerson = noBus ? 0 : busPriceFor(bus, d.trip_mode);
   const pricePerPerson = hotelPerPerson + busPerPerson;
   const subtotal = pricePerPerson * Math.max(1, d.passenger_count);
-  const extensionNights = noHotel ? 0 : Math.max(0, Math.min(10, d.extension_nights));
+  const extensionNights = noHotel ? 0 : Math.max(0, d.extension_nights);
   const extensionPerNight = noHotel ? 0 : Number(pkg?.extension_price ?? 0);
   const extensionTotal = extensionPerNight * extensionNights;
   const discount = Math.max(0, Math.min(Number(d.discount_amount) || 0, subtotal));
@@ -765,7 +765,7 @@ export function ManualBookingRow({
                 className={cell}
                 disabled={noHotel}
                 value={d.extension_nights}
-                onChange={(e) => set("extension_nights", Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
+                onChange={(e) => set("extension_nights", Math.max(0, Number(e.target.value) || 0))}
               />
             </Field>
             <Field label="سعر ليلة التمديد">

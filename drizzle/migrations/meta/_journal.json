@@ -36,6 +36,13 @@
       "when": 1791227286319,
       "tag": "0004_profit_bed_cost_fallback",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791410935143,
+      "tag": "0005_extension_nights_no_max",
+      "breakpoints": true
     }
   ]
 }
