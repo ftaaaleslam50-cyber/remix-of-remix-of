@@ -348,7 +348,7 @@ export function ManualBookingRow({
         await supabase
           .from("buses")
           .select(
-            "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price",
+            "id,name,bus_number,capacity,layout,layout_id,blocked_seats,price_addition,round_trip_price,outbound_price,return_price,open_return_price,assigned_date",
           )
           .eq("id", d.bus_id!)
           .maybeSingle()
@@ -513,7 +513,22 @@ export function ManualBookingRow({
       notes: d.notes.trim() || null,
       actual_return_day: d.trip_mode === "outbound" ? null : d.actual_return_day || selectedTrip?.return_day || null,
       // أي تاريخ عودة حقيقي (ISO) يُعتمد في كل النظام، لا في «رحلة أخرى» فقط.
-      ...(/^\d{4}-\d{2}-\d{2}$/.test(d.actual_return_day) ? { return_date: d.actual_return_day } : {}),
+      // يوم نصي (مثل «الاثنين») يُحوَّل لأول تاريخ بعد تاريخ ذهاب الحافلة حتى لا يتبع تقدم الرحلة.
+      ...(() => {
+        if (d.trip_mode === "outbound") return {};
+        const raw = d.actual_return_day || selectedTrip?.return_day || "";
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { return_date: raw };
+        const dep = (bus as { assigned_date?: string | null } | null)?.assigned_date;
+        const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+        const norm = (s: string) => s.replace(/[إأآ]/g, "ا").trim();
+        const wd = days.findIndex((x) => norm(raw).includes(norm(x)));
+        if (!dep || wd < 0) return {};
+        const base = new Date(`${dep}T00:00:00Z`);
+        let diff = (wd - base.getUTCDay() + 7) % 7;
+        if (diff === 0) diff = 7;
+        base.setUTCDate(base.getUTCDate() + diff);
+        return { return_date: base.toISOString().slice(0, 10) };
+      })(),
       ...(extraPayload ?? {}),
     };
 
