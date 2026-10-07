@@ -1340,6 +1340,24 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
     return Array.from(m.values()).sort((a, b) => b.pax - a.pax);
   }, [allRows, lookups]);
 
+  // ملخص رحلات الذهاب (على كل حجوزات التاريخ)
+  const tripSummary = useMemo(() => {
+    const m = new Map<string, { key: string; name: string; pax: number; done: number }>();
+    for (const b of allRows) {
+      const key = b.trip_id ?? "__none";
+      const e = m.get(key) ?? {
+        key,
+        name: key === "__none" ? "بدون رحلة ذهاب" : `من ${lookups.tripName(key)}`,
+        pax: 0,
+        done: 0,
+      };
+      e.pax += b.passenger_count || 1;
+      if (b.return_bus_id) e.done += b.return_seat_numbers?.length ?? 0;
+      m.set(key, e);
+    }
+    return Array.from(m.values()).sort((a, b) => b.pax - a.pax);
+  }, [allRows, lookups]);
+
   // حافلات رحلات العودة المرتبطة بهذا التاريخ (مصدر قائمة الحافلات في شعار الرحلة)
   const dateBuses = useMemo(() => {
     const ids = new Set((assignedBuses.data ?? []).map((a) => a.bus_id));
@@ -1433,6 +1451,31 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
                 >
                   {h.name}: {h.pax} راكب
                   {h.pax > h.done ? ` • ${h.pax - h.done} غير موزع` : " ✓"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ملخص رحلات الذهاب — النقر يفلتر */}
+      {tripSummary.length > 0 && (
+        <div className="surface-card p-4 space-y-2">
+          <div className="text-sm font-bold flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" /> ركاب رحلات الذهاب في هذا التاريخ
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tripSummary.map((t) => {
+              const on = f.trip === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setF({ ...f, trip: on ? "" : t.key })}
+                  className={`rounded-full border px-3 py-1 text-xs font-bold transition ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  {t.name}: {t.pax} راكب
+                  {t.pax > t.done ? ` • ${t.pax - t.done} غير موزع` : " ✓"}
                 </button>
               );
             })}
