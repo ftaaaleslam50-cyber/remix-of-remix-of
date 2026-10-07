@@ -757,11 +757,10 @@ export function ManualBookingRow({
                 ))}
               </select>
             </Field>
-            <Field label="ليالي التمديد (0-10)">
+            <Field label="ليالي التمديد">
               <Input
                 type="number"
                 min={0}
-                max={10}
                 className={cell}
                 disabled={noHotel}
                 value={d.extension_nights}
