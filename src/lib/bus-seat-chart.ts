@@ -11,6 +11,7 @@ export interface SeatOccupant {
   gender?: SeatSex;
   bookingCode: string;
   phone?: string | null;
+  bookingType?: string | null;
 }
 
 const NORMAL_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
@@ -210,8 +211,10 @@ export function renderSeatChartPages(
       ctx.font = F(19, true);
       ctx.fillText(shorten(words[0] ?? "", 12), x + CELL_W / 2, y + 54);
       if (words[1]) ctx.fillText(shorten(words[1], 12), x + CELL_W / 2, y + 76);
-      ctx.font = F(19, true);
-      ctx.fillText(occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•", x + CELL_W / 2, y + CELL_H - 13);
+      const g = occ.gender === "female" ? "♀" : occ.gender === "male" ? "♂" : "•";
+      const t = occ.bookingType === "individual" ? "أفراد" : occ.bookingType === "family" ? "عوائل" : "";
+      ctx.font = F(13, true);
+      ctx.fillText(t ? `${g} ${t}` : g, x + CELL_W / 2, y + CELL_H - 13);
     }
   }
 

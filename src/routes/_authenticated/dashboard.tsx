@@ -828,6 +828,7 @@ function UnifiedBookingsTab(props: {
           gender: genders[seat],
           bookingCode: b.booking_code,
           phone: b.contact_phone,
+          bookingType: b.booking_type ?? "family",
         });
       }
     }
