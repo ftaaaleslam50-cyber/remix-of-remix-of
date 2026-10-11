@@ -37,6 +37,7 @@ import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
 import { CopyOutboundSeatsDialog } from "@/components/admin/CopyOutboundSeatsDialog";
 
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
+import { ReturnSheetExportButton } from "@/components/admin/ReturnSheetExportButton";
 
 export interface ReturnTripRow {
   id: string;
@@ -93,6 +94,10 @@ export interface ReturnBookingRow {
   male_count?: number | null;
   female_count?: number | null;
   notes?: string | null;
+  id_number?: string | null;
+  nationality?: string | null;
+  room_type?: string | null;
+  total_price?: number | null;
 }
 
 // ---------- فلاتر وأدوات تبويب العودة ----------
@@ -364,7 +369,7 @@ export function useReturnData(date: string) {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name,bus_id,seat_numbers,created_at,booking_type,package_id,no_hotel,male_count,female_count,notes",
+          "id,booking_code,customer_name,passenger_count,trip_mode,extension_nights,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers,contact_phone,status,trip_id,booking_source,rep_name,bus_id,seat_numbers,created_at,booking_type,package_id,no_hotel,male_count,female_count,notes,id_number,nationality,room_type,total_price",
         )
         .eq("actual_return_date", date)
         .is("deleted_at", null)
@@ -1538,6 +1543,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
         <div className="ms-auto flex flex-wrap gap-2">
           <PickupSheetButton bookings={allRows} buses={dateBuses} lookups={lookups} date={date} />
           <ReturnNamesCopyButton bookings={rows} returnTripName={dayTrips.map((t) => t.name).join("، ")} />
+          <ReturnSheetExportButton bookings={rows} buses={dateBuses} retBus={f.retBus} lookups={lookups} date={date} tripName={dayTrips[0]?.name} />
           <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
         </div>
       </div>
