@@ -728,7 +728,7 @@ export function ReturnTripCard({
   const [addingBus, setAddingBus] = useState(false);
   const [newBooking, setNewBooking] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
-  const [groupByHotel, setGroupByHotel] = useState(true);
+  const [groupBy, setGroupBy] = useState<"hotel" | "trip" | "none">("hotel");
   const [bulkOut, setBulkOut] = useState("");
   const all = allBookings ?? bookings;
 
@@ -753,7 +753,7 @@ export function ReturnTripCard({
 
   const groups = useMemo(() => {
     const isPending = (b: ReturnBookingRow) => !b.return_bus_id || (b.return_seat_numbers?.length ?? 0) === 0;
-    if (!groupByHotel) {
+    if (groupBy === "none") {
       return [
         {
           key: "__all",
@@ -766,8 +766,14 @@ export function ReturnTripCard({
     }
     const m = new Map<string, { key: string; name: string; items: ReturnBookingRow[]; pax: number; pending: number }>();
     for (const b of bookings) {
-      const key = hotelKeyOf(b);
-      const g = m.get(key) ?? { key, name: lookups?.hotelName(b) ?? key, items: [], pax: 0, pending: 0 };
+      const key = groupBy === "trip" ? b.trip_id || "__none" : hotelKeyOf(b);
+      const name =
+        groupBy === "trip"
+          ? b.trip_id
+            ? `من ${lookups?.tripName(b.trip_id) ?? "رحلة"}`
+            : "بدون رحلة ذهاب"
+          : (lookups?.hotelName(b) ?? key);
+      const g = m.get(key) ?? { key, name, items: [], pax: 0, pending: 0 };
       g.items.push(b);
       g.pax += pax(b);
       if (isPending(b)) g.pending += pax(b);
@@ -775,7 +781,7 @@ export function ReturnTripCard({
     }
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings, groupByHotel, lookups, totalPax]);
+  }, [bookings, groupBy, lookups, totalPax]);
 
   /** تسكين مجموعة حجوزات غير موزعة في حافلة واحدة بأول المقاعد المتاحة. */
   async function bulkAssign(items: ReturnBookingRow[], busId: string) {
@@ -967,11 +973,25 @@ export function ReturnTripCard({
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-2 text-xs">
-          <Switch checked={groupByHotel} onCheckedChange={setGroupByHotel} id={`gh-${template.id}`} />
-          <Label htmlFor={`gh-${template.id}`} className="text-xs">
-            تجميع حسب الفندق مع التسكين الجماعي
-          </Label>
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+          <span className="font-bold">التجميع مع التسكين الجماعي:</span>
+          {(
+            [
+              ["hotel", "حسب الفندق"],
+              ["trip", "حسب الرحلة"],
+              ["none", "بدون تجميع"],
+            ] as const
+          ).map(([k, l]) => (
+            <Button
+              key={k}
+              size="sm"
+              variant={groupBy === k ? "default" : "outline"}
+              className="h-7 rounded-full text-xs"
+              onClick={() => setGroupBy(k)}
+            >
+              {l}
+            </Button>
+          ))}
         </div>
 
         <div className="overflow-x-auto">
@@ -986,26 +1006,25 @@ export function ReturnTripCard({
                 <th className="p-2 text-right">نوع الرحلة والعودة الفعلية</th>
                 <th className="p-2 text-right">ملاحظات</th>
                 <th className="p-2 text-right">حافلة العودة</th>
-                <th className="p-2 text-right">المقاعد</th>
                 <th className="p-2 text-right">الحالة</th>
               </tr>
             </thead>
             <tbody>
               {bookings.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-6 text-center text-muted-foreground">
+                  <td colSpan={9} className="p-6 text-center text-muted-foreground">
                     لا توجد حجوزات مطابقة.
                   </td>
                 </tr>
               )}
               {groups.map((g) => (
                 <Fragment key={g.key}>
-                  {groupByHotel && (
+                  {groupBy !== "none" && (
                     <tr className="bg-muted/60">
-                      <td colSpan={10} className="p-2">
+                      <td colSpan={9} className="p-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-extrabold text-sm">
-                            🏨 {g.name} ({g.pax} راكب
+                            {groupBy === "trip" ? "🚩" : "🏨"} {g.name} ({g.pax} راكب
                             {g.pending > 0 ? ` • ${g.pending} غير موزع` : " • تم التوزيع"})
                           </span>
                           {g.pending > 0 && tripBuses.length > 0 && (
@@ -1153,16 +1172,8 @@ function BookingAssignRow({
   const bus = buses.find((b) => b.id === busId);
   const distributed = !!busId && seats.length > 0;
 
-  const freeSeats = useMemo(() => {
-    if (!bus) return [] as string[];
-    const taken = new Set(takenSeats(bus.id));
-    return Array.from({ length: bus.capacity }, (_, i) => String(i + 1)).filter((s) => !taken.has(s));
-  }, [bus, takenSeats]);
-
-  function toggleSeat(s: string) {
-    const next = seats.includes(s) ? seats.filter((x) => x !== s) : [...seats, s];
-    onAssign(busId || null, next);
-  }
+  void bus;
+  void takenSeats;
 
   const isFamily = booking.booking_type === "family";
   const m = booking.male_count ?? 0;
@@ -1222,23 +1233,8 @@ function BookingAssignRow({
             ))}
           </SelectContent>
         </Select>
-      </td>
-      <td className="p-2">
-        {!bus ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <div className="flex flex-wrap gap-1 max-w-[280px]">
-            {freeSeats.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => toggleSeat(s)}
-                className={`h-7 min-w-7 px-1 rounded-md border text-[11px] font-bold ${seats.includes(s) ? "bg-primary text-primary-foreground border-primary" : "bg-background"}`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+        {seats.length > 0 && (
+          <div className="text-[11px] text-muted-foreground mt-1">💺 {seats.join("، ")}</div>
         )}
       </td>
       <td className="p-2">
