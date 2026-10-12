@@ -43,12 +43,7 @@ export interface ReturnBusOcc {
   taken: string[];
 }
 
-export const freeSeatsOf = (b: ReturnBusOcc) => {
-  const cap = Math.min(b.capacity, b.seat_labels.length);
-  const free = b.seat_labels.filter((s) => !b.taken.includes(s));
-  const room = Math.max(0, cap - b.taken.filter((s) => b.seat_labels.includes(s)).length);
-  return free.slice(0, Math.max(room, 0) === 0 ? 0 : free.length).length > room ? free : free;
-};
+export const freeSeatsOf = (b: ReturnBusOcc) => (roomOf(b) > 0 ? b.seat_labels.filter((s) => !b.taken.includes(s)) : []);
 
 export const roomOf = (b: ReturnBusOcc) =>
   Math.max(0, Math.min(b.capacity, b.seat_labels.length) - b.taken.filter((s) => b.seat_labels.includes(s)).length);
