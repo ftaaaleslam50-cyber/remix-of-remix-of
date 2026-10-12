@@ -71,6 +71,9 @@ export type Database = {
           price_family_5: number
           price_individual: number
           price_transport_only: number
+          return_extra_threshold: number
+          return_planning_capacity: number
+          return_seat_selection_enabled: boolean
           seats_full_message: string | null
           service_fee: number | null
           show_packages: boolean | null
@@ -149,6 +152,9 @@ export type Database = {
           price_family_5?: number
           price_individual?: number
           price_transport_only?: number
+          return_extra_threshold?: number
+          return_planning_capacity?: number
+          return_seat_selection_enabled?: boolean
           seats_full_message?: string | null
           service_fee?: number | null
           show_packages?: boolean | null
@@ -227,6 +233,9 @@ export type Database = {
           price_family_5?: number
           price_individual?: number
           price_transport_only?: number
+          return_extra_threshold?: number
+          return_planning_capacity?: number
+          return_seat_selection_enabled?: boolean
           seats_full_message?: string | null
           service_fee?: number | null
           show_packages?: boolean | null
@@ -2506,7 +2515,18 @@ export type Database = {
         Args: { _created_by: string; _rep_name: string; _rep_profile: string }
         Returns: string[]
       }
+      bus_seat_labels: { Args: { _bus_id: string }; Returns: string[] }
       can_manage_bookings: { Args: { _user_id: string }; Returns: boolean }
+      change_booking_extension: {
+        Args: {
+          _booking_id: string
+          _clear_assignment?: boolean
+          _nights: number
+          _return_bus_id?: string
+          _seats?: string[]
+        }
+        Returns: Json
+      }
       create_notification_broadcast: {
         Args: {
           _audience: string
@@ -2568,6 +2588,20 @@ export type Database = {
           prize_type: string
           prize_value: number
           source: string
+        }[]
+      }
+      get_return_occupancy: {
+        Args: { _date: string; _exclude_code?: string }
+        Returns: {
+          bus_id: string
+          bus_name: string
+          bus_number: number
+          capacity: number
+          layout_id: string
+          return_trip_id: string
+          return_trip_name: string
+          seat_labels: string[]
+          taken: string[]
         }[]
       }
       get_ticket: { Args: { _code: string }; Returns: Json }

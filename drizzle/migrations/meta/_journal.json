@@ -43,6 +43,13 @@
       "when": 1791410935143,
       "tag": "0005_extension_nights_no_max",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791836453300,
+      "tag": "0006_return_seat_assignment_rules",
+      "breakpoints": true
     }
   ]
 }
