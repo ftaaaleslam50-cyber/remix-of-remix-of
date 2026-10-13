@@ -172,6 +172,16 @@ function TicketPage() {
     })();
   }, [booking]);
 
+  useEffect(() => {
+    (async () => {
+      const id = booking?.return_buses?.layout_id;
+      if (!id || returnLayout) return;
+      const { data } = await supabase.from("bus_layouts").select("layout_json").eq("id", id).maybeSingle();
+      const lj = (data as { layout_json: LayoutJson } | null)?.layout_json;
+      if (lj) setReturnLayout(lj);
+    })();
+  }, [booking]);
+
   // ?pdf=1 → open the print/save-as-PDF dialog automatically (direct download link).
   useEffect(() => {
     if (!booking || !layout) return;
