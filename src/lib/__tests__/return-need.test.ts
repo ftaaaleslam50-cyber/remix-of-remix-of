@@ -1,3 +1,4 @@
+// @ts-nocheck -- vitest runs via bunx; types not installed in the app
 import { describe, it, expect } from "vitest";
 import { plannedBuses, returnStateOf, returnStepMode, roomOf, freeSeatsOf, suggestReturn, type ReturnBusOcc } from "../return-need";
 
