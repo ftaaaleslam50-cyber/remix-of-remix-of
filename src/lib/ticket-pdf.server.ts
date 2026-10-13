@@ -96,8 +96,9 @@ export interface TicketBooking {
   return_seat_numbers?: string[] | null;
   trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
-  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; supervisor_name?: string | null } | null;
+  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
   layout_json?: LayoutJson | null;
+  return_layout_json?: LayoutJson | null;
 }
 
 /** "632 (اسم)" — or the name alone when the real bus number is 0/unknown. */
@@ -144,6 +145,11 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
       .eq("id", layoutId)
       .maybeSingle();
     booking.layout_json = (lay as { layout_json: LayoutJson } | null)?.layout_json ?? null;
+  }
+  const rLayoutId = booking.return_buses?.layout_id;
+  if (rLayoutId) {
+    const { data: rl } = await supabaseAdmin.from("bus_layouts").select("layout_json").eq("id", rLayoutId).maybeSingle();
+    booking.return_layout_json = (rl as { layout_json: LayoutJson } | null)?.layout_json ?? null;
   }
   return booking;
 }
@@ -317,21 +323,13 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
 
   rtl(page, "يرجى إبراز التذكرة عند الصعود للباص.", W / 2 + 90, boxY - 24, 10, GREY);
 
-  // ---- Page 2: seat map (skipped when seats are hidden for individual bookings) ----
-  if (!hideSeats) {
-    const layout = b.layout_json ?? defaultLayout();
-    const seats = new Set(b.seat_numbers ?? []);
+  // ---- Seat map pages: outbound first, then return ----
+  const drawSeatPage = (title: string, layout: LayoutJson, seatList: string[]) => {
+    const seats = new Set(seatList);
     const p2 = pdf.addPage(A4);
     p2.drawRectangle({ x: 0, y: A4[1] - 80, width: W, height: 80, color: NAVY });
-    rtl(p2, "مخطط الحافلة", right, A4[1] - 44, 17, rgb(1, 1, 1), true);
-    rtl(
-      p2,
-      `${b.customer_name} — مقاعد: ${(b.seat_numbers ?? []).join(", ") || "-"}`,
-      right,
-      A4[1] - 64,
-      10,
-      rgb(0.82, 0.85, 0.9),
-    );
+    rtl(p2, title, right, A4[1] - 44, 17, rgb(1, 1, 1), true);
+    rtl(p2, `${b.customer_name} — مقاعد: ${seatList.join(", ") || "-"}`, right, A4[1] - 64, 10, rgb(0.82, 0.85, 0.9));
 
     const cols = Math.max(1, layout.cols || 1);
     const lrows = Math.max(1, layout.rows || 1);
@@ -346,17 +344,13 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
       for (let c = 1; c <= cols; c++) {
         const cl = map.get(`${r}:${c}`);
         if (!cl || cl.kind === "empty") continue;
-        // RTL grid: column 1 is on the right.
         const x = startX + (cols - c) * (cell + 6);
         const yy = startY - r * (cell + 6);
         const id = cl.label && cl.label.trim() ? cl.label : `${cl.row}-${cl.col}`;
         const isSeat = cl.kind === "seat";
         const mine = isSeat && seats.has(id);
         p2.drawRectangle({
-          x,
-          y: yy,
-          width: cell,
-          height: cell,
+          x, y: yy, width: cell, height: cell,
           color: mine ? NAVY : isSeat ? rgb(1, 1, 1) : LIGHT,
           borderColor: mine ? NAVY : BORDER,
           borderWidth: 1.2,
@@ -367,13 +361,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
         const t = shape(label);
         const size = 8;
         const tw = font.widthOfTextAtSize(t, size);
-        p2.drawText(t, {
-          x: x + (cell - tw) / 2,
-          y: yy + cell / 2 - (mine ? 1 : 3),
-          size,
-          font,
-          color: mine ? rgb(1, 1, 1) : GREY,
-        });
+        p2.drawText(t, { x: x + (cell - tw) / 2, y: yy + cell / 2 - (mine ? 1 : 3), size, font, color: mine ? rgb(1, 1, 1) : GREY });
         if (mine) {
           const nm = shape(b.customer_name.split(" ")[0] ?? "");
           const nw = Math.min(font.widthOfTextAtSize(nm, 6), cell - 4);
@@ -387,6 +375,26 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
     rtl(p2, `مقاعدك (${b.customer_name})`, right - 22, legendY + 2, 10, GREY);
     p2.drawRectangle({ x: right - 190, y: legendY, width: 12, height: 12, color: rgb(1, 1, 1), borderColor: BORDER, borderWidth: 1 });
     rtl(p2, "مقاعد أخرى", right - 198, legendY + 2, 10, GREY);
+  };
+
+  if (!hideSeats) {
+    const mode = b.trip_mode ?? "round";
+    if (mode !== "return") {
+      drawSeatPage("مخطط حافلة الذهاب", b.layout_json ?? defaultLayout(), b.seat_numbers ?? []);
+    }
+    if (mode !== "outbound") {
+      const rs = b.return_seat_numbers ?? [];
+      if (b.return_buses && rs.length > 0) {
+        drawSeatPage(`مخطط حافلة العودة — ${busLabel(b.return_buses)}`, b.return_layout_json ?? defaultLayout(), rs);
+      } else {
+        const p = pdf.addPage(A4);
+        p.drawRectangle({ x: 0, y: A4[1] - 80, width: W, height: 80, color: NAVY });
+        rtl(p, "مخطط حافلة العودة", right, A4[1] - 50, 17, rgb(1, 1, 1), true);
+        p.drawRectangle({ x: M, y: A4[1] / 2 - 50, width: right - M, height: 100, color: LIGHT, borderColor: GOLD, borderWidth: 1.5 });
+        rtl(p, "لم يتم اختيار مقعد عودة بعد", W / 2 + 90, A4[1] / 2 + 10, 16, NAVY, true);
+        rtl(p, "والأمر متروك للإدارة لاختيار مقعد العودة المناسب", W / 2 + 150, A4[1] / 2 - 20, 13, DARK);
+      }
+    }
   }
 
   // ---- Last page: important notices image ----
