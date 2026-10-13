@@ -378,8 +378,7 @@ function TicketPage() {
               </>
             ) : booking.trip_mode !== "outbound" && booking.actual_return_date ? (
               <TicketRow label="مقاعد العودة" value="قيد التسكين من إدارة التشغيل" />
-            ) : null} />
-            )}
+            ) : null}
 
             <TicketRow
               label="الذهاب"
