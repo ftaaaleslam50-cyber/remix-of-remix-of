@@ -1067,6 +1067,16 @@ function BookingPage() {
                 />
               )}
 
+              {stepName === "التأكيد" && !noBus && tripMode !== "outbound" && tripMode !== "round_open" && (
+                <div className="mb-3 rounded-xl border p-3 text-sm">
+                  مقاعد العودة:{" "}
+                  {returnAssigned && retBus ? (
+                    <b>{retBus.bus_name || `حافلة ${retBus.bus_number}`} — {retSeats.join("، ")} (تُثبَّت عند تأكيد الحجز)</b>
+                  ) : (
+                    <b>قيد التسكين من إدارة التشغيل</b>
+                  )}
+                </div>
+              )}
               {stepName === "التأكيد" && (
                 <StepConfirm
                   bookingType={bookingType}
