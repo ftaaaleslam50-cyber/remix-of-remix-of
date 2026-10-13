@@ -64,6 +64,7 @@ interface Booking {
     bus_number: number;
     name?: string | null;
     plate?: string | null;
+    layout_id?: string | null;
     supervisor_name?: string | null;
   } | null;
 }
@@ -101,6 +102,7 @@ function TicketPage() {
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<LayoutJson | null>(null);
+  const [returnLayout, setReturnLayout] = useState<LayoutJson | null>(null);
   // Admin option: hide seat numbers for individual bookings.
   const [hideSeatsOpt, setHideSeatsOpt] = useState(false);
   useEffect(() => {
@@ -115,10 +117,11 @@ function TicketPage() {
       // Public ticket lookup via SECURITY DEFINER RPC so the ticket opens on
       // any device (tablet/phone/desktop), not only where it was created.
       const { data: rpcData } = await supabase.rpc("get_ticket" as never, { _code: code } as never);
-      const t = rpcData as (Booking & { layout_json?: LayoutJson | null }) | null;
+      const t = rpcData as (Booking & { layout_json?: LayoutJson | null; return_layout_json?: LayoutJson | null }) | null;
       if (t && t.booking_code) {
         setBooking(t);
         if (t.layout_json) setLayout(t.layout_json);
+        if (t.return_layout_json) setReturnLayout(t.return_layout_json);
       } else {
         const { data } = await supabase
           .from("bookings")
@@ -434,26 +437,36 @@ function TicketPage() {
         </div>
       </div>
 
-      {layout && !hideSeats && (
-        <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
-          <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
-            <div
-              className="px-8 py-5 text-white flex items-center gap-3"
-              style={{ background: "var(--gradient-navy)" }}
-            >
-              <div>
-                <h2 className="text-lg font-extrabold">مخطط الحافلة</h2>
-                <p className="text-xs text-white/70">
-                  {booking.customer_name} — مقاعد: <span dir="ltr">{booking.seat_numbers.join(", ")}</span>
-                </p>
+      {layout && !hideSeats && booking.trip_mode !== "return" && (
+        <SeatSheet
+          title="مخطط حافلة الذهاب"
+          name={booking.customer_name}
+          layout={layout}
+          seats={booking.seat_numbers ?? []}
+        />
+      )}
+
+      {!hideSeats && booking.trip_mode !== "outbound" &&
+        (booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 ? (
+          <SeatSheet
+            title={`مخطط حافلة العودة — ${busLabel(booking.return_buses)}`}
+            name={booking.customer_name}
+            layout={returnLayout ?? defaultTicketLayout()}
+            seats={booking.return_seat_numbers ?? []}
+          />
+        ) : (
+          <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
+            <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
+              <div className="px-8 py-5 text-white" style={{ background: "var(--gradient-navy)" }}>
+                <h2 className="text-lg font-extrabold">مخطط حافلة العودة</h2>
+              </div>
+              <div className="px-8 py-12 text-center">
+                <p className="text-lg font-extrabold text-primary">لم يتم اختيار مقعد عودة بعد</p>
+                <p className="mt-2 text-muted-foreground">والأمر متروك للإدارة لاختيار مقعد العودة المناسب</p>
               </div>
             </div>
-            <div className="px-6 py-6">
-              <TicketSeatMap layout={layout} seats={booking.seat_numbers} name={booking.customer_name} />
-            </div>
           </div>
-        </div>
-      )}
+        ))}
 
       <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
         <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
@@ -477,6 +490,24 @@ function defaultTicketLayout(): LayoutJson {
   const mRow = rows.length + 1;
   for (let c = 1; c <= 5; c++) cells.push({ row: mRow, col: c, kind: "seat", label: `M${c}` });
   return { rows: mRow, cols: 5, cells };
+}
+
+function SeatSheet({ title, name, layout, seats }: { title: string; name: string; layout: LayoutJson; seats: string[] }) {
+  return (
+    <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
+      <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
+        <div className="px-8 py-5 text-white" style={{ background: "var(--gradient-navy)" }}>
+          <h2 className="text-lg font-extrabold">{title}</h2>
+          <p className="text-xs text-white/70">
+            {name} — مقاعد: <span dir="ltr">{seats.join(", ")}</span>
+          </p>
+        </div>
+        <div className="px-6 py-6">
+          <TicketSeatMap layout={layout} seats={seats} name={name} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /** Read-only seat map: only this booking's seats are coloured. */
