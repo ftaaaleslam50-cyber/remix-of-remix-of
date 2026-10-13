@@ -534,11 +534,27 @@ export function ManualBookingRow({
 
     const linkedRepresentative = reps.find((r) => r.name === d.rep_name.trim() && r.user_id);
     const trustedOwnerId = ownerId ?? linkedRepresentative?.user_id ?? undefined;
-    const { error } = d.id
+    let { error } = d.id
       ? await supabase.from("bookings").update(payload as never).eq("id", d.id)
       : await supabase
           .from("bookings")
           .insert((trustedOwnerId ? { ...payload, created_by: trustedOwnerId } : payload) as never);
+    // تغيير التمديد/تاريخ العودة لا يفقد مقعد العودة بصمت: التحديث يفشل كاملًا ويبقى القديم،
+    // ويُعرض على الإدارة خيار صريح لحفظ التغيير مع إلغاء إسناد العودة (ثم إعادة التسكين من قسم العودة).
+    if (error && d.id && error.message.includes("العودة")) {
+      const ok = window.confirm(
+        `${error.message}\n\nلم يُحفظ أي تغيير، وما زال مقعد العودة السابق محفوظًا.\nهل تريد حفظ التعديل مع إلغاء إسناد مقعد العودة (يصبح «قيد التسكين»)؟`,
+      );
+      if (ok) {
+        ({ error } = await supabase
+          .from("bookings")
+          .update({ ...payload, return_bus_id: null, return_seat_numbers: [] } as never)
+          .eq("id", d.id));
+      } else {
+        setSaving(false);
+        return toast.info("لم يتم الحفظ؛ بقي التاريخ والمقعد السابقان كما هما");
+      }
+    }
     setSaving(false);
     if (error) return toast.error(error.message);
     void syncCustomer();
