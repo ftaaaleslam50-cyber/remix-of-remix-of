@@ -11,7 +11,7 @@ import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/retur
 import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap";
-import ticketNotes from "@/assets/ticket-notes.png.asset.json";
+import ticketNotes from "@/assets/ticket-notes-v2.jpg.asset.json";
 
 export const Route = createFileRoute("/ticket/$code")({
   head: () => ({
