@@ -99,6 +99,7 @@ export function ReturnNeedTab() {
     for (const l of data.links) g(l.return_trip_id, l.trip_date).busIds.add(l.bus_id);
 
     const issues: { code: string; name: string; date: string; problem: string; action: string }[] = [];
+    const pending: { code: string; name: string; date: string; pax: number; reason: string; buses: { name: string; free: number }[] }[] = [];
     // تكرارات وتجاوز السعة لكل حافلة/تاريخ
     const seatOwners = new Map<string, string[]>();
     const usedPerBus = new Map<string, number>();
@@ -122,7 +123,27 @@ export function ReturnNeedTab() {
       const inferred = b.return_trip_id ?? ((s) => (s && s.size === 1 ? [...s][0] : null))(tripsOnDate.get(date));
       const grp = g(inferred, date);
       grp.pax += b.passenger_count;
-      if (st !== "confirmed") { grp.pending += b.passenger_count; continue; }
+      if (st !== "confirmed") {
+        grp.pending += b.passenger_count;
+        if (st === "pending") {
+          const linked = data.links.filter((l) => l.trip_date === date);
+          const free = linked.map((l) => {
+            const bu = busById.get(l.bus_id);
+            const lab = data.labels[l.bus_id]?.length ?? bu?.capacity ?? 0;
+            const cap = bu ? Math.min(bu.capacity, lab || bu.capacity) : 0;
+            return { name: bu ? bu.name || `حافلة ${bu.bus_number}` : "?", free: Math.max(0, cap - (usedPerBus.get(`${l.bus_id}|${date}`) ?? 0)) };
+          });
+          const reason = linked.length === 0
+            ? "لا توجد حافلة مربوطة بتاريخ العودة"
+            : free.some((f) => f.free >= b.passenger_count)
+              ? "لم يُختر مقعد عودة / لم ينجح الإسناد"
+              : free.reduce((x, f) => x + f.free, 0) >= b.passenger_count
+                ? "لا توجد حافلة واحدة تتسع للحجز كاملًا — يحتاج توزيعًا يدويًا"
+                : "المقاعد المتاحة غير كافية لجميع الأفراد";
+          pending.push({ code: b.booking_code, name: b.customer_name, date, pax: b.passenger_count, reason, buses: free });
+        }
+        continue;
+      }
       const probs: string[] = [];
       const bus = busById.get(b.return_bus_id!);
       const labels = data.labels[b.return_bus_id!] ?? [];
@@ -154,7 +175,8 @@ export function ReturnNeedTab() {
 
     const busWarn = data.buses.filter((bu) => data.labels[bu.id] && data.labels[bu.id].length > 0 && data.labels[bu.id].length !== bu.capacity)
       .map((bu) => ({ bu, layout: data.labels[bu.id].length }));
-    return { rows, issues, busWarn };
+    pending.sort((a, z) => a.date.localeCompare(z.date));
+    return { rows, issues, busWarn, pending };
   }, [data, T, CAP]);
 
   return (
@@ -229,6 +251,31 @@ export function ReturnNeedTab() {
           </div>
         )}
         <p className="text-xs text-muted-foreground">لإتاحة حافلة للعملاء: اختر حافلة حقيقية من الأسطول واربطها برحلة العودة والتاريخ من قسم العودة. لا يُنشئ النظام حافلات ولا يحذفها ولا ينقل إسنادات تلقائيًا.</p>
+      </section>
+
+      <section className="surface-card p-4 space-y-3">
+        <h3 className="font-extrabold">حجوزات بانتظار توزيع مقاعد العودة يدويًا {report ? `(${report.pending.length})` : ""}</h3>
+        <p className="text-xs text-muted-foreground">لا يُوزَّع أي حجز تلقائيًا على أكثر من حافلة، ولا يُعتبر مؤكدًا حتى تعتمد الإدارة الإسناد.</p>
+        {isError && <p className="text-sm text-destructive">غير متاح بسبب خطأ التحميل أعلاه.</p>}
+        {!isError && !report && <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>}
+        {report && report.pending.length === 0 && <p className="text-sm text-muted-foreground">لا توجد حجوزات بانتظار التوزيع.</p>}
+        {report && report.pending.length > 0 && (
+          <div className="overflow-x-auto max-h-[480px]">
+            <Table>
+              <TableHeader><TableRow><TableHead>الحجز</TableHead><TableHead>العميل</TableHead><TableHead>تاريخ العودة</TableHead><TableHead>الركاب</TableHead><TableHead>الحافلات المرتبطة (المتاح)</TableHead><TableHead>السبب</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {report.pending.map((p) => (
+                  <TableRow key={p.code}>
+                    <TableCell className="font-mono text-xs">{p.code}</TableCell><TableCell>{p.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">{p.date}</TableCell><TableCell>{p.pax}</TableCell>
+                    <TableCell className="text-xs">{p.buses.length ? p.buses.map((b) => `${b.name}: ${b.free}`).join("، ") : "—"}</TableCell>
+                    <TableCell className="text-xs">{p.reason}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </section>
 
       <section className="surface-card p-4 space-y-3">
