@@ -123,7 +123,7 @@ function TicketPage() {
         const { data } = await supabase
           .from("bookings")
           .select(
-            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id,supervisor_name),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate,supervisor_name)",
+            "booking_code,booking_type,passenger_count,room_type,customer_name,id_number,contact_phone,whatsapp_phone,seat_numbers,price_per_person,total_price,discount_amount,coupon_code,id_image_url,created_at,notes,actual_return_day,extension_nights,trip_mode,departure_date,return_date,actual_return_date,return_seat_numbers,packages(name),hotels(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(bus_number,name,plate,layout_id,supervisor_name),return_buses:buses!bookings_return_bus_id_fkey(bus_number,name,plate,layout_id,supervisor_name)",
           )
           .eq("booking_code", code)
           .maybeSingle();

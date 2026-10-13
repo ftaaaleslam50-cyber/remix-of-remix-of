@@ -96,8 +96,9 @@ export interface TicketBooking {
   return_seat_numbers?: string[] | null;
   trips?: { name: string; departure_day: string; return_day: string; departure_date?: string | null; return_date?: string | null } | null;
   buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
-  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; supervisor_name?: string | null } | null;
+  return_buses?: { bus_number: number; name?: string | null; plate?: string | null; layout_id?: string | null; supervisor_name?: string | null } | null;
   layout_json?: LayoutJson | null;
+  return_layout_json?: LayoutJson | null;
 }
 
 /** "632 (اسم)" — or the name alone when the real bus number is 0/unknown. */
@@ -144,6 +145,11 @@ export async function fetchTicket(code: string): Promise<TicketBooking | null> {
       .eq("id", layoutId)
       .maybeSingle();
     booking.layout_json = (lay as { layout_json: LayoutJson } | null)?.layout_json ?? null;
+  }
+  const rLayoutId = booking.return_buses?.layout_id;
+  if (rLayoutId) {
+    const { data: rl } = await supabaseAdmin.from("bus_layouts").select("layout_json").eq("id", rLayoutId).maybeSingle();
+    booking.return_layout_json = (rl as { layout_json: LayoutJson } | null)?.layout_json ?? null;
   }
   return booking;
 }
