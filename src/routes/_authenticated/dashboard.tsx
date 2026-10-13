@@ -69,6 +69,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReturnBookingsTab } from "@/components/admin/ReturnTripsManager";
+import { ReturnNeedTab } from "@/components/admin/ReturnNeedTab";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/return-display";
 import { supabase } from "@/integrations/supabase/client";
@@ -442,6 +443,7 @@ function Dashboard() {
             <TabsTrigger value="bustemplate" className="rounded-xl">
               <Layout className="h-4 w-4 ml-1" /> قالب صورة الباص
             </TabsTrigger>
+            <TabsTrigger value="returnneed" className="rounded-xl">إدارة العودة والاحتياج</TabsTrigger>
             <TabsTrigger value="tripsheet" className="rounded-xl">
               <FileText className="h-4 w-4 ml-1" /> الحسابات والتصفية
             </TabsTrigger>
@@ -505,6 +507,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="bustemplate" className="mt-4">
             {canManageContent && <BusTemplateTab />}
+          </TabsContent>
+          <TabsContent value="returnneed" className="mt-4">
+            <ReturnNeedTab />
           </TabsContent>
           <TabsContent value="tripsheet" className="mt-4">
             <TripSheetTab />
