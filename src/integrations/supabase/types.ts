@@ -71,6 +71,7 @@ export type Database = {
           price_family_5: number
           price_individual: number
           price_transport_only: number
+          return_extra_bus_enabled: boolean
           return_extra_threshold: number
           return_planning_capacity: number
           return_seat_selection_enabled: boolean
@@ -152,6 +153,7 @@ export type Database = {
           price_family_5?: number
           price_individual?: number
           price_transport_only?: number
+          return_extra_bus_enabled?: boolean
           return_extra_threshold?: number
           return_planning_capacity?: number
           return_seat_selection_enabled?: boolean
@@ -233,6 +235,7 @@ export type Database = {
           price_family_5?: number
           price_individual?: number
           price_transport_only?: number
+          return_extra_bus_enabled?: boolean
           return_extra_threshold?: number
           return_planning_capacity?: number
           return_seat_selection_enabled?: boolean
@@ -1978,6 +1981,27 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           whatsapp?: string
+        }
+        Relationships: []
+      }
+      return_bus_occupancy_alerts: {
+        Row: {
+          bus_id: string
+          created_at: string
+          return_date: string
+          threshold: number
+        }
+        Insert: {
+          bus_id: string
+          created_at?: string
+          return_date: string
+          threshold: number
+        }
+        Update: {
+          bus_id?: string
+          created_at?: string
+          return_date?: string
+          threshold?: number
         }
         Relationships: []
       }
