@@ -228,11 +228,13 @@ function TicketPage() {
     lines.push(`رقم الباص: ${busLabel(b.buses)}${b.buses?.plate ? ` — لوحة ${b.buses.plate}` : ""}`);
     if (b.buses?.supervisor_name) lines.push(`اسم المشرف: ${b.buses.supervisor_name}`);
     if (!hideSeats) lines.push(`المقاعد: ${b.seat_numbers.join(", ")}`);
-    if (b.return_buses) {
+    const retOk = !!b.return_buses && (b.return_seat_numbers ?? []).length > 0;
+    if (retOk && b.return_buses) {
       lines.push(`حافلة العودة: ${busLabel(b.return_buses)}`);
       if (b.return_buses.supervisor_name) lines.push(`مشرف العودة: ${b.return_buses.supervisor_name}`);
-      if (!hideSeats && (b.return_seat_numbers ?? []).length)
-        lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
+      if (!hideSeats) lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
+    } else if (b.trip_mode !== "outbound" && b.actual_return_date) {
+      lines.push("مقاعد العودة: قيد التسكين من إدارة التشغيل");
     }
 
     lines.push(
@@ -368,13 +370,15 @@ function TicketPage() {
             {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
             {booking.buses?.supervisor_name && <TicketRow label="اسم المشرف" value={booking.buses.supervisor_name} />}
             {!hideSeats && <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />}
-            {booking.return_buses && <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />}
-            {booking.return_buses?.supervisor_name && (
-              <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />
-            )}
-            {!hideSeats && booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 && (
-              <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />
-            )}
+            {booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 ? (
+              <>
+                <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />
+                {booking.return_buses.supervisor_name && <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />}
+                {!hideSeats && <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />}
+              </>
+            ) : booking.trip_mode !== "outbound" && booking.actual_return_date ? (
+              <TicketRow label="مقاعد العودة" value="قيد التسكين من إدارة التشغيل" />
+            ) : null}
 
             <TicketRow
               label="الذهاب"
