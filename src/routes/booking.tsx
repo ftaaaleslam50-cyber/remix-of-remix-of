@@ -973,7 +973,11 @@ function BookingPage() {
                   onSelectBus={(id) => {
                     setNoBus(false);
                     setBusId(id);
-                    if (id !== busId) setTripMode("round");
+                    if (id !== busId) {
+                      setTripMode("round");
+                      setSeats([]);
+                      setSeatGenders({});
+                    }
                   }}
                   noBus={noBus}
                   onSelectNoBus={() => {
@@ -1031,8 +1035,11 @@ function BookingPage() {
                   onChange={(next) => {
                     const added = next.filter((s) => !seats.includes(s));
                     const removed = seats.filter((s) => !next.includes(s));
-                    const g = { ...seatGenders };
-                    for (const r of removed) delete g[r];
+                    // نبني الأجناس من المقاعد المختارة فعليًا فقط، حتى لا تُحسب
+                    // مقاعد قديمة (من حافلة/رحلة سابقة) ضمن الحصة فتمنع الاختيار بصمت.
+                    const g: Record<string, "male" | "female"> = {};
+                    for (const s of seats) if (seatGenders[s] && !removed.includes(s)) g[s] = seatGenders[s];
+                    for (const s of seats) if (!g[s] && !removed.includes(s)) g[s] = activeGender;
                     // لا نغيّر عدد الذكور/الإناث الذي اختاره المستخدم —
                     // فقط ننتقل تلقائيًا إلى الجنس الآخر عند اكتمال حصة الجنس الحالي.
                     let want = activeGender;
@@ -1042,8 +1049,8 @@ function BookingPage() {
                       const quota = (v: "male" | "female") => (v === "male" ? maleCount : femaleCount);
                       const other: "male" | "female" = want === "male" ? "female" : "male";
                       if (used(want) >= quota(want)) {
+                        // إن اكتملت الحصتان (عدد الذكور+الإناث أقل من الركاب) لا نرفض الضغطة بصمت.
                         if (used(other) < quota(other)) want = other;
-                        else continue;
                       }
                       g[a] = want;
                       // انتقل تلقائيًا للجنس الآخر إذا اكتملت حصة الجنس الحالي.
