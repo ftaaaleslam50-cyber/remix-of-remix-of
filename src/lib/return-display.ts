@@ -71,3 +71,6 @@ export function returnDisplay(
   if (n > 0) return extensionLabel(n);
   return originalReturn ? formatReturnOption(originalReturn) : fallback;
 }
+
+/** النص الوحيد الظاهر للمستخدم النهائي عند عدم تأكيد مقعد العودة. */
+export const RETURN_SEAT_ADMIN_MSG = "سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا";
