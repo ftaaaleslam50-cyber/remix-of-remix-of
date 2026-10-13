@@ -18,7 +18,7 @@ interface Bk {
   return_seat_numbers: string[] | null;
 }
 interface Link { return_trip_id: string; trip_date: string; bus_id: string }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; layout_id: string | null }
+interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; layout_id: string | null; direction?: string | null; status?: string | null }
 interface RT { id: string; name: string; return_date: string | null }
 
 
@@ -29,21 +29,21 @@ export function ReturnNeedTab() {
   const { data: settings } = useQuery({
     queryKey: ["return_need_settings"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("return_seat_selection_enabled,return_extra_threshold,return_planning_capacity").eq("id", 1).maybeSingle();
-      return (data ?? { return_seat_selection_enabled: true, return_extra_threshold: 15, return_planning_capacity: 48 }) as {
-        return_seat_selection_enabled: boolean; return_extra_threshold: number; return_planning_capacity: number;
+      const { data } = await supabase.from("app_settings").select("return_seat_selection_enabled,return_extra_threshold,return_planning_capacity,return_extra_bus_enabled").eq("id", 1).maybeSingle();
+      return (data ?? { return_seat_selection_enabled: true, return_extra_threshold: 15, return_planning_capacity: 48, return_extra_bus_enabled: true }) as {
+        return_extra_bus_enabled: boolean; return_seat_selection_enabled: boolean; return_extra_threshold: number; return_planning_capacity: number;
       };
     },
   });
-  const [form, setForm] = useState({ enabled: true, T: 15, cap: 48 });
+  const [form, setForm] = useState({ enabled: true, T: 15, cap: 48, extra: true });
   useEffect(() => {
-    if (settings) setForm({ enabled: settings.return_seat_selection_enabled, T: settings.return_extra_threshold, cap: settings.return_planning_capacity });
+    if (settings) setForm({ enabled: settings.return_seat_selection_enabled, T: settings.return_extra_threshold, cap: settings.return_planning_capacity, extra: settings.return_extra_bus_enabled ?? true });
   }, [settings]);
 
   async function saveSettings() {
     if (form.T < 0 || form.cap < 1) return toast.error("قيم غير صالحة");
     const { error } = await supabase.from("app_settings").update({
-      return_seat_selection_enabled: form.enabled, return_extra_threshold: form.T, return_planning_capacity: form.cap,
+      return_seat_selection_enabled: form.enabled, return_extra_threshold: form.T, return_planning_capacity: form.cap, return_extra_bus_enabled: form.extra,
     } as never).eq("id", 1);
     if (error) return toast.error("تعذر الحفظ: " + error.message);
     toast.success("تم حفظ إعدادات العودة");
@@ -59,7 +59,7 @@ export function ReturnNeedTab() {
           .is("deleted_at", null).neq("status", "cancelled").not("actual_return_date", "is", null).gte("actual_return_date", today).limit(5000),
         supabase.from("return_trip_buses").select("return_trip_id,trip_date,bus_id").gte("trip_date", today),
         supabase.from("return_trips").select("id,name,return_date"),
-        supabase.from("buses").select("id,name,bus_number,capacity,layout_id"),
+        supabase.from("buses").select("id,name,bus_number,capacity,layout_id,direction,status"),
       ]);
       const firstErr = bk.error ?? links.error ?? rts.error ?? buses.error;
       if (firstErr) throw new Error(firstErr.message);
@@ -75,6 +75,20 @@ export function ReturnNeedTab() {
       return { bookings, links: (links.data ?? []) as Link[], rts: (rts.data ?? []) as RT[], buses: (buses.data ?? []) as BusRow[], labels };
     },
   });
+
+  async function addReturnBus(tripId: string, date: string, linked: Set<string>) {
+    if (!data) return;
+    const busyOnDate = new Set(data.links.filter((l) => l.trip_date === date).map((l) => l.bus_id));
+    const pick = data.buses
+      .filter((b) => (b.direction ?? "outbound") === "return" && (b.status ?? "active") === "active" && !linked.has(b.id) && !busyOnDate.has(b.id))
+      .sort((a, z) => a.bus_number - z.bus_number)[0];
+    if (!pick) return toast.error("لا توجد حافلة عودة متاحة في الأسطول لهذا التاريخ — أضف حافلة عودة من إدارة الحافلات أولًا");
+    if (!confirm(`ربط ${pick.name || `حافلة ${pick.bus_number}`} برحلة العودة بتاريخ ${date}؟`)) return;
+    const { error } = await supabase.from("return_trip_buses").insert({ return_trip_id: tripId, trip_date: date, bus_id: pick.id } as never);
+    if (error) return toast.error("تعذر الإضافة: " + error.message);
+    toast.success("تمت إضافة حافلة العودة");
+    void refetch();
+  }
 
   const T = form.T, CAP = form.cap;
   const report = useMemo(() => {
@@ -169,7 +183,7 @@ export function ReturnNeedTab() {
         const l = data.labels[id]?.length ?? bu.capacity;
         return s + Math.min(bu.capacity, l || bu.capacity);
       }, 0);
-      const plan = plannedBuses(x.pax, T, CAP);
+      const plan = plannedBuses(x.pax, form.extra ? T : Number.MAX_SAFE_INTEGER, CAP);
       return { ...x, name: x.tripId ? rtName.get(x.tripId) ?? "رحلة عودة" : "غير محددة (أكثر من رحلة أو بلا رحلة)", capReal, plan, shortage: Math.max(0, x.pax - capReal) };
     });
 
@@ -177,13 +191,17 @@ export function ReturnNeedTab() {
       .map((bu) => ({ bu, layout: data.labels[bu.id].length }));
     pending.sort((a, z) => a.date.localeCompare(z.date));
     return { rows, issues, busWarn, pending };
-  }, [data, T, CAP]);
+  }, [data, T, CAP, form.extra]);
 
   return (
     <div className="space-y-6" dir="rtl">
       <section className="surface-card p-4 space-y-4">
         <h3 className="font-extrabold">إعدادات مقاعد العودة</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex items-center justify-between gap-3 rounded-xl border p-3">
+            <span className="text-sm font-bold">إضافة حافلة عودة جديدة عند تجاوز الباقي للحد T</span>
+            <Switch checked={form.extra} onCheckedChange={(v) => setForm({ ...form, extra: v })} />
+          </label>
           <label className="flex items-center justify-between gap-3 rounded-xl border p-3">
             <span className="text-sm font-bold">اختيار مقعد العودة للعملاء أثناء الحجز</span>
             <Switch checked={form.enabled} onCheckedChange={(v) => setForm({ ...form, enabled: v })} />
@@ -241,6 +259,9 @@ export function ReturnNeedTab() {
                       <TableCell>
                         {need ? <Badge className="bg-warning text-warning-foreground">جهّز {Math.max(r.plan.buses - r.busIds.size, 0) || "حافلات"} إضافية{r.shortage ? ` (نقص ${r.shortage} مقعد)` : ""}</Badge>
                           : <Badge variant="secondary">كافٍ</Badge>}
+                        {need && form.extra && r.tripId && (
+                          <Button size="sm" variant="outline" className="rounded-full mt-1 block" onClick={() => addReturnBus(r.tripId!, r.date, r.busIds)}>إضافة حافلة عودة</Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -250,7 +271,7 @@ export function ReturnNeedTab() {
             </Table>
           </div>
         )}
-        <p className="text-xs text-muted-foreground">لإتاحة حافلة للعملاء: اختر حافلة حقيقية من الأسطول واربطها برحلة العودة والتاريخ من قسم العودة. لا يُنشئ النظام حافلات ولا يحذفها ولا ينقل إسنادات تلقائيًا.</p>
+        <p className="text-xs text-muted-foreground">لإتاحة حافلة للعملاء: اختر حافلة حقيقية من الأسطول واربطها برحلة العودة والتاريخ من قسم العودة. زر «إضافة حافلة عودة» يربط أول حافلة عودة متاحة من الأسطول بالتاريخ، ولا ينقل إسنادات تلقائيًا.</p>
       </section>
 
       <section className="surface-card p-4 space-y-3">

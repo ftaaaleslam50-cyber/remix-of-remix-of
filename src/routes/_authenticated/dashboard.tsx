@@ -629,6 +629,7 @@ function UnifiedBookingsTab(props: {
   const [tripMode, setTripMode] = useState<string>("");
   const [returnPick, setReturnPick] = useState<string>("");
   const [bookingType, setBookingType] = useState<string>("");
+  const [extFilter, setExtFilter] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [addingCustomer, setAddingCustomer] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -739,6 +740,7 @@ function UnifiedBookingsTab(props: {
     if (hotel && (b.packages?.name?.trim() || "بدون فندق") !== hotel) return false;
     if (tripMode && (b.trip_mode ?? "round") !== tripMode) return false;
     if (bookingType && (b.booking_type ?? "family") !== bookingType) return false;
+    if (extFilter && (Number((b as { extension_nights?: number | null }).extension_nights ?? 0) > 0) !== (extFilter === "with")) return false;
     if (returnPick && effReturn(b) !== returnPick) return false;
     if (tripId && !matchesTripFilter(b, tripId)) return false;
     if (busIds.length > 0 && (!b.bus_id || !busIds.includes(b.bus_id))) return false;
@@ -1266,6 +1268,18 @@ function UnifiedBookingsTab(props: {
             <option value="">— الكل —</option>
             <option value="individual">أفراد</option>
             <option value="family">عوائل</option>
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">التمديد</Label>
+          <select
+            value={extFilter}
+            onChange={(e) => setExtFilter(e.target.value)}
+            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
+          >
+            <option value="">— الكل —</option>
+            <option value="with">بتمديد</option>
+            <option value="without">بدون تمديد</option>
           </select>
         </div>
         <div>
