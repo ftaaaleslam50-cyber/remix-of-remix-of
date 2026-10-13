@@ -64,6 +64,13 @@
       "when": 1791875749143,
       "tag": "0008_change_booking_return_owner_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791876232177,
+      "tag": "0009_remove_extension_cap_atomic_outbound",
+      "breakpoints": true
     }
   ]
 }

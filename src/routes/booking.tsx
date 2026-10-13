@@ -801,7 +801,7 @@ function BookingPage() {
       if (editingCode) {
         // UPDATE existing booking — no duplicates. Authenticated users only reach this path.
         const { data: cur } = await supabase.from("bookings").select("id").eq("booking_code", editingCode).maybeSingle();
-        if (!cur || tripMode === "outbound") {
+        if (!cur) {
           const { error } = await supabase.from("bookings").update(payload as never).eq("booking_code", editingCode);
           if (error) throw error;
         } else {
@@ -1563,7 +1563,7 @@ function StepPackage({
                       className="mt-2 h-11 w-full rounded-xl border-2 border-border bg-white px-3 text-sm font-semibold"
                     >
                       <option value="0">بدون تمديد</option>
-                      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      {Array.from({ length: Math.max(30, extensionNights) }, (_, i) => i + 1).map((n) => (
                         <option key={n} value={String(n)}>
                           {n} {n === 1 ? "ليلة" : n === 2 ? "ليالي" : "ليال"}
                         </option>
