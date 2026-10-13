@@ -51,6 +51,7 @@ import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-ava
 import { storeBookingProfit } from "@/lib/profit";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 import { hotelUnavailableReason } from "@/lib/booking/types";
+import { addDays, roomOf, suggestReturn, type ReturnBusOcc } from "@/lib/return-need";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -124,6 +125,10 @@ function BookingPage() {
   const [tripMode, setTripMode] = useState<TripMode>("round");
   // Hotel stay extension (0 = no extension, max 5 nights). Only applies when a hotel is selected.
   const [extensionNights, setExtensionNights] = useState<number>(0);
+  // إسناد مقعد العودة (يُحفظ فقط عند اكتماله؛ وإلا يبقى «قيد التسكين»).
+  const [retBusId, setRetBusId] = useState<string | null>(null);
+  const [retSeats, setRetSeats] = useState<string[]>([]);
+  const [retSkip, setRetSkip] = useState(false);
 
   const { data: packages = [] } = useQuery({
     queryKey: ["packages"],
@@ -506,9 +511,61 @@ function BookingPage() {
     ? actualReturnDay
     : ((selectedTrip as unknown as { return_date?: string | null } | null)?.return_date ?? null);
   const transportOnly = noHotel;
-  // "عودة فقط" لا يحتاج اختيار مقاعد، وكذلك «بدون حافلة».
+  // "عودة فقط" لا يختار مقاعد ذهاب، وكذلك «بدون حافلة».
   const skipSeats = noBus || tripMode === "return";
-  const STEPS: readonly string[] = skipSeats ? BASE_STEPS.filter((s) => s !== "المقاعد") : BASE_STEPS;
+
+  // ===== مقاعد العودة =====
+  const { data: returnSelectionEnabled = true } = useQuery({
+    queryKey: ["return_seat_selection_enabled"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("return_seat_selection_enabled").eq("id", 1).maybeSingle();
+      return (data as { return_seat_selection_enabled?: boolean } | null)?.return_seat_selection_enabled ?? true;
+    },
+  });
+  const retExt = noHotel || !selectedPackage ? 0 : extensionNights;
+  const returnDateISO =
+    !noBus && returnSelectionEnabled && (tripMode === "round" || tripMode === "return") && selectedReturnDate && isoRe.test(selectedReturnDate)
+      ? addDays(selectedReturnDate, retExt)
+      : null;
+  const { data: returnOcc = [], refetch: refetchReturnOcc } = useQuery({
+    queryKey: ["return_occupancy", returnDateISO, editingCode],
+    enabled: !!returnDateISO,
+    staleTime: 0,
+    refetchInterval: 3_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ data: ReturnBusOcc[] | null; error: unknown }>)(
+        "get_return_occupancy",
+        { _date: returnDateISO, _exclude_code: editingCode ?? null },
+      );
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const returnBusesWithRoom = returnOcc.filter((b) => roomOf(b) >= passengerCount);
+  const returnSuggestion = useMemo(
+    () => (returnDateISO ? suggestReturn(returnOcc, tripMode === "round" ? seats : [], passengerCount) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [returnDateISO, tripMode, seats.join(","), passengerCount, returnOcc.map((b) => b.bus_id).join(",")],
+  );
+  // إعادة الاقتراح عند تغيّر التاريخ أو مقاعد الذهاب فقط (لا عند كل تحديث للإشغال).
+  const retKey = `${returnDateISO}|${tripMode}|${seats.join(",")}|${passengerCount}|${returnOcc.map((b) => b.bus_id).join(",")}`;
+  useEffect(() => {
+    setRetSkip(false);
+    if (!returnSuggestion) { setRetBusId(null); setRetSeats([]); return; }
+    setRetBusId(returnSuggestion.bus.bus_id);
+    setRetSeats(returnSuggestion.same);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retKey]);
+  const autoFullMatch = tripMode === "round" && !!returnSuggestion && returnSuggestion.same.length === passengerCount;
+  const needsReturnStep = !!returnDateISO && returnBusesWithRoom.length > 0 && !autoFullMatch;
+  const retBus = returnOcc.find((b) => b.bus_id === retBusId) ?? null;
+  const returnAssigned = !!returnDateISO && !retSkip && !!retBus && retSeats.length === passengerCount;
+
+  const STEPS: readonly string[] = (() => {
+    let st: string[] = skipSeats ? BASE_STEPS.filter((s) => s !== "المقاعد") : [...BASE_STEPS];
+    if (needsReturnStep) st.splice(st.indexOf("الفندق") + 1, 0, "مقاعد العودة");
+    return st;
+  })();
   const stepName = STEPS[step] ?? STEPS[STEPS.length - 1];
 
   // Clamp step index when steps array shrinks/grows (e.g., user picks transport pkg mid-flow).
@@ -633,6 +690,11 @@ function BookingPage() {
           : `يجب اختيار ${passengerCount} مقعد (تم اختيار ${seats.length})`;
       case "الفندق":
         return noHotel || packageId ? null : "يجب اختيار الفندق أو تحديد «بدون فندق»";
+      case "مقاعد العودة":
+        if (retSkip) return null;
+        return retBus && retSeats.length === passengerCount
+          ? null
+          : `اختر ${passengerCount} مقعد عودة (تم اختيار ${retSeats.length}) أو تابع بدون مقعد عودة`;
       case "البيانات": {
         if (customer.customer_name.trim().length <= 1) return "يجب إدخال اسم العميل بشكل صحيح";
         if (!/^\+?\d{9,15}$/.test(customer.contact_phone.replace(/\s/g, ""))) return "يجب إدخال رقم جوال صحيح للتواصل";
@@ -725,6 +787,12 @@ function BookingPage() {
         return_date: (tripMode === "outbound"
           ? null
           : selectedReturnDate) as string | null,
+        // يُحفظ إسناد العودة فقط عند اكتماله؛ قاعدة البيانات تتحقق من الربط والمخطط والتعارض.
+        ...(returnAssigned && retBus
+          ? { return_bus_id: retBus.bus_id, return_trip_id: retBus.return_trip_id, return_seat_numbers: retSeats }
+          : !editingCode || tripMode === "outbound"
+            ? { return_bus_id: null, return_seat_numbers: [] as string[] }
+            : {}),
       };
 
       if (editingCode) {
@@ -796,6 +864,14 @@ function BookingPage() {
         anyE?.message || anyE?.error || anyE?.details || anyE?.hint || (typeof e === "string" ? e : "حدث خطأ");
       // Seat conflict detected server-side: refresh occupancy and send the user
       // back to the seat step with the taken seats cleared.
+      if (msg.includes("العودة")) {
+        await refetchReturnOcc();
+        setRetSeats([]);
+        const rs = STEPS.indexOf("مقاعد العودة");
+        if (rs >= 0) setStep(rs);
+        toast.error("تعذر تثبيت مقعد العودة: " + msg + " — اختر مقعدًا آخر أو تابع بدون مقعد عودة.");
+        return;
+      }
       if (msg.includes("محجوزة بالفعل") || msg.includes("غير متاحة للحجز")) {
         const fresh = await refetchReserved();
         const takenNow = (fresh.data ?? {})[busId ?? ""] ?? [];
@@ -956,6 +1032,20 @@ function BookingPage() {
                   bus={activeBus}
                   layout={activeLayout?.layout_json ?? null}
                   remainingSeats={remainingSeats}
+                />
+              )}
+              {stepName === "مقاعد العودة" && (
+                <StepReturnSeats
+                  buses={returnBusesWithRoom}
+                  count={passengerCount}
+                  outboundSeats={tripMode === "round" ? seats : []}
+                  date={returnDateISO}
+                  busId={retBusId}
+                  seats={retSeats}
+                  skip={retSkip}
+                  onBus={(id) => { setRetBusId(id); setRetSeats([]); setRetSkip(false); }}
+                  onSeats={(v) => { setRetSeats(v); setRetSkip(false); }}
+                  onSkip={(v) => setRetSkip(v)}
                 />
               )}
               {stepName === "البيانات" && (
@@ -2386,6 +2476,80 @@ function BookingFocusLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
+    </div>
+  );
+}
+
+function StepReturnSeats(props: {
+  buses: ReturnBusOcc[];
+  count: number;
+  outboundSeats: string[];
+  date: string | null;
+  busId: string | null;
+  seats: string[];
+  skip: boolean;
+  onBus: (id: string) => void;
+  onSeats: (v: string[]) => void;
+  onSkip: (v: boolean) => void;
+}) {
+  const bus = props.buses.find((b) => b.bus_id === props.busId) ?? null;
+  const layoutId = bus?.layout_id ?? null;
+  const { data: layoutJson = null } = useQuery({
+    queryKey: ["bus_layout_json", layoutId],
+    enabled: !!layoutId,
+    queryFn: async () => {
+      const { data } = await supabase.from("bus_layouts").select("layout_json").eq("id", layoutId!).maybeSingle();
+      return ((data as { layout_json?: LayoutJson } | null)?.layout_json ?? null) as LayoutJson | null;
+    },
+  });
+  const layout: LayoutJson | null = bus
+    ? layoutJson ?? {
+        rows: Math.ceil(bus.seat_labels.length / 4),
+        cols: 5,
+        cells: bus.seat_labels.map((label, i) => {
+          const r = Math.floor(i / 4) + 1;
+          const c = i % 4;
+          return { row: r, col: c < 2 ? c + 1 : c + 2, kind: "seat" as const, label };
+        }),
+      }
+    : null;
+  const kept = props.outboundSeats.filter((s) => props.seats.includes(s));
+  const notAvailable = (s: string) => !bus || !bus.seat_labels.includes(s);
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-extrabold">مقاعد العودة</h2>
+        <p className="text-sm text-muted-foreground">
+          تاريخ العودة الفعلي: <b dir="ltr">{props.date}</b>
+          {props.outboundSeats.length > 0 && kept.length > 0 && (
+            <> — احتفظنا بنفس رقم مقعد الذهاب ({kept.join("، ")}). اختر بديلًا لـ {props.count - kept.length} راكب.</>
+          )}
+          {props.outboundSeats.length > 0 && kept.length === 0 && <> — أرقام مقاعد الذهاب غير متاحة في حافلة العودة، اختر مقاعد بديلة.</>}
+        </p>
+      </div>
+      {props.buses.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {props.buses.map((b) => (
+            <Button key={b.bus_id} type="button" size="sm" variant={b.bus_id === props.busId ? "default" : "outline"} className="rounded-full" onClick={() => props.onBus(b.bus_id)}>
+              {b.bus_name || `حافلة ${b.bus_number}`} — {b.return_trip_name} ({roomOf(b)} متاح)
+            </Button>
+          ))}
+        </div>
+      )}
+      {bus && layout && !props.skip && (
+        <LayoutSeatMap
+          layout={layout}
+          selected={props.seats}
+          reserved={[...bus.taken, ...layout.cells.filter((c) => c.kind === "seat" && c.label && notAvailable(c.label)).map((c) => c.label!)]}
+          maxSelectable={props.count}
+          onChange={props.onSeats}
+        />
+      )}
+      {!bus && <p className="text-sm text-muted-foreground">اختر حافلة العودة.</p>}
+      <label className="flex items-center gap-2 rounded-xl border p-3 text-sm">
+        <Checkbox checked={props.skip} onCheckedChange={(v) => props.onSkip(v === true)} />
+        متابعة بدون مقعد عودة الآن — تبقى مقاعد العودة «قيد التسكين من إدارة التشغيل».
+      </label>
     </div>
   );
 }
