@@ -255,11 +255,12 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   if (b.buses?.supervisor_name) rows.push(["اسم المشرف", b.buses.supervisor_name]);
   const hideSeats = b.booking_type === "individual" && (await hideSeatsForIndividual());
   if (!hideSeats) rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
-  if (b.return_buses) {
+  if (b.return_buses && (b.return_seat_numbers ?? []).length > 0) {
     rows.push(["حافلة العودة", busLabel(b.return_buses)]);
     if (b.return_buses.supervisor_name) rows.push(["مشرف العودة", b.return_buses.supervisor_name]);
-    if (!hideSeats && (b.return_seat_numbers ?? []).length > 0)
-      rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
+    if (!hideSeats) rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
+  } else if (b.trip_mode !== "outbound" && b.actual_return_date) {
+    rows.push(["مقاعد العودة", "قيد التسكين من إدارة التشغيل"]);
   }
 
   rows.push([
