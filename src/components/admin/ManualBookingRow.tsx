@@ -534,26 +534,37 @@ export function ManualBookingRow({
 
     const linkedRepresentative = reps.find((r) => r.name === d.rep_name.trim() && r.user_id);
     const trustedOwnerId = ownerId ?? linkedRepresentative?.user_id ?? undefined;
-    let { error } = d.id
-      ? await supabase.from("bookings").update(payload as never).eq("id", d.id)
-      : await supabase
-          .from("bookings")
-          .insert((trustedOwnerId ? { ...payload, created_by: trustedOwnerId } : payload) as never);
-    // تغيير التمديد/تاريخ العودة لا يفقد مقعد العودة بصمت: التحديث يفشل كاملًا ويبقى القديم،
-    // ويُعرض على الإدارة خيار صريح لحفظ التغيير مع إلغاء إسناد العودة (ثم إعادة التسكين من قسم العودة).
-    if (error && d.id && error.message.includes("العودة")) {
-      const ok = window.confirm(
-        `${error.message}\n\nلم يُحفظ أي تغيير، وما زال مقعد العودة السابق محفوظًا.\nهل تريد حفظ التعديل مع إلغاء إسناد مقعد العودة (يصبح «قيد التسكين»)؟`,
-      );
-      if (ok) {
-        ({ error } = await supabase
-          .from("bookings")
-          .update({ ...payload, return_bus_id: null, return_seat_numbers: [] } as never)
-          .eq("id", d.id));
-      } else {
-        setSaving(false);
-        return toast.info("لم يتم الحفظ؛ بقي التاريخ والمقعد السابقان كما هما");
+    let error: { message: string } | null = null;
+    if (d.id) {
+      // تغيير التمديد يمر حصرًا عبر الدالة الذرية change_booking_extension (قفل الصف + التحقق).
+      // عند الفشل لا يُحفظ شيء ويبقى التاريخ والمقعد السابقان؛ الإلغاء الصريح للإسناد يتم داخل نفس الدالة فقط.
+      const callExt = (clear: boolean) =>
+        supabase.rpc("change_booking_extension" as never, {
+          _booking_id: d.id, _nights: extensionNights, _return_bus_id: null, _seats: null, _clear_assignment: clear,
+        } as never) as unknown as Promise<{ error: { message: string } | null }>;
+      ({ error } = await callExt(false));
+      if (error && error.message.includes("العودة")) {
+        const ok = window.confirm(
+          `${error.message}\n\nلم يُحفظ أي تغيير، وما زال مقعد العودة السابق محفوظًا.\nهل تريد تغيير التمديد مع إلغاء إسناد مقعد العودة (يصبح «قيد التسكين»)؟`,
+        );
+        if (!ok) {
+          setSaving(false);
+          return toast.info("لم يتم الحفظ؛ بقي التاريخ والمقعد السابقان كما هما");
+        }
+        ({ error } = await callExt(true));
       }
+      if (error) {
+        setSaving(false);
+        return toast.error("لم يُحفظ تغيير التمديد: " + error.message);
+      }
+      // بقية الحقول بدون extension_nights حتى لا يتجاوز أي تحديث مباشر التحقق الذري.
+      const { extension_nights: _omit, ...rest } = payload as Record<string, unknown>;
+      void _omit;
+      ({ error } = await supabase.from("bookings").update(rest as never).eq("id", d.id));
+    } else {
+      ({ error } = await supabase
+        .from("bookings")
+        .insert((trustedOwnerId ? { ...payload, created_by: trustedOwnerId } : payload) as never));
     }
     setSaving(false);
     if (error) return toast.error(error.message);

@@ -693,7 +693,7 @@ function BookingPage() {
       case "الفندق":
         return noHotel || packageId ? null : "يجب اختيار الفندق أو تحديد «بدون فندق»";
       case "مقاعد العودة":
-        if (retSkip) return null;
+        if (retSkip || returnMode === "admin") return null;
         return retBus && retSeats.length === passengerCount
           ? null
           : `اختر ${passengerCount} مقعد عودة (تم اختيار ${retSeats.length}) أو تابع بدون مقعد عودة`;
