@@ -18,7 +18,7 @@ interface Bk {
   return_seat_numbers: string[] | null;
 }
 interface Link { return_trip_id: string; trip_date: string; bus_id: string }
-interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; layout_id: string | null }
+interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; layout_id: string | null; direction?: string | null; status?: string | null }
 interface RT { id: string; name: string; return_date: string | null }
 
 
@@ -83,7 +83,7 @@ export function ReturnNeedTab() {
       .filter((b) => (b.direction ?? "outbound") === "return" && (b.status ?? "active") === "active" && !linked.has(b.id) && !busyOnDate.has(b.id))
       .sort((a, z) => a.bus_number - z.bus_number)[0];
     if (!pick) return toast.error("لا توجد حافلة عودة متاحة في الأسطول لهذا التاريخ — أضف حافلة عودة من إدارة الحافلات أولًا");
-    if (!confirm(`ربط ${pick.name || `حافلة ${pick.number ?? pick.bus_number}`} برحلة العودة بتاريخ ${date}؟`)) return;
+    if (!confirm(`ربط ${pick.name || `حافلة ${pick.bus_number}`} برحلة العودة بتاريخ ${date}؟`)) return;
     const { error } = await supabase.from("return_trip_buses").insert({ return_trip_id: tripId, trip_date: date, bus_id: pick.id } as never);
     if (error) return toast.error("تعذر الإضافة: " + error.message);
     toast.success("تمت إضافة حافلة العودة");
@@ -271,7 +271,7 @@ export function ReturnNeedTab() {
             </Table>
           </div>
         )}
-        <p className="text-xs text-muted-foreground">لإتاحة حافلة للعملاء: اختر حافلة حقيقية من الأسطول واربطها برحلة العودة والتاريخ من قسم العودة. لا يُنشئ النظام حافلات ولا يحذفها ولا ينقل إسنادات تلقائيًا.</p>
+        <p className="text-xs text-muted-foreground">لإتاحة حافلة للعملاء: اختر حافلة حقيقية من الأسطول واربطها برحلة العودة والتاريخ من قسم العودة. زر «إضافة حافلة عودة» يربط أول حافلة عودة متاحة من الأسطول بالتاريخ، ولا ينقل إسنادات تلقائيًا.</p>
       </section>
 
       <section className="surface-card p-4 space-y-3">
