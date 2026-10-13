@@ -51,7 +51,7 @@ import { bookingBlockedMessage, useBookingAvailability } from "@/lib/booking-ava
 import { storeBookingProfit } from "@/lib/profit";
 import type { BookingType, Bus, Package, PricingCell, RoomType, Trip } from "@/lib/booking/types";
 import { hotelUnavailableReason } from "@/lib/booking/types";
-import { addDays, roomOf, suggestReturn, type ReturnBusOcc } from "@/lib/return-need";
+import { addDays, roomOf, returnStepMode, suggestReturn, type ReturnBusOcc } from "@/lib/return-need";
 
 export const Route = createFileRoute("/booking")({
   head: () => ({
@@ -542,6 +542,7 @@ function BookingPage() {
     },
   });
   const returnBusesWithRoom = returnOcc.filter((b) => roomOf(b) >= passengerCount);
+  const returnMode = returnStepMode(returnOcc, passengerCount);
   const returnSuggestion = useMemo(
     () => (returnDateISO ? suggestReturn(returnOcc, tripMode === "round" ? seats : [], passengerCount) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -557,9 +558,10 @@ function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retKey]);
   const autoFullMatch = tripMode === "round" && !!returnSuggestion && returnSuggestion.same.length === passengerCount;
-  const needsReturnStep = !!returnDateISO && returnBusesWithRoom.length > 0 && !autoFullMatch;
+  // تظهر الخطوة أيضًا عندما تتوزع المقاعد على أكثر من حافلة (وضع admin) لإبلاغ العميل بوضوح أن الإدارة ستسكّنه.
+  const needsReturnStep = !!returnDateISO && ((returnMode === "single" && !autoFullMatch) || returnMode === "admin");
   const retBus = returnOcc.find((b) => b.bus_id === retBusId) ?? null;
-  const returnAssigned = !!returnDateISO && !retSkip && !!retBus && retSeats.length === passengerCount;
+  const returnAssigned = !!returnDateISO && returnMode === "single" && !retSkip && !!retBus && roomOf(retBus) >= passengerCount && retSeats.length === passengerCount;
 
   const STEPS: readonly string[] = (() => {
     let st: string[] = skipSeats ? BASE_STEPS.filter((s) => s !== "المقاعد") : [...BASE_STEPS];
@@ -1037,6 +1039,7 @@ function BookingPage() {
               {stepName === "مقاعد العودة" && (
                 <StepReturnSeats
                   buses={returnBusesWithRoom}
+                  adminOnly={returnMode === "admin"}
                   count={passengerCount}
                   outboundSeats={tripMode === "round" ? seats : []}
                   date={returnDateISO}
@@ -2492,6 +2495,7 @@ function BookingFocusLayout({ children }: { children: React.ReactNode }) {
 
 function StepReturnSeats(props: {
   buses: ReturnBusOcc[];
+  adminOnly?: boolean;
   count: number;
   outboundSeats: string[];
   date: string | null;
@@ -2524,6 +2528,17 @@ function StepReturnSeats(props: {
       }
     : null;
   const kept = props.outboundSeats.filter((s) => props.seats.includes(s));
+  if (props.adminOnly) {
+    return (
+      <div className="space-y-3">
+        <h2 className="text-xl font-extrabold">مقاعد العودة</h2>
+        <div role="status" className="rounded-xl border border-warning/50 p-4 text-sm">
+          لا توجد حافلة عودة واحدة تتسع لجميع أفراد الحجز ({props.count}) في تاريخ <b dir="ltr">{props.date}</b>.
+          سيُكمَل الحجز وتبقى مقاعد العودة «قيد التسكين من إدارة التشغيل» دون أي إسناد جزئي.
+        </div>
+      </div>
+    );
+  }
   const notAvailable = (s: string) => !bus || !bus.seat_labels.includes(s);
   return (
     <div className="space-y-4">
