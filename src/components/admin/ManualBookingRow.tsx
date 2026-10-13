@@ -24,6 +24,8 @@ import { storeBookingProfit } from "@/lib/profit";
 import { CustomerCombobox } from "@/components/admin/CustomerCombobox";
 import { customersTable, customerWhatsapp, type TravelCustomer, idImageUrl, uploadCustomerId } from "@/lib/customers";
 import { Upload, Trash2 } from "lucide-react";
+import { ReturnChangePanel, returnChoiceReady, type ReturnChoice } from "@/components/booking/ReturnChangePanel";
+import { addDays } from "@/lib/return-need";
 
 const ID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -468,6 +470,37 @@ export function ManualBookingRow({
     return m;
   }, [d.seat_numbers, d.male_count]);
 
+  function returnDatePatch(): { return_date?: string } {
+    if (d.trip_mode === "outbound") return {};
+    const raw = d.actual_return_day || selectedTrip?.return_day || "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { return_date: raw };
+    const dep = (bus as { assigned_date?: string | null } | null)?.assigned_date;
+    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const norm = (s: string) => s.replace(/[إأآ]/g, "ا").trim();
+    const wd = days.findIndex((x) => norm(raw).includes(norm(x)));
+    if (!dep || wd < 0) return {};
+    const base = new Date(`${dep}T00:00:00Z`);
+    let diff = (wd - base.getUTCDay() + 7) % 7;
+    if (diff === 0) diff = 7;
+    base.setUTCDate(base.getUTCDate() + diff);
+    return { return_date: base.toISOString().slice(0, 10) };
+  }
+
+  // بيانات العودة المحفوظة للحجز (للتحقق من تغيير التاريخ مع وجود مقعد مؤكد).
+  const [orig, setOrig] = useState<{ booking_code: string; return_date: string | null; extension_nights: number; return_bus_id: string | null; return_seat_numbers: string[]; passenger_count: number } | null>(null);
+  const [retChoice, setRetChoice] = useState<ReturnChoice>({ busId: null, seats: [], allowUnassigned: false });
+  useEffect(() => {
+    if (!d.id) return;
+    supabase.from("bookings").select("booking_code,return_date,extension_nights,return_bus_id,return_seat_numbers,passenger_count").eq("id", d.id).maybeSingle()
+      .then(({ data }) => data && setOrig(data as never));
+  }, [d.id]);
+  const origActual = orig?.return_date ? addDays(orig.return_date, Number(orig.extension_nights ?? 0)) : null;
+  const newReturnBase = returnDatePatch().return_date ?? orig?.return_date ?? null;
+  const newActual = newReturnBase ? addDays(newReturnBase, extensionNights) : null;
+  const origConfirmed = !!orig?.return_bus_id && (orig?.return_seat_numbers?.length ?? 0) > 0;
+  const needReturnChoice = !!d.id && origConfirmed && d.trip_mode !== "outbound" && newActual !== origActual;
+  useEffect(() => { setRetChoice({ busId: null, seats: [], allowUnassigned: false }); }, [newActual]);
+
   async function save() {
     if (!d.customer_name.trim()) return toast.error("أدخل اسم العميل");
     if (d.male_count + d.female_count !== d.passenger_count) {
@@ -514,21 +547,7 @@ export function ManualBookingRow({
       actual_return_day: d.trip_mode === "outbound" ? null : d.actual_return_day || selectedTrip?.return_day || null,
       // أي تاريخ عودة حقيقي (ISO) يُعتمد في كل النظام، لا في «رحلة أخرى» فقط.
       // يوم نصي (مثل «الاثنين») يُحوَّل لأول تاريخ بعد تاريخ ذهاب الحافلة حتى لا يتبع تقدم الرحلة.
-      ...(() => {
-        if (d.trip_mode === "outbound") return {};
-        const raw = d.actual_return_day || selectedTrip?.return_day || "";
-        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { return_date: raw };
-        const dep = (bus as { assigned_date?: string | null } | null)?.assigned_date;
-        const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-        const norm = (s: string) => s.replace(/[إأآ]/g, "ا").trim();
-        const wd = days.findIndex((x) => norm(raw).includes(norm(x)));
-        if (!dep || wd < 0) return {};
-        const base = new Date(`${dep}T00:00:00Z`);
-        let diff = (wd - base.getUTCDay() + 7) % 7;
-        if (diff === 0) diff = 7;
-        base.setUTCDate(base.getUTCDate() + diff);
-        return { return_date: base.toISOString().slice(0, 10) };
-      })(),
+      ...returnDatePatch(),
       ...(extraPayload ?? {}),
     };
 
@@ -536,31 +555,24 @@ export function ManualBookingRow({
     const trustedOwnerId = ownerId ?? linkedRepresentative?.user_id ?? undefined;
     let error: { message: string } | null = null;
     if (d.id) {
-      // تغيير التمديد يمر حصرًا عبر الدالة الذرية change_booking_extension (قفل الصف + التحقق).
-      // عند الفشل لا يُحفظ شيء ويبقى التاريخ والمقعد السابقان؛ الإلغاء الصريح للإسناد يتم داخل نفس الدالة فقط.
-      const callExt = (clear: boolean) =>
-        supabase.rpc("change_booking_extension" as never, {
-          _booking_id: d.id, _nights: extensionNights, _return_bus_id: null, _seats: null, _clear_assignment: clear,
-        } as never) as unknown as Promise<{ error: { message: string } | null }>;
-      ({ error } = await callExt(false));
-      if (error && error.message.includes("العودة")) {
-        const ok = window.confirm(
-          `${error.message}\n\nلم يُحفظ أي تغيير، وما زال مقعد العودة السابق محفوظًا.\nهل تريد تغيير التمديد مع إلغاء إسناد مقعد العودة (يصبح «قيد التسكين»)؟`,
-        );
-        if (!ok) {
-          setSaving(false);
-          return toast.info("لم يتم الحفظ؛ بقي التاريخ والمقعد السابقان كما هما");
-        }
-        ({ error } = await callExt(true));
-      }
-      if (error) {
+      // كل التعديلات (التمديد/التاريخ/مقعد العودة/بقية الحقول) في عملية ذرية واحدة:
+      // تنجح معًا أو تفشل معًا، والمقعد القديم لا يُحرَّر إلا بنجاحها.
+      if (needReturnChoice && !returnChoiceReady(retChoice, d.passenger_count)) {
         setSaving(false);
-        return toast.error("لم يُحفظ تغيير التمديد: " + error.message);
+        return toast.error("اختر مقعد العودة في التاريخ الجديد، أو وافق على الحفظ دون مقعد مؤكد");
       }
-      // بقية الحقول بدون extension_nights حتى لا يتجاوز أي تحديث مباشر التحقق الذري.
-      const { extension_nights: _omit, ...rest } = payload as Record<string, unknown>;
-      void _omit;
-      ({ error } = await supabase.from("bookings").update(rest as never).eq("id", d.id));
+      const { extension_nights: _n, return_date: _rd, ...rest } = payload as Record<string, unknown>;
+      void _n;
+      const res = (await supabase.rpc("change_booking_return" as never, {
+        _booking_id: d.id,
+        _nights: extensionNights,
+        _return_date: (_rd as string | undefined) ?? null,
+        _return_bus_id: needReturnChoice ? retChoice.busId : null,
+        _seats: needReturnChoice && retChoice.busId ? retChoice.seats : null,
+        _allow_unassigned: needReturnChoice && retChoice.allowUnassigned,
+        _patch: rest,
+      } as never)) as unknown as { error: { message: string } | null };
+      error = res.error ? { message: "لم يُحفظ أي تغيير وبقي التاريخ والمقعد السابقان: " + res.error.message.replace("RETURN_SEAT_REQUIRED: ", "") } : null;
     } else {
       ({ error } = await supabase
         .from("bookings")
@@ -767,6 +779,21 @@ export function ManualBookingRow({
               </Button>
             </Field>
           </Section>
+          {needReturnChoice && orig && (
+            <div className="md:col-span-full">
+              <ReturnChangePanel
+                staff
+                bookingCode={orig.booking_code}
+                newDate={newActual}
+                oldDate={origActual}
+                count={d.passenger_count}
+                oldBusId={orig.return_bus_id}
+                oldSeats={orig.return_seat_numbers ?? []}
+                value={retChoice}
+                onChange={setRetChoice}
+              />
+            </div>
+          )}
 
           {/* 3) الفندق والتمديد */}
           <Section title="٣) الفندق والتمديد">

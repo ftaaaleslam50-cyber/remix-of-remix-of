@@ -1,3 +1,4 @@
+import { RETURN_SEAT_ADMIN_MSG } from "@/lib/return-display";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -799,11 +800,33 @@ function BookingPage() {
 
       if (editingCode) {
         // UPDATE existing booking — no duplicates. Authenticated users only reach this path.
-        const { error } = await supabase
-          .from("bookings")
-          .update(payload as never)
-          .eq("booking_code", editingCode);
-        if (error) throw error;
+        const { data: cur } = await supabase.from("bookings").select("id").eq("booking_code", editingCode).maybeSingle();
+        if (!cur || tripMode === "outbound") {
+          const { error } = await supabase.from("bookings").update(payload as never).eq("booking_code", editingCode);
+          if (error) throw error;
+        } else {
+          // تغيير التمديد/التاريخ/مقعد العودة وبقية الحقول في عملية ذرية واحدة؛
+          // المقعد القديم لا يُحرَّر إلا عند نجاح التأكيد.
+          const { extension_nights, return_date, return_bus_id: _a, return_trip_id: _b, return_seat_numbers: _c, ...rest } = payload as Record<string, unknown>;
+          void _a; void _b; void _c;
+          const call = (allow: boolean) =>
+            supabase.rpc("change_booking_return" as never, {
+              _booking_id: (cur as { id: string }).id,
+              _nights: extension_nights,
+              _return_date: return_date ?? null,
+              _return_bus_id: returnAssigned && retBus ? retBus.bus_id : null,
+              _seats: returnAssigned && retBus ? retSeats : null,
+              _allow_unassigned: allow,
+              _patch: rest,
+            } as never) as unknown as Promise<{ error: { message: string } | null }>;
+          let { error } = await call(retSkip);
+          if (error?.message.includes("RETURN_SEAT_REQUIRED")) {
+            const ok = window.confirm(`لا يتوفر مقعد عودة مؤكد في التاريخ الجديد.\n${RETURN_SEAT_ADMIN_MSG}\n\nهل تريد تأكيد تغيير الحجز؟`);
+            if (!ok) throw new Error("لم يتم تغيير الحجز؛ بقي تاريخ ومقعد العودة السابقان كما هما");
+            ({ error } = await call(true));
+          }
+          if (error) throw new Error(error.message.replace("RETURN_SEAT_REQUIRED: ", ""));
+        }
       } else {
         // Attach created_by so authenticated users can see the booking in "My Bookings".
         const insertPayload = { ...payload, created_by: currentUser?.id ?? null };
@@ -1076,7 +1099,7 @@ function BookingPage() {
                   {returnAssigned && retBus ? (
                     <b>{retBus.bus_name || `حافلة ${retBus.bus_number}`} — {retSeats.join("، ")} (تُثبَّت عند تأكيد الحجز)</b>
                   ) : (
-                    <b>قيد التسكين من إدارة التشغيل</b>
+                    <b>سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا</b>
                   )}
                 </div>
               )}
@@ -2533,8 +2556,7 @@ function StepReturnSeats(props: {
       <div className="space-y-3">
         <h2 className="text-xl font-extrabold">مقاعد العودة</h2>
         <div role="status" className="rounded-xl border border-warning/50 p-4 text-sm">
-          لا توجد حافلة عودة واحدة تتسع لجميع أفراد الحجز ({props.count}) في تاريخ <b dir="ltr">{props.date}</b>.
-          سيُكمَل الحجز وتبقى مقاعد العودة «قيد التسكين من إدارة التشغيل» دون أي إسناد جزئي.
+          سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا
         </div>
       </div>
     );
@@ -2573,7 +2595,7 @@ function StepReturnSeats(props: {
       {!bus && <p className="text-sm text-muted-foreground">اختر حافلة العودة.</p>}
       <label className="flex items-center gap-2 rounded-xl border p-3 text-sm">
         <Checkbox checked={props.skip} onCheckedChange={(v) => props.onSkip(v === true)} />
-        متابعة بدون مقعد عودة الآن — تبقى مقاعد العودة «قيد التسكين من إدارة التشغيل».
+        متابعة بدون اختيار مقعد العودة الآن — سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا
       </label>
     </div>
   );

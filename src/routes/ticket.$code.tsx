@@ -234,7 +234,7 @@ function TicketPage() {
       if (b.return_buses.supervisor_name) lines.push(`مشرف العودة: ${b.return_buses.supervisor_name}`);
       if (!hideSeats) lines.push(`مقاعد العودة: ${(b.return_seat_numbers ?? []).join(", ")}`);
     } else if (b.trip_mode !== "outbound" && b.actual_return_date) {
-      lines.push("مقاعد العودة: قيد التسكين من إدارة التشغيل");
+      lines.push("مقاعد العودة: سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا");
     }
 
     lines.push(
@@ -377,7 +377,7 @@ function TicketPage() {
                 {!hideSeats && <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />}
               </>
             ) : booking.trip_mode !== "outbound" && booking.actual_return_date ? (
-              <TicketRow label="مقاعد العودة" value="قيد التسكين من إدارة التشغيل" />
+              <TicketRow label="مقاعد العودة" value="سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا" />
             ) : null}
 
             <TicketRow

@@ -2527,6 +2527,18 @@ export type Database = {
         }
         Returns: Json
       }
+      change_booking_return: {
+        Args: {
+          _allow_unassigned?: boolean
+          _booking_id: string
+          _nights?: number
+          _patch?: Json
+          _return_bus_id?: string
+          _return_date?: string
+          _seats?: string[]
+        }
+        Returns: Json
+      }
       create_notification_broadcast: {
         Args: {
           _audience: string

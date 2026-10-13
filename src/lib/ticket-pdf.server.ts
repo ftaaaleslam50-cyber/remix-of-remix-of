@@ -260,7 +260,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
     if (b.return_buses.supervisor_name) rows.push(["مشرف العودة", b.return_buses.supervisor_name]);
     if (!hideSeats) rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
   } else if (b.trip_mode !== "outbound" && b.actual_return_date) {
-    rows.push(["مقاعد العودة", "قيد التسكين من إدارة التشغيل"]);
+    rows.push(["مقاعد العودة", "سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا"]);
   }
 
   rows.push([
