@@ -50,6 +50,13 @@
       "when": 1791836453300,
       "tag": "0006_return_seat_assignment_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791875588049,
+      "tag": "0007_atomic_change_booking_return",
+      "breakpoints": true
     }
   ]
 }
