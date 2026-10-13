@@ -13,3 +13,4 @@
 - Prefix return-trip select values with `return:` so independent outbound/return IDs filter by their respective booking fields without collisions.
 - Store the return-seat company share in `settlement_reference.return_trip_company_profit_rate` and use it only for bookings with `return_trip_id` or `trip_mode = 'return'`, so regular commissions remain unchanged.
 - Use the shared client-side trip-notice sharing helper for outbound and return notices; it keeps passenger lists text-only and bus images attached only to notices.
+- Return-seat assignments are validated by the bookings DB trigger (bus linked in return_trip_buses for the real return date, seat in bus_seat_labels, capacity, uniqueness); UI only suggests seats, so never bypass the trigger.
