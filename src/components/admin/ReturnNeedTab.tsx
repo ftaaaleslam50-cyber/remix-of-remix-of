@@ -21,7 +21,6 @@ interface Link { return_trip_id: string; trip_date: string; bus_id: string }
 interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; layout_id: string | null }
 interface RT { id: string; name: string; return_date: string | null }
 
-const rpc = supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 
 export function ReturnNeedTab() {
   const qc = useQueryClient();
@@ -51,7 +50,8 @@ export function ReturnNeedTab() {
     void qc.invalidateQueries({ queryKey: ["return_need_settings"] });
   }
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, error: loadError, refetch, isFetching } = useQuery({
+    retry: 1,
     queryKey: ["return_need_data", today],
     queryFn: async () => {
       const [bk, links, rts, buses] = await Promise.all([
@@ -61,12 +61,16 @@ export function ReturnNeedTab() {
         supabase.from("return_trips").select("id,name,return_date"),
         supabase.from("buses").select("id,name,bus_number,capacity,layout_id"),
       ]);
+      const firstErr = bk.error ?? links.error ?? rts.error ?? buses.error;
+      if (firstErr) throw new Error(firstErr.message);
       const bookings = (bk.data ?? []) as unknown as Bk[];
       const busIds = Array.from(new Set([...(links.data ?? []).map((l) => l.bus_id), ...bookings.map((b) => b.return_bus_id).filter(Boolean) as string[]]));
       const labels: Record<string, string[]> = {};
       await Promise.all(busIds.map(async (id) => {
-        const { data } = await rpc("bus_seat_labels", { _bus_id: id });
-        labels[id] = (data as string[] | null) ?? [];
+        // استدعاء مباشر يحافظ على سياق العميل (this)؛ الاستدعاء المنفصل كان يفشل بصمت.
+        const { data, error } = await supabase.rpc("bus_seat_labels" as never, { _bus_id: id } as never);
+        if (error) throw new Error(`تعذر قراءة مخطط الحافلة: ${error.message}`);
+        labels[id] = (data as unknown as string[] | null) ?? [];
       }));
       return { bookings, links: (links.data ?? []) as Link[], rts: (rts.data ?? []) as RT[], buses: (buses.data ?? []) as BusRow[], labels };
     },
@@ -180,9 +184,15 @@ export function ReturnNeedTab() {
       <section className="surface-card p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-extrabold">احتياج حافلات العودة لكل رحلة وتاريخ</h3>
-          <Button variant="outline" size="sm" className="rounded-full" onClick={() => refetch()}>تحديث</Button>
+          <Button variant="outline" size="sm" className="rounded-full" disabled={isFetching} onClick={() => refetch()}>{isFetching ? "جارٍ التحديث…" : "تحديث"}</Button>
         </div>
-        {isLoading || !report ? <p className="text-sm text-muted-foreground">جارٍ التحميل…</p> : (
+        {isError ? (
+          <div role="alert" className="rounded-xl border border-destructive/50 p-3 text-sm text-destructive space-y-2">
+            <div className="font-bold">تعذر تحميل بيانات الاحتياج</div>
+            <div className="text-xs">{(loadError as Error | null)?.message ?? "خطأ غير معروف"}</div>
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => refetch()}>إعادة المحاولة</Button>
+          </div>
+        ) : isLoading || !report ? <p className="text-sm text-muted-foreground">جارٍ التحميل…</p> : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -223,6 +233,8 @@ export function ReturnNeedTab() {
 
       <section className="surface-card p-4 space-y-3">
         <h3 className="font-extrabold">تقرير الإسنادات غير الصالحة {report ? `(${report.issues.length})` : ""}</h3>
+        {isError && <p className="text-sm text-destructive">التقرير غير متاح بسبب خطأ التحميل أعلاه.</p>}
+        {!isError && !report && <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>}
         {report && report.issues.length === 0 && <p className="text-sm text-muted-foreground">لا توجد مشكلات.</p>}
         {report && report.issues.length > 0 && (
           <div className="overflow-x-auto">

@@ -58,3 +58,18 @@ export function suggestReturn(buses: ReturnBusOcc[], outboundSeats: string[], co
   }
   return best;
 }
+
+/**
+ * وضع خطوة مقاعد العودة:
+ * - none: لا توجد حافلات مربوطة أو لا توجد مقاعد متاحة إطلاقًا → قيد التسكين.
+ * - single: توجد حافلة واحدة على الأقل تستوعب كل الركاب → يختار العميل.
+ * - admin: المقاعد متاحة لكن موزعة على أكثر من حافلة. الحجز يحمل حافلة عودة واحدة فقط
+ *   (return_bus_id) ولا يمكن ضمان توزيع متعدد ذريًا، فيُعرض للعميل أن الإدارة ستسكّنه دون إسناد جزئي.
+ */
+export type ReturnStepMode = "none" | "single" | "admin";
+export function returnStepMode(buses: ReturnBusOcc[], count: number): ReturnStepMode {
+  if (count <= 0) return "none";
+  if (buses.some((b) => roomOf(b) >= count)) return "single";
+  const total = buses.reduce((s, b) => s + roomOf(b), 0);
+  return total > 0 ? "admin" : "none";
+}
