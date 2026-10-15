@@ -1125,7 +1125,13 @@ export function ManualBookingRow({
                 onChange={(s) => set("seat_numbers", s)}
               />
             )}
-            <Button className="rounded-full" onClick={() => setSeatOpen(false)}>
+            <Button
+              className="rounded-full"
+              onClick={() => {
+                setSeatOpen(false);
+                void autoPickReturnSeats();
+              }}
+            >
               تم
             </Button>
           </DialogContent>
