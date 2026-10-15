@@ -577,6 +577,12 @@ export function ManualBookingRow({
     if (!noBus && d.seat_numbers.length && d.seat_numbers.length !== d.passenger_count) {
       return toast.error("عدد المقاعد المختارة لا يساوي عدد الأفراد");
     }
+    if (d.trip_mode !== "outbound" && d.return_seat_numbers.length > 0) {
+      if (d.return_seat_numbers.length !== d.passenger_count) {
+        return toast.error("عدد مقاعد العودة المختارة لا يساوي عدد الأفراد");
+      }
+      if (!d.return_bus_id) return toast.error("اختر حافلة العودة مع مقاعد العودة");
+    }
     setSaving(true);
     const code = d.booking_code ?? newCode();
     const payload = {
@@ -593,6 +599,12 @@ export function ManualBookingRow({
       bus_id: d.bus_id,
       trip_mode: d.trip_mode,
       seat_numbers: d.seat_numbers,
+      return_bus_id: d.trip_mode === "outbound" ? null : d.return_seat_numbers.length > 0 ? d.return_bus_id : null,
+      return_seat_numbers: d.trip_mode === "outbound" ? [] : d.return_seat_numbers,
+      return_trip_id:
+        d.trip_mode !== "outbound" && d.return_seat_numbers.length > 0
+          ? (chosenRetOcc?.return_trip_id ?? d.return_trip_id ?? null)
+          : null,
       no_hotel: noHotel,
       no_bus: noBus,
       customer_name: d.customer_name.trim(),
