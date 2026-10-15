@@ -637,9 +637,25 @@ export function ManualBookingRow({
     if (d.id) {
       // كل التعديلات (التمديد/التاريخ/مقعد العودة/بقية الحقول) في عملية ذرية واحدة:
       // تنجح معًا أو تفشل معًا، والمقعد القديم لا يُحرَّر إلا بنجاحها.
-      if (needReturnChoice && !returnChoiceReady(retChoice, d.passenger_count)) {
-        setSaving(false);
-        return toast.error("اختر مقعد العودة في التاريخ الجديد، أو وافق على الحفظ دون مقعد مؤكد");
+      let rbId: string | null = null;
+      let rbSeats: string[] | null = null;
+      let rbUnassigned = false;
+      if (d.trip_mode !== "outbound" && retTouched) {
+        // اختيار صريح من خانة «مقاعد العودة»: إما مقاعد جديدة وإما إزالة المقاعد.
+        if (d.return_seat_numbers.length > 0) {
+          rbId = d.return_bus_id;
+          rbSeats = d.return_seat_numbers;
+        } else if (origConfirmed) {
+          rbUnassigned = true;
+        }
+      } else if (needReturnChoice) {
+        if (!returnChoiceReady(retChoice, d.passenger_count)) {
+          setSaving(false);
+          return toast.error("اختر مقعد العودة في التاريخ الجديد، أو وافق على الحفظ دون مقعد مؤكد");
+        }
+        rbId = retChoice.busId;
+        rbSeats = retChoice.busId ? retChoice.seats : null;
+        rbUnassigned = retChoice.allowUnassigned;
       }
       const { extension_nights: _n, return_date: _rd, ...rest } = payload as Record<string, unknown>;
       void _n;
@@ -647,9 +663,9 @@ export function ManualBookingRow({
         _booking_id: d.id,
         _nights: extensionNights,
         _return_date: (_rd as string | undefined) ?? null,
-        _return_bus_id: needReturnChoice ? retChoice.busId : null,
-        _seats: needReturnChoice && retChoice.busId ? retChoice.seats : null,
-        _allow_unassigned: needReturnChoice && retChoice.allowUnassigned,
+        _return_bus_id: rbId,
+        _seats: rbSeats,
+        _allow_unassigned: rbUnassigned,
         _patch: rest,
       } as never)) as unknown as { error: { message: string } | null };
       error = res.error ? { message: "لم يُحفظ أي تغيير وبقي التاريخ والمقعد السابقان: " + res.error.message.replace("RETURN_SEAT_REQUIRED: ", "") } : null;
