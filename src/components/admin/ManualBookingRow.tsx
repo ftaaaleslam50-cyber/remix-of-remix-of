@@ -874,6 +874,23 @@ export function ManualBookingRow({
                 {d.seat_numbers.length ? d.seat_numbers.join(", ") : "اختيار المقاعد"}
               </Button>
             </Field>
+            {d.trip_mode !== "outbound" && !noBus && (
+              <Field label={`مقاعد العودة (${d.return_seat_numbers.length}/${d.passenger_count})`}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 w-full text-xs justify-start"
+                  onClick={() => {
+                    if (!newActual) return toast.error("حدد تاريخ العودة أولًا");
+                    setRetSeatOpen(true);
+                  }}
+                >
+                  <LayoutGrid className="h-3 w-3 ml-1" />
+                  {d.return_seat_numbers.length ? d.return_seat_numbers.join(", ") : "اختيار مقاعد العودة"}
+                </Button>
+              </Field>
+            )}
           </Section>
           {needReturnChoice && orig && (
             <div className="md:col-span-full">
