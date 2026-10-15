@@ -1107,6 +1107,83 @@ export function ManualBookingRow({
             </Button>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={retSeatOpen} onOpenChange={setRetSeatOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                اختيار مقاعد العودة ({d.return_seat_numbers.length}/{d.passenger_count})
+              </DialogTitle>
+            </DialogHeader>
+            <div className="text-xs text-muted-foreground">تاريخ العودة: {newActual ?? "—"}</div>
+            <select
+              className={sel}
+              value={d.return_bus_id ?? ""}
+              onChange={(e) => setD((p) => ({ ...p, return_bus_id: e.target.value || null, return_seat_numbers: [] }))}
+            >
+              <option value="">اختر حافلة العودة</option>
+              {retOcc.map((b) => (
+                <option key={b.bus_id} value={b.bus_id} disabled={roomOf(b) < d.passenger_count}>
+                  {b.return_trip_name} — {b.bus_name || `حافلة ${b.bus_number}`} — متاح {roomOf(b)}
+                </option>
+              ))}
+            </select>
+            {retOcc.length === 0 && (
+              <div className="text-xs text-muted-foreground">لا توجد حافلات عودة مربوطة بهذا التاريخ.</div>
+            )}
+            {d.return_bus_id && !chosenRetOcc && retOcc.length > 0 && (
+              <div className="text-xs text-destructive">هذه الحافلة غير مربوطة بتاريخ {newActual} — اختر حافلة أخرى.</div>
+            )}
+            {chosenRetOcc &&
+              retBus &&
+              (retLayoutRow?.layout_json ? (
+                <LayoutSeatMap
+                  layout={retLayoutRow.layout_json}
+                  selected={d.return_seat_numbers}
+                  reserved={chosenRetOcc.taken}
+                  reservedGenders={{}}
+                  maxSelectable={d.passenger_count}
+                  genders={retSeatGenders}
+                  onChange={(s) => set("return_seat_numbers", s)}
+                />
+              ) : (
+                <BusSeatMap
+                  selected={d.return_seat_numbers}
+                  reserved={chosenRetOcc.taken}
+                  reservedGenders={{}}
+                  maxSelectable={d.passenger_count}
+                  blocked={retBus.blocked_seats ?? []}
+                  layout={(retBus.layout as "A" | "B") ?? "A"}
+                  genders={retSeatGenders}
+                  onChange={(s) => set("return_seat_numbers", s)}
+                />
+              ))}
+            <div className="flex gap-2">
+              <Button
+                className="rounded-full"
+                onClick={() => {
+                  setRetTouched(true);
+                  setRetSeatOpen(false);
+                }}
+              >
+                تم
+              </Button>
+              {(d.return_seat_numbers.length > 0 || d.return_bus_id) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => {
+                    setD((p) => ({ ...p, return_bus_id: null, return_seat_numbers: [] }));
+                    setRetTouched(true);
+                  }}
+                >
+                  إزالة مقاعد العودة
+                </Button>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </td>
     </tr>
   );
