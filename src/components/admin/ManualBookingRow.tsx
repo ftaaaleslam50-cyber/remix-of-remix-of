@@ -481,7 +481,10 @@ export function ManualBookingRow({
 
   function returnDatePatch(): { return_date?: string } {
     if (d.trip_mode === "outbound") return {};
-    const raw = d.actual_return_day || selectedTrip?.return_day || "";
+    const raw =
+      d.actual_return_day ||
+      selectedTrip?.return_day ||
+      (typeof extraPayload?.return_date === "string" ? (extraPayload.return_date as string) : "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { return_date: raw };
     const dep = (bus as { assigned_date?: string | null } | null)?.assigned_date;
     const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -509,6 +512,62 @@ export function ManualBookingRow({
   const origConfirmed = !!orig?.return_bus_id && (orig?.return_seat_numbers?.length ?? 0) > 0;
   const needReturnChoice = !!d.id && origConfirmed && d.trip_mode !== "outbound" && newActual !== origActual;
   useEffect(() => { setRetChoice({ busId: null, seats: [], allowUnassigned: false }); }, [newActual]);
+
+  // نوع مقاعد العودة المختارة: أول male_count مقاعد للذكور والباقي للإناث.
+  const retSeatGenders = useMemo(() => {
+    const m: Record<string, "male" | "female"> = {};
+    d.return_seat_numbers.forEach((s, i) => {
+      m[s] = i < d.male_count ? "male" : "female";
+    });
+    return m;
+  }, [d.return_seat_numbers, d.male_count]);
+
+  // «ذهاب فقط» لا يحمل مقاعد عودة.
+  useEffect(() => {
+    if (d.trip_mode === "outbound" && (d.return_bus_id || d.return_seat_numbers.length > 0)) {
+      setD((p) => ({ ...p, return_bus_id: null, return_seat_numbers: [] }));
+    }
+  }, [d.trip_mode, d.return_bus_id, d.return_seat_numbers.length]);
+
+  // إشغال حافلات العودة في تاريخ العودة الفعلي (يُحدَّث دوريًا لالتقاط حجوزات المستخدمين الآخرين).
+  const { data: retOcc = [] } = useQuery({
+    queryKey: ["mb-ret-occ", newActual, d.booking_code ?? ""],
+    enabled: retSeatOpen && !!newActual,
+    refetchInterval: 2_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_return_occupancy" as never, {
+        _date: newActual,
+        _exclude_code: d.booking_code ?? null,
+      } as never);
+      if (error) throw error;
+      return (data ?? []) as unknown as ReturnBusOcc[];
+    },
+  });
+  const chosenRetOcc = retOcc.find((o) => o.bus_id === d.return_bus_id) ?? null;
+
+  // بيانات حافلة العودة المختارة (المخطط والسعة) — من قائمة الحافلات أو بجلب مباشر.
+  const retBusFromList = buses.find((b) => b.id === d.return_bus_id) ?? null;
+  const { data: retBusDirect = null } = useQuery({
+    queryKey: ["mb-retbus-direct", d.return_bus_id],
+    enabled: !!d.return_bus_id && !retBusFromList,
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("buses")
+          .select("id,name,bus_number,capacity,layout,layout_id,blocked_seats")
+          .eq("id", d.return_bus_id!)
+          .maybeSingle()
+      ).data as unknown as BusOpt) ?? null,
+  });
+  const retBus = retBusFromList ?? retBusDirect;
+  const { data: retLayoutRow } = useQuery({
+    queryKey: ["mb-ret-layout", retBus?.layout_id ?? null],
+    enabled: !!retBus?.layout_id,
+    queryFn: async () =>
+      (await supabase.from("bus_layouts").select("layout_json").eq("id", retBus!.layout_id!).maybeSingle()).data as {
+        layout_json: LayoutJson;
+      } | null,
+  });
 
   async function save() {
     if (!d.customer_name.trim()) return toast.error("أدخل اسم العميل");
