@@ -25,7 +25,7 @@ import { CustomerCombobox } from "@/components/admin/CustomerCombobox";
 import { customersTable, customerWhatsapp, type TravelCustomer, idImageUrl, uploadCustomerId } from "@/lib/customers";
 import { Upload, Trash2 } from "lucide-react";
 import { ReturnChangePanel, returnChoiceReady, type ReturnChoice } from "@/components/booking/ReturnChangePanel";
-import { addDays } from "@/lib/return-need";
+import { addDays, roomOf, type ReturnBusOcc } from "@/lib/return-need";
 
 const ID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -112,6 +112,9 @@ export interface ManualBookingDraft {
   bus_id: string | null;
   trip_mode: TripMode;
   seat_numbers: string[];
+  return_bus_id: string | null;
+  return_trip_id: string | null;
+  return_seat_numbers: string[];
   actual_return_day: string;
   coupon_code: string;
   discount_amount: number;
@@ -143,6 +146,9 @@ const EMPTY: ManualBookingDraft = {
   bus_id: null,
   trip_mode: "round",
   seat_numbers: [],
+  return_bus_id: null,
+  return_trip_id: null,
+  return_seat_numbers: [],
   actual_return_day: "",
   coupon_code: "",
   discount_amount: 0,
@@ -230,6 +236,9 @@ export function ManualBookingRow({
   } as ManualBookingDraft);
   const [saving, setSaving] = useState(false);
   const [seatOpen, setSeatOpen] = useState(false);
+  const [retSeatOpen, setRetSeatOpen] = useState(false);
+  // true عند فتح مخطط مقاعد العودة والضغط «تم» — يُمرَّر الاختيار صراحةً عند الحفظ.
+  const [retTouched, setRetTouched] = useState(false);
   const [priceOverride, setPriceOverride] = useState<string>("");
   // عميل محفوظ مختار من «العملاء» — لا يُحدَّث سجله إلا بموافقة صريحة.
   const [picked, setPicked] = useState<TravelCustomer | null>(null);
