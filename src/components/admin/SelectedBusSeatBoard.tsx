@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LiveSeatBoard, type LiveSeatBooking } from "@/components/admin/LiveSeatBoard";
+import { LiveSeatBoard, type LiveSeatBooking, type SeatTransferApi } from "@/components/admin/LiveSeatBoard";
 import { busDateLabel } from "@/components/admin/BusMultiSelect";
 import { mirrorLayout, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { buildDefaultLayout, twoPartName } from "@/lib/bus-seat-chart";
@@ -21,7 +21,8 @@ interface BoardBus {
 
 const shortName = (name: string | null | undefined) => twoPartName(name ?? "");
 
-export function SelectedBusSeatBoard({ bus, bookings, index, onSaved }: {
+export function SelectedBusSeatBoard({ bus, bookings, index, onSaved, transfer }: {
+  transfer?: SeatTransferApi | null;
   bus: BoardBus;
   bookings: LiveSeatBooking[];
   index: number;
@@ -42,7 +43,7 @@ export function SelectedBusSeatBoard({ bus, bookings, index, onSaved }: {
 
   return (
     <section aria-label={`مخطط الحافلة ${bus.bus_number}`} data-bus-board={bus.id}
-      className={`min-w-0 rounded-lg border border-t-4 bg-card text-card-foreground p-3 sm:p-4 ${accents[index % accents.length]}`}>
+      className={`min-w-0 rounded-lg border border-t-4 bg-card text-card-foreground p-3 sm:p-4 ${accents[index % accents.length]} ${transfer ? "ring-2 ring-warning/60" : ""}`}>
       <header className="space-y-3 border-b pb-3 mb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -72,7 +73,7 @@ export function SelectedBusSeatBoard({ bus, bookings, index, onSaved }: {
         </div>
       ) : (
         <LiveSeatBoard layout={mirrorLayout(layout?.layout_json ?? buildDefaultLayout(bus.layout === "B" ? "B" : "A"))}
-          bookings={bookings} shortName={shortName} onSaved={onSaved} />
+          bookings={bookings} shortName={shortName} onSaved={onSaved} transfer={transfer} />
       )}
     </section>
   );

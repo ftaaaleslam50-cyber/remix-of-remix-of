@@ -2650,6 +2650,10 @@ export type Database = {
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
       mobile_exists: { Args: { _mobile: string }; Returns: boolean }
+      move_booking_outbound: {
+        Args: { _booking_id: string; _seats: string[]; _target_bus_id: string }
+        Returns: Json
+      }
       my_staff_role: { Args: never; Returns: string }
       perform_spin: {
         Args: {

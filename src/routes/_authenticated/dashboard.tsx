@@ -37,7 +37,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
-import { SelectedBusSeatBoard } from "@/components/admin/SelectedBusSeatBoard";
+import { BusTransferBoards } from "@/components/admin/BusTransferBoards";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
@@ -1399,18 +1399,9 @@ function UnifiedBookingsTab(props: {
             <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
 
             {busIds.length > 0 && (
-              <div className="col-span-2 md:col-span-4 lg:col-span-6 space-y-3">
-                <h2 className="font-extrabold flex items-center gap-2">
-                  <Bus className="size-4 text-primary" /> مخططات الحافلات الحية
-                </h2>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
-                  {buses.filter((selected) => busIds.includes(selected.id)).map((selected, index) => (
-                    <SelectedBusSeatBoard key={selected.id} bus={selected} index={index}
-                      bookings={activeSeatBookings.filter((booking) => booking.bus_id === selected.id)}
-                      onSaved={() => { void qcInner.invalidateQueries({ queryKey: ["admin-bookings"] }); }} />
-                  ))}
-                </div>
-              </div>
+              <BusTransferBoards buses={buses.filter((selected) => busIds.includes(selected.id))}
+                bookings={activeSeatBookings}
+                onRefresh={() => qcInner.invalidateQueries({ queryKey: ["admin-bookings"] })} />
             )}
 
 
