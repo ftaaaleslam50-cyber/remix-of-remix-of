@@ -57,6 +57,7 @@ import { addDays, roomOf, returnStepMode, suggestReturn, type ReturnBusOcc } fro
 export const Route = createFileRoute("/booking")({
   head: () => ({
     meta: [
+      { name: "twitter:card", content: "summary" },
       { title: `الحجز | ${BRAND.name}` },
       {
         name: "description",

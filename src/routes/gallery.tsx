@@ -15,6 +15,7 @@ interface Image { id: string; album_id: string; image_url: string; caption: stri
 export const Route = createFileRoute("/gallery")({
   head: () => ({
     meta: [
+      { name: "twitter:card", content: "summary" },
       { title: `المعرض | ${BRAND.name}` },
       {
         name: "description",

@@ -1,5 +1,5 @@
 // مخطط الحافلة الحي مع سحب وإفلات لتبديل/نقل المقاعد، ثم اعتماد التعديلات دفعة واحدة.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, RotateCcw, Mars, Venus, UsersRound, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,7 @@ export function LiveSeatBoard({
   shortName: (n: string | null | undefined) => string;
   onSaved?: () => void;
 }) {
+  const dragScope = `application/x-zt-seat-${useId().replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}`;
   /** الخريطة الأصلية من قاعدة البيانات */
   const original = useMemo(() => {
     const m: Record<string, Occupant> = {};
@@ -208,18 +209,20 @@ export function LiveSeatBoard({
               draggable={!!occ}
               onDragStart={(e) => {
                 if (!occ) return;
-                e.dataTransfer.setData("text/plain", label);
+                e.dataTransfer.setData(dragScope, label);
                 e.dataTransfer.effectAllowed = "move";
                 setPicked(label);
               }}
               onDragOver={(e) => {
+                if (!e.dataTransfer.types.includes(dragScope)) return;
                 e.preventDefault();
                 setHover(label);
               }}
               onDragLeave={() => setHover((h) => (h === label ? null : h))}
               onDrop={(e) => {
                 e.preventDefault();
-                move(e.dataTransfer.getData("text/plain") || picked || "", label);
+                const from = e.dataTransfer.getData(dragScope);
+                if (from) move(from, label);
               }}
               onDragEnd={() => {
                 setHover(null);

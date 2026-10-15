@@ -12,7 +12,15 @@ import { BRAND } from "@/lib/brand";
 import { SiteLayout } from "@/components/site/SiteLayout";
 
 export const Route = createFileRoute("/_authenticated/profile")({
-  head: () => ({ meta: [{ title: `الملف الشخصي | ${BRAND.name}` }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [
+      { title: `الملف الشخصي | ${BRAND.name}` },
+      { name: "description", content: "إدارة بيانات حسابك في زهرة طيبة." },
+      { property: "og:title", content: `الملف الشخصي | ${BRAND.name}` },
+      { property: "og:description", content: "إدارة بيانات حسابك في زهرة طيبة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ] }),
   component: ProfilePage,
 });
 

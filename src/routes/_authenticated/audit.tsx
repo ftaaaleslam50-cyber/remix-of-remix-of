@@ -10,7 +10,15 @@ import { formatDate } from "@/lib/format";
 import { BRAND } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/audit")({
-  head: () => ({ meta: [{ title: `سجل النظام | ${BRAND.name}` }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [
+      { title: `سجل النظام | ${BRAND.name}` },
+      { name: "description", content: "مراجعة سجل عمليات إدارة زهرة طيبة." },
+      { property: "og:title", content: `سجل النظام | ${BRAND.name}` },
+      { property: "og:description", content: "مراجعة سجل عمليات إدارة زهرة طيبة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ] }),
   component: AuditPage,
 });
 

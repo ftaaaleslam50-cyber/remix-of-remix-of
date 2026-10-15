@@ -11,6 +11,8 @@ import { BookNowLink } from "@/components/site/BookNowLink";
 export const Route = createFileRoute("/packages")({
   head: () => ({
     meta: [
+      { name: "twitter:card", content: "summary" },
+      { property: "og:type", content: "website" },
       { title: `الباقات | ${BRAND.name}` },
       {
         name: "description",
