@@ -14,9 +14,15 @@ import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap"
 import ticketNotes from "@/assets/ticket-notes-v2.jpg.asset.json";
 
 export const Route = createFileRoute("/ticket/$code")({
-  head: () => ({
-    meta: [{ title: `تذكرة حجز | ${BRAND.name}` }, { name: "robots", content: "noindex" }],
-  }),
+  head: () => ({ meta: [
+      { title: `تذكرة حجز | ${BRAND.name}` },
+      { name: "description", content: "تفاصيل تذكرة حجز رحلة زهرة طيبة ومقاعد الذهاب والعودة." },
+      { property: "og:title", content: `تذكرة حجز | ${BRAND.name}` },
+      { property: "og:description", content: "تفاصيل تذكرة حجز رحلة زهرة طيبة ومقاعد الذهاب والعودة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ] }),
   component: TicketPage,
 });
 

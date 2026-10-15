@@ -21,6 +21,8 @@ import type { AppSettings } from "@/lib/booking/types";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
+      { name: "twitter:card", content: "summary" },
+      { property: "og:type", content: "website" },
       { title: `تواصل معنا | ${BRAND.name}` },
       {
         name: "description",

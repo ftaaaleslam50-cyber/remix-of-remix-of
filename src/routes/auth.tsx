@@ -11,12 +11,15 @@ import { Logo } from "@/components/site/Logo";
 import { BRAND } from "@/lib/brand";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
+  head: () => ({ meta: [
       { title: `تسجيل الدخول | ${BRAND.name}` },
+      { name: "description", content: "تسجيل الدخول إلى حساب زهرة طيبة." },
+      { property: "og:title", content: `تسجيل الدخول | ${BRAND.name}` },
+      { property: "og:description", content: "تسجيل الدخول إلى حساب زهرة طيبة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
-    ],
-  }),
+    ] }),
   component: AuthPage,
 });
 

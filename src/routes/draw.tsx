@@ -17,6 +17,7 @@ import { getClientIp, getDeviceId } from "@/lib/client-ip";
 export const Route = createFileRoute("/draw")({
   head: () => ({
     meta: [
+      { name: "twitter:card", content: "summary" },
       { title: `عجلة السحب | ${BRAND.name}` },
       {
         name: "description",

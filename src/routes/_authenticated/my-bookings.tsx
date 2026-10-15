@@ -18,7 +18,15 @@ import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/retur
 import { startOfWeek } from "@/lib/week";
 
 export const Route = createFileRoute("/_authenticated/my-bookings")({
-  head: () => ({ meta: [{ title: `حجوزاتي | ${BRAND.name}` }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [
+      { title: `حجوزاتي | ${BRAND.name}` },
+      { name: "description", content: "عرض حجوزات رحلات زهرة طيبة الخاصة بك." },
+      { property: "og:title", content: `حجوزاتي | ${BRAND.name}` },
+      { property: "og:description", content: "عرض حجوزات رحلات زهرة طيبة الخاصة بك." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ] }),
   component: MyBookingsPage,
 });
 
