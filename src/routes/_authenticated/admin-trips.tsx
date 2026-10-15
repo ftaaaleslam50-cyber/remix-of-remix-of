@@ -434,14 +434,14 @@ function TripEditor({ trip, buses, assigned, occupancy, past, onSave, onSaveOccu
       </div>
 
       {past.length > 0 && (
-        <div>
-          <div className="text-sm font-bold mb-2">المواعيد السابقة (قابلة للتعديل)</div>
-          <div className="space-y-2">
+        <details className="group rounded-xl border p-2">
+          <summary className="text-sm font-bold cursor-pointer select-none">المواعيد السابقة (قابلة للتعديل) — {past.length}</summary>
+          <div className="space-y-2 mt-2">
             {past.map((o) => (
               <PastOccurrence key={o.id} occurrence={o} onSave={onSaveOccurrence} />
             ))}
           </div>
-        </div>
+        </details>
       )}
 
       <div className="flex justify-end gap-2">
