@@ -132,6 +132,8 @@ interface BookingRow {
   bus_id?: string | null;
   trip_id?: string | null;
   return_trip_id?: string | null;
+  return_bus_id?: string | null;
+  return_seat_numbers?: string[];
   package_id?: string | null;
   packages?: { name: string } | null;
   departure_date?: string | null;
@@ -197,7 +199,7 @@ function Dashboard() {
       let q = supabase
         .from("bookings")
         .select(
-           "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,actual_return_date,no_hotel,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,return_trip_id,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
+           "id,booking_code,customer_name,contact_phone,whatsapp_phone,id_number,id_image_url,passenger_count,total_price,status,created_at,seat_numbers,room_type,booking_type,male_count,female_count,seat_genders,discount_amount,coupon_code,deleted_at,no_show,notes,actual_return_day,actual_return_date,no_hotel,nationality,booking_source,extension_nights,trip_mode,departure_date,return_date,bus_id,trip_id,return_trip_id,return_bus_id,return_seat_numbers,package_id,packages(name),trips(name,departure_day,return_day,departure_date,return_date),buses!bookings_bus_id_fkey(id,name,bus_number,expenses,driver_phone,driver_id_number)",
         )
         .order("created_at", { ascending: false })
         .limit(500);
@@ -1734,6 +1736,9 @@ function UnifiedBookingsTab(props: {
                     bus_id: b.bus_id ?? null,
                     trip_mode: ((b.trip_mode ?? "round") as "round" | "outbound" | "return" | "round_open"),
                     seat_numbers: b.seat_numbers ?? [],
+                    return_bus_id: b.return_bus_id ?? null,
+                    return_trip_id: b.return_trip_id ?? null,
+                    return_seat_numbers: b.return_seat_numbers ?? [],
                     actual_return_day: b.actual_return_day ?? "",
                     coupon_code: b.coupon_code ?? "",
                     discount_amount: Number(b.discount_amount ?? 0),

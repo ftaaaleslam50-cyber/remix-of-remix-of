@@ -25,7 +25,7 @@ import { CustomerCombobox } from "@/components/admin/CustomerCombobox";
 import { customersTable, customerWhatsapp, type TravelCustomer, idImageUrl, uploadCustomerId } from "@/lib/customers";
 import { Upload, Trash2 } from "lucide-react";
 import { ReturnChangePanel, returnChoiceReady, type ReturnChoice } from "@/components/booking/ReturnChangePanel";
-import { addDays } from "@/lib/return-need";
+import { addDays, roomOf, type ReturnBusOcc } from "@/lib/return-need";
 
 const ID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -112,6 +112,9 @@ export interface ManualBookingDraft {
   bus_id: string | null;
   trip_mode: TripMode;
   seat_numbers: string[];
+  return_bus_id: string | null;
+  return_trip_id: string | null;
+  return_seat_numbers: string[];
   actual_return_day: string;
   coupon_code: string;
   discount_amount: number;
@@ -143,6 +146,9 @@ const EMPTY: ManualBookingDraft = {
   bus_id: null,
   trip_mode: "round",
   seat_numbers: [],
+  return_bus_id: null,
+  return_trip_id: null,
+  return_seat_numbers: [],
   actual_return_day: "",
   coupon_code: "",
   discount_amount: 0,
@@ -230,6 +236,9 @@ export function ManualBookingRow({
   } as ManualBookingDraft);
   const [saving, setSaving] = useState(false);
   const [seatOpen, setSeatOpen] = useState(false);
+  const [retSeatOpen, setRetSeatOpen] = useState(false);
+  // true عند فتح مخطط مقاعد العودة والضغط «تم» — يُمرَّر الاختيار صراحةً عند الحفظ.
+  const [retTouched, setRetTouched] = useState(false);
   const [priceOverride, setPriceOverride] = useState<string>("");
   // عميل محفوظ مختار من «العملاء» — لا يُحدَّث سجله إلا بموافقة صريحة.
   const [picked, setPicked] = useState<TravelCustomer | null>(null);
@@ -472,7 +481,10 @@ export function ManualBookingRow({
 
   function returnDatePatch(): { return_date?: string } {
     if (d.trip_mode === "outbound") return {};
-    const raw = d.actual_return_day || selectedTrip?.return_day || "";
+    const raw =
+      d.actual_return_day ||
+      selectedTrip?.return_day ||
+      (typeof extraPayload?.return_date === "string" ? (extraPayload.return_date as string) : "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { return_date: raw };
     const dep = (bus as { assigned_date?: string | null } | null)?.assigned_date;
     const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -501,6 +513,62 @@ export function ManualBookingRow({
   const needReturnChoice = !!d.id && origConfirmed && d.trip_mode !== "outbound" && newActual !== origActual;
   useEffect(() => { setRetChoice({ busId: null, seats: [], allowUnassigned: false }); }, [newActual]);
 
+  // نوع مقاعد العودة المختارة: أول male_count مقاعد للذكور والباقي للإناث.
+  const retSeatGenders = useMemo(() => {
+    const m: Record<string, "male" | "female"> = {};
+    d.return_seat_numbers.forEach((s, i) => {
+      m[s] = i < d.male_count ? "male" : "female";
+    });
+    return m;
+  }, [d.return_seat_numbers, d.male_count]);
+
+  // «ذهاب فقط» لا يحمل مقاعد عودة.
+  useEffect(() => {
+    if (d.trip_mode === "outbound" && (d.return_bus_id || d.return_seat_numbers.length > 0)) {
+      setD((p) => ({ ...p, return_bus_id: null, return_seat_numbers: [] }));
+    }
+  }, [d.trip_mode, d.return_bus_id, d.return_seat_numbers.length]);
+
+  // إشغال حافلات العودة في تاريخ العودة الفعلي (يُحدَّث دوريًا لالتقاط حجوزات المستخدمين الآخرين).
+  const { data: retOcc = [] } = useQuery({
+    queryKey: ["mb-ret-occ", newActual, d.booking_code ?? ""],
+    enabled: retSeatOpen && !!newActual,
+    refetchInterval: 2_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_return_occupancy" as never, {
+        _date: newActual,
+        _exclude_code: d.booking_code ?? null,
+      } as never);
+      if (error) throw error;
+      return (data ?? []) as unknown as ReturnBusOcc[];
+    },
+  });
+  const chosenRetOcc = retOcc.find((o) => o.bus_id === d.return_bus_id) ?? null;
+
+  // بيانات حافلة العودة المختارة (المخطط والسعة) — من قائمة الحافلات أو بجلب مباشر.
+  const retBusFromList = buses.find((b) => b.id === d.return_bus_id) ?? null;
+  const { data: retBusDirect = null } = useQuery({
+    queryKey: ["mb-retbus-direct", d.return_bus_id],
+    enabled: !!d.return_bus_id && !retBusFromList,
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("buses")
+          .select("id,name,bus_number,capacity,layout,layout_id,blocked_seats")
+          .eq("id", d.return_bus_id!)
+          .maybeSingle()
+      ).data as unknown as BusOpt) ?? null,
+  });
+  const retBus = retBusFromList ?? retBusDirect;
+  const { data: retLayoutRow } = useQuery({
+    queryKey: ["mb-ret-layout", retBus?.layout_id ?? null],
+    enabled: !!retBus?.layout_id,
+    queryFn: async () =>
+      (await supabase.from("bus_layouts").select("layout_json").eq("id", retBus!.layout_id!).maybeSingle()).data as {
+        layout_json: LayoutJson;
+      } | null,
+  });
+
   async function save() {
     if (!d.customer_name.trim()) return toast.error("أدخل اسم العميل");
     if (d.male_count + d.female_count !== d.passenger_count) {
@@ -508,6 +576,12 @@ export function ManualBookingRow({
     }
     if (!noBus && d.seat_numbers.length && d.seat_numbers.length !== d.passenger_count) {
       return toast.error("عدد المقاعد المختارة لا يساوي عدد الأفراد");
+    }
+    if (d.trip_mode !== "outbound" && d.return_seat_numbers.length > 0) {
+      if (d.return_seat_numbers.length !== d.passenger_count) {
+        return toast.error("عدد مقاعد العودة المختارة لا يساوي عدد الأفراد");
+      }
+      if (!d.return_bus_id) return toast.error("اختر حافلة العودة مع مقاعد العودة");
     }
     setSaving(true);
     const code = d.booking_code ?? newCode();
@@ -525,6 +599,12 @@ export function ManualBookingRow({
       bus_id: d.bus_id,
       trip_mode: d.trip_mode,
       seat_numbers: d.seat_numbers,
+      return_bus_id: d.trip_mode === "outbound" ? null : d.return_seat_numbers.length > 0 ? d.return_bus_id : null,
+      return_seat_numbers: d.trip_mode === "outbound" ? [] : d.return_seat_numbers,
+      return_trip_id:
+        d.trip_mode !== "outbound" && d.return_seat_numbers.length > 0
+          ? (chosenRetOcc?.return_trip_id ?? d.return_trip_id ?? null)
+          : null,
       no_hotel: noHotel,
       no_bus: noBus,
       customer_name: d.customer_name.trim(),
@@ -557,9 +637,25 @@ export function ManualBookingRow({
     if (d.id) {
       // كل التعديلات (التمديد/التاريخ/مقعد العودة/بقية الحقول) في عملية ذرية واحدة:
       // تنجح معًا أو تفشل معًا، والمقعد القديم لا يُحرَّر إلا بنجاحها.
-      if (needReturnChoice && !returnChoiceReady(retChoice, d.passenger_count)) {
-        setSaving(false);
-        return toast.error("اختر مقعد العودة في التاريخ الجديد، أو وافق على الحفظ دون مقعد مؤكد");
+      let rbId: string | null = null;
+      let rbSeats: string[] | null = null;
+      let rbUnassigned = false;
+      if (d.trip_mode !== "outbound" && retTouched) {
+        // اختيار صريح من خانة «مقاعد العودة»: إما مقاعد جديدة وإما إزالة المقاعد.
+        if (d.return_seat_numbers.length > 0) {
+          rbId = d.return_bus_id;
+          rbSeats = d.return_seat_numbers;
+        } else if (origConfirmed) {
+          rbUnassigned = true;
+        }
+      } else if (needReturnChoice) {
+        if (!returnChoiceReady(retChoice, d.passenger_count)) {
+          setSaving(false);
+          return toast.error("اختر مقعد العودة في التاريخ الجديد، أو وافق على الحفظ دون مقعد مؤكد");
+        }
+        rbId = retChoice.busId;
+        rbSeats = retChoice.busId ? retChoice.seats : null;
+        rbUnassigned = retChoice.allowUnassigned;
       }
       const { extension_nights: _n, return_date: _rd, ...rest } = payload as Record<string, unknown>;
       void _n;
@@ -567,9 +663,9 @@ export function ManualBookingRow({
         _booking_id: d.id,
         _nights: extensionNights,
         _return_date: (_rd as string | undefined) ?? null,
-        _return_bus_id: needReturnChoice ? retChoice.busId : null,
-        _seats: needReturnChoice && retChoice.busId ? retChoice.seats : null,
-        _allow_unassigned: needReturnChoice && retChoice.allowUnassigned,
+        _return_bus_id: rbId,
+        _seats: rbSeats,
+        _allow_unassigned: rbUnassigned,
         _patch: rest,
       } as never)) as unknown as { error: { message: string } | null };
       error = res.error ? { message: "لم يُحفظ أي تغيير وبقي التاريخ والمقعد السابقان: " + res.error.message.replace("RETURN_SEAT_REQUIRED: ", "") } : null;
@@ -778,6 +874,23 @@ export function ManualBookingRow({
                 {d.seat_numbers.length ? d.seat_numbers.join(", ") : "اختيار المقاعد"}
               </Button>
             </Field>
+            {d.trip_mode !== "outbound" && !noBus && (
+              <Field label={`مقاعد العودة (${d.return_seat_numbers.length}/${d.passenger_count})`}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 w-full text-xs justify-start"
+                  onClick={() => {
+                    if (!newActual) return toast.error("حدد تاريخ العودة أولًا");
+                    setRetSeatOpen(true);
+                  }}
+                >
+                  <LayoutGrid className="h-3 w-3 ml-1" />
+                  {d.return_seat_numbers.length ? d.return_seat_numbers.join(", ") : "اختيار مقاعد العودة"}
+                </Button>
+              </Field>
+            )}
           </Section>
           {needReturnChoice && orig && (
             <div className="md:col-span-full">
@@ -992,6 +1105,83 @@ export function ManualBookingRow({
             <Button className="rounded-full" onClick={() => setSeatOpen(false)}>
               تم
             </Button>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={retSeatOpen} onOpenChange={setRetSeatOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                اختيار مقاعد العودة ({d.return_seat_numbers.length}/{d.passenger_count})
+              </DialogTitle>
+            </DialogHeader>
+            <div className="text-xs text-muted-foreground">تاريخ العودة: {newActual ?? "—"}</div>
+            <select
+              className={sel}
+              value={d.return_bus_id ?? ""}
+              onChange={(e) => setD((p) => ({ ...p, return_bus_id: e.target.value || null, return_seat_numbers: [] }))}
+            >
+              <option value="">اختر حافلة العودة</option>
+              {retOcc.map((b) => (
+                <option key={b.bus_id} value={b.bus_id} disabled={roomOf(b) < d.passenger_count}>
+                  {b.return_trip_name} — {b.bus_name || `حافلة ${b.bus_number}`} — متاح {roomOf(b)}
+                </option>
+              ))}
+            </select>
+            {retOcc.length === 0 && (
+              <div className="text-xs text-muted-foreground">لا توجد حافلات عودة مربوطة بهذا التاريخ.</div>
+            )}
+            {d.return_bus_id && !chosenRetOcc && retOcc.length > 0 && (
+              <div className="text-xs text-destructive">هذه الحافلة غير مربوطة بتاريخ {newActual} — اختر حافلة أخرى.</div>
+            )}
+            {chosenRetOcc &&
+              retBus &&
+              (retLayoutRow?.layout_json ? (
+                <LayoutSeatMap
+                  layout={retLayoutRow.layout_json}
+                  selected={d.return_seat_numbers}
+                  reserved={chosenRetOcc.taken}
+                  reservedGenders={{}}
+                  maxSelectable={d.passenger_count}
+                  genders={retSeatGenders}
+                  onChange={(s) => set("return_seat_numbers", s)}
+                />
+              ) : (
+                <BusSeatMap
+                  selected={d.return_seat_numbers}
+                  reserved={chosenRetOcc.taken}
+                  reservedGenders={{}}
+                  maxSelectable={d.passenger_count}
+                  blocked={retBus.blocked_seats ?? []}
+                  layout={(retBus.layout as "A" | "B") ?? "A"}
+                  genders={retSeatGenders}
+                  onChange={(s) => set("return_seat_numbers", s)}
+                />
+              ))}
+            <div className="flex gap-2">
+              <Button
+                className="rounded-full"
+                onClick={() => {
+                  setRetTouched(true);
+                  setRetSeatOpen(false);
+                }}
+              >
+                تم
+              </Button>
+              {(d.return_seat_numbers.length > 0 || d.return_bus_id) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => {
+                    setD((p) => ({ ...p, return_bus_id: null, return_seat_numbers: [] }));
+                    setRetTouched(true);
+                  }}
+                >
+                  إزالة مقاعد العودة
+                </Button>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </td>
