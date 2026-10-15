@@ -179,8 +179,6 @@ export function LiveSeatBoard({
             <Check className="h-3.5 w-3.5 ml-1" /> {saving ? "جارٍ الاعتماد…" : "اعتمد"}
           </Button>
         </div>
-      </div>
-
       </div>}
 
       {!transfer && dirty && <Badge variant="secondary" className="text-[11px]">تغييرات غير معتمدة</Badge>}
