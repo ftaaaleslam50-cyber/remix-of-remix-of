@@ -25,7 +25,7 @@ import { CustomerCombobox } from "@/components/admin/CustomerCombobox";
 import { customersTable, customerWhatsapp, type TravelCustomer, idImageUrl, uploadCustomerId } from "@/lib/customers";
 import { Upload, Trash2 } from "lucide-react";
 import { ReturnChangePanel, returnChoiceReady, type ReturnChoice } from "@/components/booking/ReturnChangePanel";
-import { addDays, roomOf, type ReturnBusOcc } from "@/lib/return-need";
+import { addDays, roomOf, suggestReturn, type ReturnBusOcc } from "@/lib/return-need";
 
 const ID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
