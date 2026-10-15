@@ -18,6 +18,15 @@ export interface LiveSeatBooking {
   booking_type?: string | null;
 }
 
+export interface SeatTransferApi {
+  /** مقاعد الحجز المصدر في هذه الحافلة */
+  sourceSeats: string[];
+  /** المقاعد المستهدفة المختارة في هذه الحافلة */
+  targetSeats: string[];
+  busy: boolean;
+  onSeatClick: (label: string, occupant: { bookingId: string } | null) => void;
+}
+
 interface Occupant {
   bookingId: string;
   name: string;
@@ -33,11 +42,13 @@ export function LiveSeatBoard({
   bookings,
   shortName,
   onSaved,
+  transfer,
 }: {
   layout: LayoutJson;
   bookings: LiveSeatBooking[];
   shortName: (n: string | null | undefined) => string;
   onSaved?: () => void;
+  transfer?: SeatTransferApi | null;
 }) {
   const dragScope = `application/x-zt-seat-${useId().replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}`;
   /** الخريطة الأصلية من قاعدة البيانات */
@@ -66,6 +77,7 @@ export function LiveSeatBoard({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => setMap(original), [original]);
+  useEffect(() => { if (transfer) { setMap(original); setPicked(null); setHover(null); } }, [transfer ? 1 : 0, original]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dirty = useMemo(() => {
     const a = Object.keys(original).sort();
@@ -153,7 +165,7 @@ export function LiveSeatBoard({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      {!transfer && <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-[11px] text-muted-foreground">
           اسحب المعتمر إلى مقعد آخر — إذا كان المقعد مشغولًا يتم التبديل بينهما. أو اضغط المقعد ثم اضغط الوجهة (للجوال).
         </p>
@@ -169,7 +181,9 @@ export function LiveSeatBoard({
         </div>
       </div>
 
-      {dirty && <Badge variant="secondary" className="text-[11px]">تغييرات غير معتمدة</Badge>}
+      </div>}
+
+      {!transfer && dirty && <Badge variant="secondary" className="text-[11px]">تغييرات غير معتمدة</Badge>}
 
       <div
         className="grid gap-1 sm:gap-1.5 mx-auto w-full"
@@ -197,7 +211,11 @@ export function LiveSeatBoard({
           const isPicked = picked === label;
           const isHover = hover === label;
           const moved = occ && original[label]?.bookingId !== occ.bookingId;
-          const cls = occ
+          const isSrc = !!transfer && transfer.sourceSeats.includes(label);
+          const isTgt = !!transfer && transfer.targetSeats.includes(label);
+          const cls = isTgt
+            ? "bg-success text-success-foreground border-success ring-2 ring-success/60 scale-105"
+            : occ
             ? occ.gender === "female"
               ? "bg-pink-500 text-white border-pink-600"
               : "bg-sky-600 text-white border-sky-700"
@@ -206,7 +224,8 @@ export function LiveSeatBoard({
             <button
               key={i}
               type="button"
-              draggable={!!occ}
+              draggable={!transfer && !!occ}
+              disabled={!!transfer && transfer.busy}
               onDragStart={(e) => {
                 if (!occ) return;
                 e.dataTransfer.setData(dragScope, label);
@@ -228,13 +247,14 @@ export function LiveSeatBoard({
                 setHover(null);
               }}
               onClick={() => {
+                if (transfer) return transfer.onSeatClick(label, occ ? { bookingId: occ.bookingId } : null);
                 if (picked) return move(picked, label);
                 if (occ) setPicked(label);
               }}
                title={occ ? `${label} — ${occ.name} — ${occ.bookingType === "family" ? "عوائل" : occ.bookingType === "individual" ? "فردي" : ""} — ${occ.source}` : label}
               className={`min-h-[70px] sm:min-h-0 sm:aspect-square rounded-lg border-2 text-[11px] font-bold flex flex-col items-center justify-center gap-0 sm:gap-0.5 leading-tight px-0.5 py-1 overflow-hidden transition ${cls} ${
                 isPicked ? "ring-2 ring-primary scale-105" : ""
-              } ${isHover ? "ring-2 ring-primary/70" : ""} ${moved ? "outline outline-2 outline-amber-400" : ""} ${
+              } ${isHover ? "ring-2 ring-primary/70" : ""} ${isSrc ? "ring-4 ring-warning animate-pulse" : ""} ${transfer && !occ && !isTgt ? "border-dashed" : ""} ${moved ? "outline outline-2 outline-amber-400" : ""} ${
                 occ ? "cursor-grab active:cursor-grabbing" : picked ? "cursor-pointer hover:bg-primary/10" : ""
               }`}
             >
