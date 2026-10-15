@@ -37,7 +37,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { LayoutSeatMap, mirrorLayout, type LayoutJson } from "@/components/booking/LayoutSeatMap";
-import { LiveSeatBoard } from "@/components/admin/LiveSeatBoard";
+import { SelectedBusSeatBoard } from "@/components/admin/SelectedBusSeatBoard";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
 import { ExportSheetDialog, type ExportPayload } from "@/components/admin/ExportSheetDialog";
@@ -617,7 +617,7 @@ function UnifiedBookingsTab(props: {
   const [tripId, setTripId] = useState<string>("");
   const [busIds, setBusIds] = useState<string[]>([]);
   // الحافلة "النشطة" للعمليات المفردة (المخطط، المصاريف، الحجز اليدوي) = عند اختيار حافلة واحدة فقط
-  const busId = busIds.length === 1 ? busIds[0]! : "";
+  const busId = busIds.length === 1 ? busIds[0] ?? "" : "";
   const setBusId = (id: string) => setBusIds(id ? [id] : []);
   const [manualOpen, setManualOpen] = useState<boolean>(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -1411,22 +1411,19 @@ function UnifiedBookingsTab(props: {
             {tripId && <StatCard icon={CalendarCheck} label="مواعيد العودة" value={String(returnCount)} />}
             <StatCard icon={Bus} label={tripId ? "حافلات الرحلة" : "إجمالي الحافلات"} value={String(busesInScope)} />
 
-            {bus && liveLayout && (
-              <div className="surface-card p-4 space-y-3 col-span-2 md:col-span-4 lg:col-span-6">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h3 className="font-extrabold flex items-center gap-2">
-                    <Bus className="h-4 w-4 text-primary" /> مخطط الحافلة الحي
-                  </h3>
-                  <span className="text-xs text-muted-foreground">{liveSeatNumbers.length} مقعد مشغول</span>
+            {busIds.length > 0 && (
+              <div className="col-span-2 md:col-span-4 lg:col-span-6 space-y-3">
+                <h2 className="font-extrabold flex items-center gap-2">
+                  <Bus className="size-4 text-primary" /> مخططات الحافلات الحية
+                </h2>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                  {buses.filter((selected) => busIds.includes(selected.id)).map((selected, index) => (
+                    <SelectedBusSeatBoard key={selected.id} bus={selected} index={index}
+                      bookings={activeSeatBookings.filter((booking) => booking.bus_id === selected.id)}
+                      onSaved={() => { void qcInner.invalidateQueries({ queryKey: ["admin-bookings"] }); }} />
+                  ))}
                 </div>
-                <LiveSeatBoard
-                  layout={mirrorLayout(liveLayout)}
-                  bookings={activeSeatBookings as never}
-                  shortName={(n) => twoPartName(n ?? "")}
-                  onSaved={() => qcInner.invalidateQueries({ queryKey: ["admin-bookings"] })}
-                />
               </div>
-
             )}
 
 
@@ -1683,7 +1680,8 @@ function UnifiedBookingsTab(props: {
               <TableHead>الرحلة</TableHead>
               <TableHead>العودة</TableHead>
               <TableHead>الحافلة</TableHead>
-              <TableHead>المقاعد</TableHead>
+              <TableHead className="whitespace-nowrap">مقاعد الذهاب</TableHead>
+              <TableHead className="whitespace-nowrap bg-secondary/5 text-secondary">مقاعد العودة</TableHead>
               <TableHead>الإجمالي</TableHead>
               <TableHead>الحالة</TableHead>
               <TableHead>التاريخ</TableHead>
@@ -1693,7 +1691,7 @@ function UnifiedBookingsTab(props: {
           <TableBody>
             {manualOpen && (
               <ManualBookingRow
-                colSpan={17}
+                colSpan={18}
                 defaultTripId={tripId.startsWith("return:") ? "" : tripId}
                 defaultBusId={busId}
                 onClose={() => setManualOpen(false)}
@@ -1705,7 +1703,7 @@ function UnifiedBookingsTab(props: {
             )}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={17} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={18} className="text-center py-10 text-muted-foreground">
                   لا توجد حجوزات مطابقة.
                 </TableCell>
               </TableRow>
@@ -1714,7 +1712,7 @@ function UnifiedBookingsTab(props: {
               editId === b.id ? (
                 <ManualBookingRow
                   key={b.id}
-                  colSpan={17}
+                  colSpan={18}
                   initial={{
                     id: b.id,
                     booking_code: b.booking_code,
@@ -1768,7 +1766,12 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="text-xs">{tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)}</TableCell>
                 <TableCell className="text-xs">{returnActualDisplay(b.return_date ?? b.trips?.return_date, b.actual_return_day ?? b.trips?.return_day, b.extension_nights, b.trip_mode, "-")}</TableCell>
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
-                <TableCell className="text-xs">{b.seat_numbers.join(", ")}</TableCell>
+                <TableCell className="text-xs" dir="ltr">{(b.seat_numbers ?? []).join(", ") || "—"}</TableCell>
+                <TableCell className="text-xs bg-secondary/5 text-secondary">
+                  {b.trip_mode === "outbound" || b.no_hotel && !b.bus_id && !b.return_bus_id ? "—" :
+                    b.return_seat_numbers?.length ? <span dir="ltr">{b.return_seat_numbers.join(", ")}</span> :
+                    <span className="text-muted-foreground whitespace-nowrap">لم يُخصص بعد</span>}
+                </TableCell>
                 <TableCell className="font-bold text-primary">{sar(Number(b.total_price))}</TableCell>
                 <TableCell>
                   {b.no_show ? (
