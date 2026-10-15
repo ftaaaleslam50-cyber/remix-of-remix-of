@@ -545,6 +545,29 @@ export function ManualBookingRow({
   });
   const chosenRetOcc = retOcc.find((o) => o.bus_id === d.return_bus_id) ?? null;
 
+  // عند تأكيد مقاعد الذهاب: اختر نفس المقاعد تلقائيًا للعودة إن توفرت كلها على
+  // حافلة عودة واحدة، وإلا نبّه وافتح مخطط العودة للاختيار اليدوي.
+  // لا يلمس اختيارًا يدويًا سابقًا (retTouched) ولا مقاعد عودة موجودة.
+  async function autoPickReturnSeats() {
+    if (d.trip_mode === "outbound") return;
+    if (retTouched || d.return_seat_numbers.length > 0 || d.return_bus_id) return;
+    if (d.seat_numbers.length === 0 || d.seat_numbers.length !== d.passenger_count) return;
+    if (!newActual) return;
+    const { data, error } = await supabase.rpc("get_return_occupancy" as never, {
+      _date: newActual,
+      _exclude_code: d.booking_code ?? null,
+    } as never);
+    if (error) return;
+    const best = suggestReturn((data ?? []) as unknown as ReturnBusOcc[], d.seat_numbers, d.passenger_count);
+    if (best && best.same.length === d.passenger_count) {
+      setD((p) => ({ ...p, return_bus_id: best.bus.bus_id, return_seat_numbers: [...best.same] }));
+      toast.success(`تم اختيار نفس مقاعد الذهاب للعودة (${best.same.join(", ")})`);
+    } else {
+      toast.warning("تعارض: مقاعد الذهاب غير متاحة كلها في حافلات العودة — اختر مقاعد العودة يدويًا");
+      setRetSeatOpen(true);
+    }
+  }
+
   // بيانات حافلة العودة المختارة (المخطط والسعة) — من قائمة الحافلات أو بجلب مباشر.
   const retBusFromList = buses.find((b) => b.id === d.return_bus_id) ?? null;
   const { data: retBusDirect = null } = useQuery({
