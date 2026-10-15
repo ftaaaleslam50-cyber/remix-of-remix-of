@@ -36,7 +36,7 @@ import {
   CheckCircle2,
   FileDown,
 } from "lucide-react";
-import { LayoutSeatMap, mirrorLayout, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { LayoutSeatMap, type LayoutJson } from "@/components/booking/LayoutSeatMap";
 import { SelectedBusSeatBoard } from "@/components/admin/SelectedBusSeatBoard";
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { TripSheetTab } from "@/components/admin/TripSheetTab";
@@ -807,19 +807,6 @@ function UnifiedBookingsTab(props: {
   });
 
   const activeSeatBookings = filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && (b.seat_numbers?.length ?? 0) > 0);
-  const liveSeatNumbers = activeSeatBookings.flatMap((b) => b.seat_numbers ?? []);
-  const liveSeatGenders = activeSeatBookings.reduce<Record<string, "male" | "female">>((acc, b) => {
-    const explicit = (b.seat_genders ?? {}) as Record<string, "male" | "female">;
-    for (const [idx, seat] of (b.seat_numbers ?? []).entries()) {
-      acc[seat] = explicit[seat] ?? (idx < Number(b.male_count ?? 0) ? "male" : "female");
-    }
-    return acc;
-  }, {});
-  const liveSeatNames = activeSeatBookings.reduce<Record<string, string>>((acc, b) => {
-    for (const seat of b.seat_numbers ?? []) acc[seat] = twoPartName(b.customer_name ?? "");
-    return acc;
-  }, {});
-  const liveLayout = bus ? busLayout?.layout_json ?? buildDefaultLayout(bus.layout === "B" ? "B" : "A") : null;
 
   function buildChart() {
     if (!busId || !bus) {
@@ -1768,7 +1755,7 @@ function UnifiedBookingsTab(props: {
                 <TableCell className="text-xs">{b.buses?.bus_number ?? "-"}</TableCell>
                 <TableCell className="text-xs" dir="ltr">{(b.seat_numbers ?? []).join(", ") || "—"}</TableCell>
                 <TableCell className="text-xs bg-secondary/5 text-secondary">
-                  {b.trip_mode === "outbound" || b.no_hotel && !b.bus_id && !b.return_bus_id ? "—" :
+                  {b.trip_mode === "outbound" || !b.bus_id && !b.return_bus_id ? "—" :
                     b.return_seat_numbers?.length ? <span dir="ltr">{b.return_seat_numbers.join(", ")}</span> :
                     <span className="text-muted-foreground whitespace-nowrap">لم يُخصص بعد</span>}
                 </TableCell>
