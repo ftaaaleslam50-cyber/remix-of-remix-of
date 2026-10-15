@@ -85,6 +85,13 @@
       "when": 1791891089108,
       "tag": "0011_return_extra_bus_toggle_and_return_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792035199197,
+      "tag": "0012_enforce_return_seat_count",
+      "breakpoints": true
     }
   ]
 }
