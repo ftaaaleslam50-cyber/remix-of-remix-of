@@ -1094,6 +1094,7 @@ function UnifiedBookingsTab(props: {
         packageTotal: Number(b.total_price || 0),
         extensionNights: Number(b.extension_nights ?? 0),
         notes: b.notes ?? "",
+        returnOnly: b.trip_mode === "return",
       })),
     };
   }
@@ -1132,7 +1133,7 @@ function UnifiedBookingsTab(props: {
             <ImageIcon className="h-4 w-4 ml-1" /> مخطط المقاعد PNG
           </Button>
           <DepartureSloganDialog
-            bookings={filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && !b.no_show)}
+            bookings={filtered.filter((b) => !b.deleted_at && b.status !== "cancelled" && !b.no_show && b.trip_mode !== "return")}
             tripName={trips.find((t) => t.id === tripId)?.name}
             bus={bus ? { name: bus.name, bus_number: bus.bus_number, plate: bus.plate, supervisor_name: bus.supervisor_name } : null}
             disabled={!busId}
