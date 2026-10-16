@@ -8,6 +8,7 @@ import ArabicReshaper from "arabic-reshaper";
 // Core encoder only: the package's main entry pulls in PNG/file-system
 // renderers that crash in the edge runtime ("No such module node:fs").
 // @ts-expect-error - no bundled types for the core subpath
+import { parseTicketOptions, type TicketOptions } from "@/lib/ticket-options";
 import QRCodeCore from "qrcode/lib/core/qrcode";
 const QRCode = QRCodeCore as { create: (text: string, opts: { errorCorrectionLevel: string }) => { modules: { size: number; get: (r: number, c: number) => boolean | number } } };
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -179,6 +180,11 @@ async function hideSeatsForIndividual(): Promise<boolean> {
   return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
 }
 
+async function loadTicketOptions(): Promise<TicketOptions> {
+  const { data } = await supabaseAdmin.from("app_settings").select("ticket_template").eq("id", 1).maybeSingle();
+  return parseTicketOptions((data as { ticket_template?: unknown } | null)?.ticket_template);
+}
+
 /** Fallback bus layout when the bus has no saved template. */
 function defaultLayout(): LayoutJson {
   const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
@@ -230,6 +236,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   page.drawRectangle({ x: M, y: A4[1] - 62, width: 74, height: 22, color: GOLD });
   rtl(page, "مؤكَّد", M + 60, A4[1] - 56, 11, NAVY, true);
 
+  const opt = await loadTicketOptions();
   let y = A4[1] - 130;
 
   // ---- Booking code + QR ----
@@ -237,7 +244,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   ltr(page, b.booking_code, right - font.widthOfTextAtSize(b.booking_code, 24), y, 24, NAVY);
 
   const qrSize = 84;
-  await drawQr(page, `ZT-TICKET:${b.booking_code}`, M, y - 10, qrSize);
+  if (opt.show_qr) await drawQr(page, `ZT-TICKET:${b.booking_code}`, M, y - 10, qrSize);
   y -= 40;
   page.drawLine({ start: { x: M, y }, end: { x: right, y }, thickness: 1, color: BORDER });
 
@@ -245,26 +252,27 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   const hasHotel = !!(b.packages?.name ?? b.hotels?.name);
   const rows: [string, string][] = [
     ["الاسم", b.customer_name],
-    ["رقم الهوية", b.id_number || "-"],
-    ["جوال التواصل", b.contact_phone || "-"],
-    ["جوال الواتساب", b.whatsapp_phone || "-"],
-    ["الرحلة", tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)],
-    ["الفندق", b.packages?.name ?? b.hotels?.name ?? "بدون فندق"],
   ];
+  if (opt.show_id_number) rows.push(["رقم الهوية", b.id_number || "-"]);
+  if (opt.show_phones) rows.push(["جوال التواصل", b.contact_phone || "-"], ["جوال الواتساب", b.whatsapp_phone || "-"]);
+  rows.push(["الرحلة", tripWithDate(b.trips?.name, b.departure_date ?? b.trips?.departure_date, b.trips?.departure_day)]);
+  if (opt.show_hotel) rows.push(["الفندق", b.packages?.name ?? b.hotels?.name ?? "بدون فندق"]);
   if (Number(b.extension_nights ?? 0) > 0) rows.push(["عدد ليال التمديد", String(b.extension_nights)]);
   rows.push(["نوع الحجز", b.booking_type === "individual" ? "أفراد" : "عوائل"]);
-  rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type as "individual" | "family", hasHotel)]);
+  if (opt.show_room) rows.push(["نوع الغرفة", roomDisplayLabel(b.room_type as RoomType, b.booking_type as "individual" | "family", hasHotel)]);
   rows.push(["عدد الأفراد", String(b.passenger_count)]);
-  rows.push(["رقم الباص", Number(b.buses?.bus_number || 0) > 0 ? String(b.buses?.bus_number) : "-"]);
-  if (b.buses?.name) rows.push(["اسم الباص", b.buses.name]);
-  if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
-  if (b.buses?.supervisor_name) rows.push(["اسم المشرف", b.buses.supervisor_name]);
+  if (opt.show_bus_info) {
+    rows.push(["رقم الباص", Number(b.buses?.bus_number || 0) > 0 ? String(b.buses?.bus_number) : "-"]);
+    if (b.buses?.name) rows.push(["اسم الباص", b.buses.name]);
+    if (b.buses?.plate) rows.push(["لوحة الباص", b.buses.plate]);
+  }
+  if (opt.show_supervisor && b.buses?.supervisor_name) rows.push(["اسم المشرف", b.buses.supervisor_name]);
   const flag = (b as { hide_seats?: boolean | null }).hide_seats;
   const hideSeats = typeof flag === "boolean" ? flag : b.booking_type === "individual" && (await hideSeatsForIndividual());
   if (!hideSeats) rows.push(["المقاعد", (b.seat_numbers ?? []).join(", ") || "-"]);
   if (b.return_buses && (b.return_seat_numbers ?? []).length > 0) {
     rows.push(["حافلة العودة", busLabel(b.return_buses)]);
-    if (b.return_buses.supervisor_name) rows.push(["مشرف العودة", b.return_buses.supervisor_name]);
+    if (opt.show_supervisor && b.return_buses.supervisor_name) rows.push(["مشرف العودة", b.return_buses.supervisor_name]);
     if (!hideSeats) rows.push(["مقاعد العودة", (b.return_seat_numbers ?? []).join(", ")]);
   } else if (b.trip_mode !== "outbound" && b.actual_return_date) {
     rows.push(["مقاعد العودة", "سوف يتم اختيار مقعد العودة من قبل الإدارة بما تراه مناسبًا"]);
@@ -285,7 +293,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
       "-",
     ),
   ]);
-  rows.push(["تاريخ الحجز", formatDate(b.created_at)]);
+  if (opt.show_booking_date) rows.push(["تاريخ الحجز", formatDate(b.created_at)]);
 
   y -= 30;
   const colRight = [right, M + (right - M) / 2 - 10];
@@ -298,7 +306,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   });
   y -= Math.ceil(rows.length / 2) * rowH + 6;
 
-  if (b.notes) {
+  if (opt.show_booking_notes && b.notes) {
     page.drawLine({ start: { x: M, y }, end: { x: right, y }, thickness: 1, color: BORDER });
     y -= 20;
     rtl(page, "ملاحظات", right, y, 9, GREY);
@@ -311,8 +319,9 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
   }
 
   // ---- Totals ----
-  const boxH = b.coupon_code ? 82 : 70;
+  const boxH = !opt.show_prices ? 0 : b.coupon_code ? 82 : 70;
   const boxY = Math.max(M + 40, y - boxH);
+  if (opt.show_prices) {
   page.drawRectangle({ x: M, y: boxY, width: right - M, height: boxH, color: LIGHT });
   rtl(page, "سعر الفرد", right - 14, boxY + boxH - 24, 9, GREY);
   rtl(page, sar(Number(b.price_per_person)), right - 14, boxY + boxH - 44, 14, DARK, true);
@@ -321,8 +330,9 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
     rtl(page, `خصم: −${sar(Number(b.discount_amount))}`, M + 160, boxY + 12, 9, GREY);
   rtl(page, "الإجمالي", M + 160, boxY + boxH - 24, 9, GREY);
   rtl(page, sar(Number(b.total_price)), M + 160, boxY + boxH - 48, 18, NAVY, true);
+  }
 
-  rtl(page, "يرجى إبراز التذكرة عند الصعود للباص.", W / 2 + 90, boxY - 24, 10, GREY);
+  if (opt.footer_text.trim()) rtl(page, opt.footer_text.trim(), W / 2 + font.widthOfTextAtSize(opt.footer_text.trim(), 10) / 2, boxY - 24, 10, GREY);
 
   // ---- Seat map pages: outbound first, then return ----
   const drawSeatPage = (title: string, layout: LayoutJson, seatList: string[]) => {
