@@ -490,11 +490,11 @@ function TicketPage() {
           </div>
         ))}
 
-      <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
+      {opt.show_notes_image && <div className="container-luxe max-w-3xl mt-6 print-break print-sheet print-compact">
         <div className="print-page bg-white rounded-[28px] overflow-hidden shadow-[var(--shadow-elegant)] print:rounded-none print:shadow-none">
           <img src={ticketNotes.url} alt="تنبيهات هامة" className="w-full h-auto object-contain" />
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

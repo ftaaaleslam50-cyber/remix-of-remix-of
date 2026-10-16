@@ -1,4 +1,5 @@
 import { fetchTripBusesWithLinks } from "@/lib/trip-bus-links";
+import { DEFAULT_TICKET_OPTIONS, TICKET_OPTION_LABELS, parseTicketOptions, type TicketOptions } from "@/lib/ticket-options";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -3405,10 +3406,10 @@ function TicketOptionsTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from("app_settings")
-        .select("hide_seats_individual,hide_seats_trip_ids,hide_seats_return_trip_ids")
+        .select("hide_seats_individual,hide_seats_trip_ids,hide_seats_return_trip_ids,ticket_template")
         .eq("id", 1)
         .maybeSingle();
-      return data as { hide_seats_individual: boolean; hide_seats_trip_ids: string[]; hide_seats_return_trip_ids: string[] } | null;
+      return data as { hide_seats_individual: boolean; hide_seats_trip_ids: string[]; hide_seats_return_trip_ids: string[]; ticket_template: unknown } | null;
     },
   });
   const { data: tripList = [] } = useQuery({
@@ -3426,6 +3427,12 @@ function TicketOptionsTab() {
   });
   const hide = Boolean(cfg?.hide_seats_individual);
   const [saving, setSaving] = useState(false);
+  const opts = parseTicketOptions(cfg?.ticket_template);
+  const [footer, setFooter] = useState<string | null>(null);
+  function setOpt(patch: Partial<TicketOptions>) {
+    const base = (cfg?.ticket_template && typeof cfg.ticket_template === "object" ? cfg.ticket_template : {}) as Record<string, unknown>;
+    void update({ ticket_template: { ...base, ...opts, ...patch } }, "تم حفظ خيارات التذكرة");
+  }
 
   async function update(patch: Record<string, unknown>, msg: string) {
     setSaving(true);
@@ -3508,6 +3515,31 @@ function TicketOptionsTab() {
             </div>
           );
         })}
+      </div>
+      <div className="rounded-xl border p-4 space-y-3">
+        <div>
+          <div className="text-sm font-bold">محتوى التذكرة</div>
+          <p className="text-xs text-muted-foreground">اختر ما يظهر في تذكرة الويب وملف PDF. التغيير يُطبَّق فورًا على كل التذاكر.</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {TICKET_OPTION_LABELS.map((o) => (
+            <label key={o.key} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer">
+              <input type="checkbox" className="h-4 w-4" checked={opts[o.key]} disabled={saving}
+                onChange={(e) => setOpt({ [o.key]: e.target.checked } as Partial<TicketOptions>)} />
+              <span>إظهار {o.label}</span>
+              {o.hint && <span className="text-[10px] text-muted-foreground">({o.hint})</span>}
+            </label>
+          ))}
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-bold">نص أسفل التذكرة</div>
+          <textarea className="w-full rounded-lg border bg-background p-2 text-sm" rows={2}
+            value={footer ?? opts.footer_text} onChange={(e) => setFooter(e.target.value)} />
+          <div className="flex gap-2">
+            <Button size="sm" disabled={saving || footer === null} onClick={() => { setOpt({ footer_text: footer ?? "" }); setFooter(null); }}>حفظ النص</Button>
+            <Button size="sm" variant="ghost" disabled={saving} onClick={() => { setOpt({ ...DEFAULT_TICKET_OPTIONS }); setFooter(null); }}>استعادة الافتراضي</Button>
+          </div>
+        </div>
       </div>
     </div>
   );
