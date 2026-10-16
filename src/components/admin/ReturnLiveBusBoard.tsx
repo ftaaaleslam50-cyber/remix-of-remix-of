@@ -1,6 +1,6 @@
 // مخطط حي لحافلة عودة: نفس LiveSeatBoard (سحب/تبديل/اعتماد، أسماء، مصدر الحجز، نوعه) + تصدير PNG.
 import { useQuery } from "@tanstack/react-query";
-import { Bus, ImageIcon, Loader2 } from "lucide-react";
+import { Bus, ImageIcon, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LiveSeatBoard, type LiveSeatBooking } from "@/components/admin/LiveSeatBoard";
@@ -20,11 +20,14 @@ interface Props {
   index: number;
   tripLabel?: string;
   onSaved: () => void;
+  externalPickedId?: string | null;
+  onExternalPlace?: (seat: string, bookingId: string) => void;
+  onRemoveBus?: () => void;
 }
 
 const shortName = (n: string | null | undefined) => twoPartName(n ?? "");
 
-export function ReturnLiveBusBoard({ bus, bookings, index, tripLabel, onSaved }: Props) {
+export function ReturnLiveBusBoard({ bus, bookings, index, tripLabel, onSaved, externalPickedId, onExternalPlace, onRemoveBus }: Props) {
   const { data: layout, isPending } = useQuery({
     queryKey: ["ub-bus-layout", bus.layout_id],
     enabled: !!bus.layout_id,
@@ -83,6 +86,11 @@ export function ReturnLiveBusBoard({ bus, bookings, index, tripLabel, onSaved }:
           <Button size="sm" variant="outline" className="h-7 rounded-full text-xs" onClick={exportPng}>
             <ImageIcon className="h-3.5 w-3.5 ml-1" /> PNG
           </Button>
+          {onRemoveBus && (
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full text-destructive" title="إزالة الحافلة من هذه العودة" onClick={onRemoveBus}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </header>
       {bus.layout_id && isPending ? (
@@ -90,7 +98,7 @@ export function ReturnLiveBusBoard({ bus, bookings, index, tripLabel, onSaved }:
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <LiveSeatBoard layout={mirrorLayout(raw)} bookings={live} shortName={shortName} onSaved={onSaved} seatField="return" />
+        <LiveSeatBoard layout={mirrorLayout(raw)} bookings={live} shortName={shortName} onSaved={onSaved} seatField="return" externalPickedId={externalPickedId} onExternalPlace={onExternalPlace} />
       )}
     </section>
   );

@@ -503,17 +503,21 @@ function AdminBuses() {
           { key: "return", title: "حافلات العودة" },
         ] as const).map((group) => {
           const STATUS_RANK: Record<string, number> = { active: 0, maintenance: 1, stopped: 2 };
+          const busDate = (b: BusRow) =>
+            tripsIndex.dateByBus[b.id] ?? (b.trip_id ? tripsIndex.dates[b.trip_id] : undefined) ?? null;
+          // الترتيب حسب تاريخ الرحلة المرتبطة (الأقرب أولًا)، ثم الحالة، ثم رقم الحافلة.
           const list = buses
             .filter((b) => (b.direction ?? "outbound") === group.key)
             .slice()
-            .sort(
-              (a, b) =>
+            .sort((a, b) => {
+              const da = busDate(a) ?? "9999-12-31";
+              const db = busDate(b) ?? "9999-12-31";
+              return (
+                da.localeCompare(db) ||
                 (STATUS_RANK[a.status] ?? 3) - (STATUS_RANK[b.status] ?? 3) ||
-                (a.bus_number ?? 0) - (b.bus_number ?? 0),
-            );
-
-          const busDate = (b: BusRow) =>
-            tripsIndex.dateByBus[b.id] ?? (b.trip_id ? tripsIndex.dates[b.trip_id] : undefined) ?? null;
+                (a.bus_number ?? 0) - (b.bus_number ?? 0)
+              );
+            });
 
           const weekGroups = groupBusesByWeek(list, busDate);
 

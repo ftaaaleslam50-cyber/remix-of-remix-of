@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { mirrorLayout, type LayoutCell, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { buildDefaultLayout } from "@/lib/bus-seat-chart";
+import { ReturnLiveBusBoard } from "@/components/admin/ReturnLiveBusBoard";
+import { EXT_TYPE } from "@/components/admin/LiveSeatBoard";
 import type { ReturnBookingRow } from "@/components/admin/ReturnTripsManager";
 
 export interface BoardBus {
@@ -38,7 +41,13 @@ export function ReturnSeatBoard({
   buses,
   bookings,
   onAssign,
+  onSaved,
+  onRemoveBus,
+  tripLabel,
 }: {
+  onSaved: () => void;
+  onRemoveBus?: (busId: string) => void;
+  tripLabel?: string;
   buses: BoardBus[];
   bookings: ReturnBookingRow[];
   onAssign: (b: ReturnBookingRow, busId: string | null, seats: string[]) => Promise<void> | void;
@@ -62,7 +71,7 @@ export function ReturnSeatBoard({
   // نفس معالجة مخطط الذهاب الحي (LiveSeatBoard): نعكس الأعمدة بـ mirrorLayout حتى
   // يطابق اتجاه العرض الفعلي للحافلة بدل الترتيب الخام المخزّن في layout_json.
   const layoutFor = (b: BoardBus): LayoutJson =>
-    mirrorLayout((b.layout_id && layouts.data?.[b.layout_id]) || fallbackLayout(b.capacity));
+    mirrorLayout((b.layout_id && layouts.data?.[b.layout_id]) || buildDefaultLayout("A"));
 
   const pax = (b: ReturnBookingRow) => Math.max(1, b.passenger_count || 1);
   const undistributed = bookings.filter((b) => !b.return_bus_id || (b.return_seat_numbers?.length ?? 0) === 0);
@@ -147,7 +156,7 @@ export function ReturnSeatBoard({
   const dragProps = (id: string) => ({
     draggable: true,
     onDragStart: (e: React.DragEvent) => {
-      e.dataTransfer.setData("text/plain", id);
+      e.dataTransfer.setData(EXT_TYPE, id);
       e.dataTransfer.effectAllowed = "move";
       setPicked(id);
     },
@@ -157,7 +166,17 @@ export function ReturnSeatBoard({
   return (
     <div className="space-y-4">
       {/* غير الموزعين */}
-      <div className="rounded-xl border bg-muted/30 p-3">
+      <div
+        className="rounded-xl border bg-muted/30 p-3"
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(EXT_TYPE)) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const b = bookings.find((x) => x.id === e.dataTransfer.getData(EXT_TYPE));
+          if (b && b.return_bus_id) void onAssign(b, null, []);
+        }}
+      >
         <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
           <div className="text-sm font-bold">غير موزعين ({undistributed.length})</div>
           <div className="flex items-center gap-2">
@@ -179,7 +198,7 @@ export function ReturnSeatBoard({
         ) : (
           <>
             <p className="text-[11px] text-muted-foreground mb-2">
-              اسحب الراكب وأفلته على مقعد في الحافلة — أو اضغط عليه ثم اضغط المقعد المطلوب (للجوال).
+              اسحب الراكب وأفلته على مقعد في الحافلة — أو اضغط عليه ثم اضغط المقعد المطلوب (للجوال). لإلغاء توزيع راكب اسحب مقعده إلى هنا.
             </p>
             <div className="flex flex-wrap gap-2">
               {undistributed.map((b) => (
@@ -206,138 +225,24 @@ export function ReturnSeatBoard({
         )}
       </div>
 
-      {/* الحافلات */}
+      {/* الحافلات — المخطط الحي (سحب/تبديل/اعتماد) + الإفلات من قائمة غير الموزعين */}
       {buses.length === 0 ? (
         <p className="text-xs text-muted-foreground">أضف حافلة عودة أولًا لتتمكن من التوزيع.</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {buses.map((bus) => {
-            const layout = layoutFor(bus);
-            const taken = occupancy[bus.id] ?? {};
-            const cols = Math.max(1, layout.cols || 1);
-            const used = Object.keys(taken).length;
-            const cap = layout.cells.filter((c) => c.kind === "seat" && !c.disabled).length;
-            const preview = new Set(
-              hover && hover.startsWith(`${bus.id}:`) && pickedBooking
-                ? (seatsFrom(bus, hover.slice(bus.id.length + 1), pickedBooking) ?? [])
-                : [],
-            );
-            return (
-              <div
-                key={bus.id}
-                className={`rounded-2xl border p-3 transition ${picked ? "border-primary/60 border-dashed" : ""}`}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  drop(bus, null, e.dataTransfer.getData("text/plain"));
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-sm font-bold">
-                    <BusIcon className="h-4 w-4" /> {busTitle(bus)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[11px]">
-                      {used} / {cap}
-                    </Badge>
-                    {pickedBooking && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 rounded-full text-xs"
-                        onClick={() => drop(bus, null)}
-                      >
-                        إضافة هنا
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div
-                  className="grid gap-1 mx-auto"
-                  style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, maxWidth: cols * 52 }}
-                  dir="ltr"
-                >
-                  {Array.from({ length: Math.max(1, layout.rows) * cols }, (_, i) => {
-                    const r = Math.floor(i / cols) + 1;
-                    const c = (i % cols) + 1;
-                    const cell = layout.cells.find((x) => x.row === r && x.col === c);
-                    if (!cell || cell.kind === "empty") return <div key={i} className="aspect-square" />;
-                    if (cell.kind !== "seat") {
-                      return (
-                        <div
-                          key={i}
-                          className="aspect-square rounded-md border bg-muted/50 text-[9px] flex items-center justify-center text-muted-foreground"
-                        >
-                          {cell.kind === "driver"
-                            ? "🚍"
-                            : cell.kind === "door"
-                              ? "🚪"
-                              : cell.kind === "restroom"
-                                ? "🚻"
-                                : "👤"}
-                        </div>
-                      );
-                    }
-                    const label = cellLabel(cell);
-                    const occ = taken[label];
-                    const key = `${bus.id}:${label}`;
-                    const isPreview = preview.has(label);
-                    const disabled = !!cell.disabled;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        title={occ ? `${occ.customer_name || occ.booking_code} — اضغط للإزالة` : label}
-                        disabled={disabled}
-                        {...(occ ? dragProps(occ.id) : {})}
-                        onDragOver={(e) => {
-                          if (!occ || occ.id === picked) {
-                            e.preventDefault();
-                            setHover(key);
-                          }
-                        }}
-                        onDragLeave={() => setHover((h) => (h === key ? null : h))}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          drop(bus, label, e.dataTransfer.getData("text/plain"));
-                        }}
-                        onClick={() => {
-                          if (picked && (!occ || occ.id === picked)) return void drop(bus, label);
-                          if (occ) {
-                            if (
-                              confirm(
-                                `إزالة «${occ.customer_name || occ.booking_code}» من ${busTitle(bus)}؟\nسيعود إلى قائمة غير الموزعين.`,
-                              )
-                            )
-                              void onAssign(occ, null, []);
-                          }
-                        }}
-                        className={`aspect-square rounded-md border text-[9px] leading-tight flex flex-col items-center justify-center overflow-hidden px-0.5 transition ${
-                          disabled
-                            ? "bg-muted/40 text-muted-foreground/50 cursor-not-allowed"
-                            : occ
-                              ? "bg-[color:var(--color-navy)] text-white border-[color:var(--color-navy)] cursor-grab"
-                              : isPreview
-                                ? "bg-primary/30 border-primary"
-                                : picked
-                                  ? "bg-background hover:bg-primary/20 border-primary/50 cursor-pointer"
-                                  : "bg-background"
-                        }`}
-                      >
-                        <span className="font-bold">{label}</span>
-                        {occ && (
-                          <span className="truncate w-full text-center text-[8px] font-normal" dir="rtl">
-                            {(occ.customer_name || "").split(" ")[0]}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {buses.map((bus, i) => (
+            <ReturnLiveBusBoard
+              key={bus.id}
+              bus={bus}
+              bookings={bookings}
+              index={i}
+              tripLabel={tripLabel}
+              onSaved={onSaved}
+              externalPickedId={picked}
+              onExternalPlace={(seat, id) => void drop(bus, seat, id)}
+              onRemoveBus={onRemoveBus ? () => onRemoveBus(bus.id) : undefined}
+            />
+          ))}
         </div>
       )}
     </div>
