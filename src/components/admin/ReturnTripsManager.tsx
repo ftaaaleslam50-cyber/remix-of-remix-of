@@ -916,37 +916,24 @@ export function ReturnTripCard({
         </div>
       </div>
 
-      {/* الحافلات المخصصة يدويًا لهذا التاريخ */}
-      <div>
-        <div className="text-sm font-bold flex items-center gap-2 mb-2">
-          <BusIcon className="h-4 w-4" /> حافلات العودة
+      {/* مخطط موحّد: قائمة غير الموزعين + المخطط الحي لكل حافلة عودة (سحب/تبديل/اعتماد/PNG) */}
+      <div className={`rounded-xl border p-4 ${undistributed.length > 0 ? "border-warning/50 bg-warning/5" : ""}`}>
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+          <div className="text-sm font-bold flex items-center gap-2">
+            <BusIcon className="h-4 w-4" /> توزيع الركاب على حافلات العودة
+          </div>
+          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setAddingBus(true)}>
+            <Plus className="h-4 w-4 ml-1" /> إضافة حافلة
+          </Button>
         </div>
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {tripBuses.length === 0 && (
-            <div className="text-xs text-muted-foreground">
-              لا توجد حافلات مضافة لهذه العودة بعد — الحجوزات تظهر كاملة رغم ذلك.
-            </div>
-          )}
-          {tripBuses.map((b) => {
-            const used = seatsOnBus(b.id).length;
-            return (
-              <div key={b.id} className="flex items-center justify-between border rounded-xl p-3">
-                <div>
-                  <div className="text-sm font-bold">{b.name || `حافلة ${b.bus_number}`}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {used} / {b.capacity}
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" className="rounded-full" onClick={() => removeBus(b.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-        <Button size="sm" variant="outline" className="rounded-full mt-3" onClick={() => setAddingBus(true)}>
-          <Plus className="h-4 w-4 ml-1" /> إضافة حافلة
-        </Button>
+        <ReturnSeatBoard
+          buses={tripBuses}
+          bookings={all}
+          onAssign={assign}
+          onSaved={refresh}
+          onRemoveBus={removeBus}
+          tripLabel={`${template.name} — ${formatTripDate(date)}`}
+        />
       </div>
 
       {/* الحجوزات المرتبطة */}
@@ -1119,36 +1106,6 @@ export function ReturnTripCard({
           </div>
         )}
       </div>
-
-      {/* لوحة التوزيع بالسحب والإفلات على مخطط حافلات العودة */}
-      <div className={`rounded-xl border p-4 ${undistributed.length > 0 ? "border-warning/50 bg-warning/5" : ""}`}>
-        <div className="text-sm font-bold flex items-center gap-2 mb-3">
-          <AlertTriangle className="h-4 w-4" /> توزيع الركاب على حافلات العودة
-          {undistributed.length > 0 && (
-            <Badge className="bg-warning text-white">غير موزعين: {undistributed.reduce((s, b) => s + pax(b), 0)}</Badge>
-          )}
-        </div>
-        <ReturnSeatBoard buses={tripBuses} bookings={all} onAssign={assign} />
-      </div>
-
-      {/* المخطط الحي لحافلات العودة — مثل قسم الذهاب، مع تصدير PNG لكل حافلة */}
-      {tripBuses.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-bold">المخطط الحي لحافلات العودة</div>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {tripBuses.map((bus, i) => (
-              <ReturnLiveBusBoard
-                key={bus.id}
-                bus={bus}
-                bookings={all}
-                index={i}
-                tripLabel={`${template.name} — ${formatTripDate(date)}`}
-                onSaved={refresh}
-              />
-            ))}
-          </div>
-        </div>
-      )}
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
         <DialogContent>

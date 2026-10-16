@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { mirrorLayout, type LayoutCell, type LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { buildDefaultLayout } from "@/lib/bus-seat-chart";
 import { ReturnLiveBusBoard } from "@/components/admin/ReturnLiveBusBoard";
 import { EXT_TYPE } from "@/components/admin/LiveSeatBoard";
 import type { ReturnBookingRow } from "@/components/admin/ReturnTripsManager";
@@ -70,7 +71,7 @@ export function ReturnSeatBoard({
   // نفس معالجة مخطط الذهاب الحي (LiveSeatBoard): نعكس الأعمدة بـ mirrorLayout حتى
   // يطابق اتجاه العرض الفعلي للحافلة بدل الترتيب الخام المخزّن في layout_json.
   const layoutFor = (b: BoardBus): LayoutJson =>
-    mirrorLayout((b.layout_id && layouts.data?.[b.layout_id]) || fallbackLayout(b.capacity));
+    mirrorLayout((b.layout_id && layouts.data?.[b.layout_id]) || buildDefaultLayout("A"));
 
   const pax = (b: ReturnBookingRow) => Math.max(1, b.passenger_count || 1);
   const undistributed = bookings.filter((b) => !b.return_bus_id || (b.return_seat_numbers?.length ?? 0) === 0);
