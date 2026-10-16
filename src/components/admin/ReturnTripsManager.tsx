@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
+import { ReturnLiveBusBoard } from "@/components/admin/ReturnLiveBusBoard";
 import { CopyOutboundSeatsDialog } from "@/components/admin/CopyOutboundSeatsDialog";
 
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
@@ -1129,6 +1130,25 @@ export function ReturnTripCard({
         </div>
         <ReturnSeatBoard buses={tripBuses} bookings={all} onAssign={assign} />
       </div>
+
+      {/* المخطط الحي لحافلات العودة — مثل قسم الذهاب، مع تصدير PNG لكل حافلة */}
+      {tripBuses.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-bold">المخطط الحي لحافلات العودة</div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {tripBuses.map((bus, i) => (
+              <ReturnLiveBusBoard
+                key={bus.id}
+                bus={bus}
+                bookings={all}
+                index={i}
+                tripLabel={`${template.name} — ${formatTripDate(date)}`}
+                onSaved={refresh}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
         <DialogContent>
