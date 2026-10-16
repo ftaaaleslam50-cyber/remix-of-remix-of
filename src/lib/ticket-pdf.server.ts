@@ -1,3 +1,4 @@
+import { parseTicketOptions, type TicketOptions } from "@/lib/ticket-options";
 // Server-side ticket PDF generation (Cloudflare Worker friendly).
 // Arabic support: text is reshaped to presentation forms and drawn with an
 // embedded Amiri TTF (no HTML/browser print). pdf-lib reverses the whole
@@ -8,7 +9,6 @@ import ArabicReshaper from "arabic-reshaper";
 // Core encoder only: the package's main entry pulls in PNG/file-system
 // renderers that crash in the edge runtime ("No such module node:fs").
 // @ts-expect-error - no bundled types for the core subpath
-import { parseTicketOptions, type TicketOptions } from "@/lib/ticket-options";
 import QRCodeCore from "qrcode/lib/core/qrcode";
 const QRCode = QRCodeCore as { create: (text: string, opts: { errorCorrectionLevel: string }) => { modules: { size: number; get: (r: number, c: number) => boolean | number } } };
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
