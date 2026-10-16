@@ -1,0 +1,2 @@
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS hide_seats_trip_ids uuid[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS hide_seats_return_trip_ids uuid[] NOT NULL DEFAULT '{}';
