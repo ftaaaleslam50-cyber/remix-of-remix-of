@@ -3399,22 +3399,47 @@ function SiteTab() {
 // ================== TICKET OPTIONS ==================
 function TicketOptionsTab() {
   const qc = useQueryClient();
-  const { data: hide = false } = useQuery({
-    queryKey: ["hide-seats-individual"],
+  const { data: cfg } = useQuery({
+    queryKey: ["hide-seats-config"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
-      return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
+      const { data } = await supabase
+        .from("app_settings")
+        .select("hide_seats_individual,hide_seats_trip_ids,hide_seats_return_trip_ids")
+        .eq("id", 1)
+        .maybeSingle();
+      return data as { hide_seats_individual: boolean; hide_seats_trip_ids: string[]; hide_seats_return_trip_ids: string[] } | null;
     },
   });
+  const { data: tripList = [] } = useQuery({
+    queryKey: ["ticket-opt-trips"],
+    queryFn: async () => {
+      const [t, r] = await Promise.all([
+        supabase.from("trips").select("id,name,active").order("display_order"),
+        supabase.from("return_trips").select("id,name,active").order("display_order"),
+      ]);
+      return [
+        ...((t.data ?? []) as { id: string; name: string; active: boolean }[]).map((x) => ({ ...x, kind: "out" as const })),
+        ...((r.data ?? []) as { id: string; name: string; active: boolean }[]).map((x) => ({ ...x, kind: "ret" as const })),
+      ];
+    },
+  });
+  const hide = Boolean(cfg?.hide_seats_individual);
   const [saving, setSaving] = useState(false);
 
-  async function toggle(next: boolean) {
+  async function update(patch: Record<string, unknown>, msg: string) {
     setSaving(true);
-    const { error } = await supabase.from("app_settings").update({ hide_seats_individual: next } as never).eq("id", 1);
+    const { error } = await supabase.from("app_settings").update(patch as never).eq("id", 1);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success(next ? "تم إخفاء أرقام المقاعد لحجوزات الأفراد" : "تم إظهار أرقام المقاعد");
+    toast.success(msg);
+    qc.invalidateQueries({ queryKey: ["hide-seats-config"] });
     qc.invalidateQueries({ queryKey: ["hide-seats-individual"] });
+  }
+  function toggleTrip(kind: "out" | "ret", id: string, on: boolean) {
+    const col = kind === "out" ? "hide_seats_trip_ids" : "hide_seats_return_trip_ids";
+    const cur = (kind === "out" ? cfg?.hide_seats_trip_ids : cfg?.hide_seats_return_trip_ids) ?? [];
+    const next = on ? Array.from(new Set([...cur, id])) : cur.filter((x) => x !== id);
+    void update({ [col]: next }, on ? "تم إخفاء المقاعد لهذه الرحلة" : "تم إظهار المقاعد لهذه الرحلة");
   }
 
   return (
@@ -3429,12 +3454,17 @@ function TicketOptionsTab() {
           className="mt-1 h-4 w-4"
           checked={hide}
           disabled={saving}
-          onChange={(e) => toggle(e.target.checked)}
+          onChange={(e) =>
+            void update(
+              { hide_seats_individual: e.target.checked },
+              e.target.checked ? "تم إخفاء أرقام المقاعد لحجوزات الأفراد" : "تم إظهار أرقام المقاعد",
+            )
+          }
         />
         <span>
           <span className="block text-sm font-bold">
             إخفاء أرقام المقاعد في حجوزات الأفراد —{" "}
-            <span className={hide ? "text-green-600" : "text-muted-foreground"}>{hide ? "مفعّل" : "متوقف"}</span>
+            <span className={hide ? "text-success" : "text-muted-foreground"}>{hide ? "مفعّل" : "متوقف"}</span>
           </span>
           <span className="block text-xs text-muted-foreground">
             عند تفعيله لا تظهر خانة أرقام المقاعد في ملخص الحجز ولا في تذكرة الحجز ولا في ملف PDF لمن اختار نوع الحجز
@@ -3442,6 +3472,42 @@ function TicketOptionsTab() {
           </span>
         </span>
       </label>
+      <div className="rounded-xl border p-4 space-y-3">
+        <div>
+          <div className="text-sm font-bold">إخفاء أرقام المقاعد لرحلات محددة</div>
+          <p className="text-xs text-muted-foreground">
+            اختر الرحلات التي لا تظهر فيها أرقام المقاعد ومخططاتها في التذكرة وملف PDF لكل الحجوزات (أفراد وعوائل).
+          </p>
+        </div>
+        {(["out", "ret"] as const).map((kind) => {
+          const list = tripList.filter((t) => t.kind === kind);
+          const sel = (kind === "out" ? cfg?.hide_seats_trip_ids : cfg?.hide_seats_return_trip_ids) ?? [];
+          return (
+            <div key={kind} className="space-y-2">
+              <div className="text-xs font-bold text-muted-foreground">{kind === "out" ? "رحلات الذهاب" : "رحلات العودة"}</div>
+              {list.length === 0 ? (
+                <p className="text-xs text-muted-foreground">لا توجد رحلات.</p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {list.map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={sel.includes(t.id)}
+                        disabled={saving}
+                        onChange={(e) => toggleTrip(kind, t.id, e.target.checked)}
+                      />
+                      <span className="truncate">{t.name}</span>
+                      {!t.active && <span className="text-[10px] text-muted-foreground">(غير نشطة)</span>}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
