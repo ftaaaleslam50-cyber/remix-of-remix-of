@@ -2314,14 +2314,21 @@ function StepConfirm(props: {
   applyCoupon: () => void;
   clearCoupon: () => void;
 }) {
-  const { data: hideSeatsOpt = false } = useQuery({
-    queryKey: ["hide-seats-individual"],
+  const { data: hideCfg } = useQuery({
+    queryKey: ["hide-seats-config"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
-      return Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual);
+      const { data } = await supabase
+        .from("app_settings")
+        .select("hide_seats_individual,hide_seats_trip_ids")
+        .eq("id", 1)
+        .maybeSingle();
+      return data as { hide_seats_individual?: boolean; hide_seats_trip_ids?: string[] } | null;
     },
   });
-  const hideSeats = hideSeatsOpt && props.bookingType === "individual";
+  const tripIdForHide = (props.trip as { id?: string } | null | undefined)?.id;
+  const hideSeats =
+    (Boolean(hideCfg?.hide_seats_individual) && props.bookingType === "individual") ||
+    (!!tripIdForHide && (hideCfg?.hide_seats_trip_ids ?? []).includes(tripIdForHide));
   const rows: [string, string][] = [
 
     ["نوع الحجز", props.bookingType === "individual" ? "أفراد" : "عوائل"],
