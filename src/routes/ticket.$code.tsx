@@ -220,7 +220,10 @@ function TicketPage() {
     );
   }
 
-  const hideSeats = hideSeatsOpt && booking.booking_type === "individual";
+  const hideSeats =
+    typeof (booking as { hide_seats?: boolean | null }).hide_seats === "boolean"
+      ? Boolean((booking as { hide_seats?: boolean | null }).hide_seats)
+      : hideSeatsOpt && booking.booking_type === "individual";
 
   /** Full booking summary used for both WhatsApp sharing and clipboard copy. */
   function summaryText() {
