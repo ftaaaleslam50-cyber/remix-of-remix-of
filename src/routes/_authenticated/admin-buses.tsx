@@ -164,9 +164,11 @@ function AdminBuses() {
     queryKey: ["admin-buses-trips-index"],
     enabled: isAdmin === true,
     queryFn: async () => {
-      const [{ data: trips }, { data: links }] = await Promise.all([
+      const [{ data: trips }, { data: links }, { data: rTrips }, { data: rLinks }] = await Promise.all([
         supabase.from("trips").select("id,name,departure_date"),
         supabase.from("trip_buses").select("trip_id,bus_id"),
+        supabase.from("return_trips").select("id,name,return_date"),
+        supabase.from("return_trip_buses").select("return_trip_id,bus_id,trip_date"),
       ]);
       const fmtDate = (d?: string | null) =>
         d ? new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" }) : "";
@@ -185,6 +187,18 @@ function AdminBuses() {
         (byBus[l.bus_id] ??= []).push(label);
         const d = dates[l.trip_id];
         if (d && (!dateByBus[l.bus_id] || d > dateByBus[l.bus_id])) dateByBus[l.bus_id] = d;
+      }
+      // حافلات العودة: مرتبطة برحلات العودة عبر return_trip_buses (بتاريخ كل رحلة).
+      const rNames: Record<string, string> = {};
+      for (const t of ((rTrips ?? []) as { id: string; name: string }[])) rNames[t.id] = t.name;
+      for (const l of ((rLinks ?? []) as { return_trip_id: string; bus_id: string; trip_date: string }[])) {
+        const n = rNames[l.return_trip_id];
+        if (!n) continue;
+        const d = fmtDate(l.trip_date);
+        const label = `↩ ${n}${d ? ` (${d})` : ""}`;
+        const list = (byBus[l.bus_id] ??= []);
+        if (!list.includes(label)) list.push(label);
+        if (l.trip_date && (!dateByBus[l.bus_id] || l.trip_date > dateByBus[l.bus_id])) dateByBus[l.bus_id] = l.trip_date;
       }
       return { names, byBus, dateByBus, dates };
     },
@@ -219,7 +233,7 @@ function AdminBuses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("bus_id,seat_numbers,status,deleted_at")
+        .select("bus_id,seat_numbers,return_bus_id,return_seat_numbers,status,deleted_at")
         .neq("status", "cancelled")
         .is("deleted_at", null);
 
@@ -230,12 +244,15 @@ function AdminBuses() {
       for (const b of (data ?? []) as {
         bus_id: string | null;
         seat_numbers: string[] | null;
+        return_bus_id: string | null;
+        return_seat_numbers: string[] | null;
         status: string;
         deleted_at: string | null;
       }[]) {
-        if (!b.bus_id) continue;
-
-        map[b.bus_id] = (map[b.bus_id] ?? 0) + (b.seat_numbers?.length ?? 0);
+        if (b.bus_id) map[b.bus_id] = (map[b.bus_id] ?? 0) + (b.seat_numbers?.length ?? 0);
+        // ركاب العودة يُحسبون على حافلة العودة المسندة لهم.
+        if (b.return_bus_id && b.return_bus_id !== b.bus_id)
+          map[b.return_bus_id] = (map[b.return_bus_id] ?? 0) + (b.return_seat_numbers?.length ?? 0);
       }
 
       return map;

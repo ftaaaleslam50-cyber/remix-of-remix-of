@@ -43,7 +43,10 @@ export function LiveSeatBoard({
   shortName,
   onSaved,
   transfer,
+  seatField = "outbound",
 }: {
+  /** outbound: يحفظ seat_numbers/seat_genders — return: يحفظ return_seat_numbers فقط. */
+  seatField?: "outbound" | "return";
   layout: LayoutJson;
   bookings: LiveSeatBooking[];
   shortName: (n: string | null | undefined) => string;
@@ -130,9 +133,10 @@ export function LiveSeatBoard({
         const g = gendersByBooking[b.id]?.[s];
         if (g) keptGenders[s] = g;
       }
+      // في العودة: يُفرَّغ مؤقتًا (العدد يجب أن يطابق الركاب أو يكون صفرًا).
       const { error } = await supabase
         .from("bookings")
-        .update({ seat_numbers: kept, seat_genders: keptGenders } as never)
+        .update((seatField === "return" ? { return_seat_numbers: [] } : { seat_numbers: kept, seat_genders: keptGenders }) as never)
         .eq("id", b.id);
       if (error) {
         setSaving(false);
@@ -146,7 +150,7 @@ export function LiveSeatBoard({
     for (const { b, after } of changedList) {
       const { error } = await supabase
         .from("bookings")
-        .update({ seat_numbers: after, seat_genders: gendersByBooking[b.id] ?? {} } as never)
+        .update((seatField === "return" ? { return_seat_numbers: after } : { seat_numbers: after, seat_genders: gendersByBooking[b.id] ?? {} }) as never)
         .eq("id", b.id);
       if (error) {
         setSaving(false);

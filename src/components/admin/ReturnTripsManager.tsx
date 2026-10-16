@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ManualBookingRow } from "@/components/admin/ManualBookingRow";
 import { formatTripDate, formatTripTime, addDays } from "@/lib/trip-dates";
 import { ReturnSeatBoard } from "@/components/admin/ReturnSeatBoard";
+import { ReturnLiveBusBoard } from "@/components/admin/ReturnLiveBusBoard";
 import { CopyOutboundSeatsDialog } from "@/components/admin/CopyOutboundSeatsDialog";
 
 import { ReturnSloganDialog } from "@/components/admin/ReturnSloganDialog";
@@ -135,6 +136,19 @@ function hotelKeyOf(b: ReturnBookingRow): string {
 }
 function sourceOf(b: ReturnBookingRow): string {
   return (b.rep_name || b.booking_source || "الموقع").trim() || "الموقع";
+}
+export type ReturnGroupBy = "hotel" | "trip" | "outBus" | "none";
+function returnGroupKey(b: ReturnBookingRow, g: ReturnGroupBy): string {
+  if (g === "trip") return b.trip_id || "__none";
+  if (g === "outBus") return b.bus_id || "__none";
+  if (g === "none") return "__all";
+  return hotelKeyOf(b);
+}
+function returnGroupName(b: ReturnBookingRow, g: ReturnGroupBy, lk?: ReturnLookups): string {
+  if (g === "trip") return b.trip_id ? `من ${lk?.tripName(b.trip_id) ?? "رحلة"}` : "بدون رحلة ذهاب";
+  if (g === "outBus") return b.bus_id ? (lk?.busLabel(b.bus_id) ?? "حافلة") : "بدون حافلة ذهاب";
+  if (g === "none") return "";
+  return lk?.hotelName(b) ?? hotelKeyOf(b);
 }
 export interface ReturnLookups {
   hotelName: (b: ReturnBookingRow) => string;
@@ -714,7 +728,11 @@ export function ReturnTripCard({
   allBookings,
   lookups,
   ownerId,
+  groupBy: groupByProp,
+  onGroupByChange,
 }: {
+  groupBy?: ReturnGroupBy;
+  onGroupByChange?: (g: ReturnGroupBy) => void;
   template: ReturnTripRow;
   date: string;
   buses: BusRow[];
@@ -728,7 +746,9 @@ export function ReturnTripCard({
   const [addingBus, setAddingBus] = useState(false);
   const [newBooking, setNewBooking] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
-  const [groupBy, setGroupBy] = useState<"hotel" | "trip" | "none">("hotel");
+  const [groupByLocal, setGroupByLocal] = useState<ReturnGroupBy>("hotel");
+  const groupBy = groupByProp ?? groupByLocal;
+  const setGroupBy = onGroupByChange ?? setGroupByLocal;
   const [bulkOut, setBulkOut] = useState("");
   const all = allBookings ?? bookings;
 
@@ -766,13 +786,8 @@ export function ReturnTripCard({
     }
     const m = new Map<string, { key: string; name: string; items: ReturnBookingRow[]; pax: number; pending: number }>();
     for (const b of bookings) {
-      const key = groupBy === "trip" ? b.trip_id || "__none" : hotelKeyOf(b);
-      const name =
-        groupBy === "trip"
-          ? b.trip_id
-            ? `من ${lookups?.tripName(b.trip_id) ?? "رحلة"}`
-            : "بدون رحلة ذهاب"
-          : (lookups?.hotelName(b) ?? key);
+      const key = returnGroupKey(b, groupBy);
+      const name = returnGroupName(b, groupBy, lookups);
       const g = m.get(key) ?? { key, name, items: [], pax: 0, pending: 0 };
       g.items.push(b);
       g.pax += pax(b);
@@ -979,6 +994,7 @@ export function ReturnTripCard({
             [
               ["hotel", "حسب الفندق"],
               ["trip", "حسب الرحلة"],
+              ["outBus", "حسب حافلة الذهاب"],
               ["none", "بدون تجميع"],
             ] as const
           ).map(([k, l]) => (
@@ -1024,7 +1040,7 @@ export function ReturnTripCard({
                       <td colSpan={9} className="p-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-extrabold text-sm">
-                            {groupBy === "trip" ? "🚩" : "🏨"} {g.name} ({g.pax} راكب
+                            {groupBy === "trip" ? "🚩" : groupBy === "outBus" ? "🚌" : "🏨"} {g.name} ({g.pax} راكب
                             {g.pending > 0 ? ` • ${g.pending} غير موزع` : " • تم التوزيع"})
                           </span>
                           {g.pending > 0 && tripBuses.length > 0 && (
@@ -1114,6 +1130,25 @@ export function ReturnTripCard({
         </div>
         <ReturnSeatBoard buses={tripBuses} bookings={all} onAssign={assign} />
       </div>
+
+      {/* المخطط الحي لحافلات العودة — مثل قسم الذهاب، مع تصدير PNG لكل حافلة */}
+      {tripBuses.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-bold">المخطط الحي لحافلات العودة</div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {tripBuses.map((bus, i) => (
+              <ReturnLiveBusBoard
+                key={bus.id}
+                bus={bus}
+                bookings={all}
+                index={i}
+                tripLabel={`${template.name} — ${formatTripDate(date)}`}
+                onSaved={refresh}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <Dialog open={addingBus} onOpenChange={setAddingBus}>
         <DialogContent>
@@ -1325,6 +1360,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   const allRows = bookings.data ?? [];
   const lookups = useReturnLookups(allRows);
   const [f, setF] = useState<ReturnFilters>(EMPTY_FILTERS);
+  const [groupBy, setGroupBy] = useState<ReturnGroupBy>("hotel");
   const rows = useMemo(() => applyReturnFilters(allRows, f, lookups), [allRows, f, lookups]);
   const filterActive = Object.values(f).some(Boolean);
 
@@ -1538,7 +1574,7 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
         <Badge className="bg-warning text-white">غير موزعين: {Math.max(totalPax - donePax, 0)}</Badge>
         <div className="ms-auto flex flex-wrap gap-2">
           <PickupSheetButton bookings={allRows} buses={dateBuses} lookups={lookups} date={date} />
-          <ReturnNamesCopyButton bookings={rows} returnTripName={dayTrips.map((t) => t.name).join("، ")} />
+          <ReturnNamesCopyButton bookings={rows} groupBy={groupBy} lookups={lookups} returnTripName={dayTrips.map((t) => t.name).join("، ")} />
           <ReturnSheetExportButton bookings={rows} buses={dateBuses} retBus={f.retBus} lookups={lookups} date={date} tripName={dayTrips[0]?.name} />
           <ReturnSloganDialog date={date} tripName={dayTrips[0]?.name} buses={dateBuses} />
         </div>
@@ -1578,6 +1614,8 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
             allBookings={allRows}
             lookups={lookups}
             ownerId={ownerId}
+            groupBy={groupBy}
+            onGroupByChange={setGroupBy}
           />
         ))
       )}
@@ -1585,44 +1623,34 @@ export function ReturnBookingsTab({ ownerId }: { ownerId?: string }) {
   );
 }
 
-/** زر نسخ أسماء العودات مجمّعة حسب رحلة الذهاب. */
+/** زر نسخ أسماء العودات مجمّعة حسب التجميع المختار (فندق/رحلة/حافلة ذهاب/بدون). */
 export function ReturnNamesCopyButton({
   bookings,
   returnTripName,
+  groupBy = "trip",
+  lookups,
 }: {
   bookings: ReturnBookingRow[];
   returnTripName?: string;
+  groupBy?: ReturnGroupBy;
+  lookups?: ReturnLookups;
 }) {
-  const tripIds = useMemo(
-    () => Array.from(new Set(bookings.map((b) => b.trip_id).filter(Boolean) as string[])),
-    [bookings],
-  );
-
-  const trips = useQuery({
-    queryKey: ["return-copy-trips", tripIds.join(",")],
-    enabled: tripIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("trips").select("id,name").in("id", tripIds);
-      if (error) throw error;
-      return (data as { id: string; name: string }[]) ?? [];
-    },
-  });
-
   function buildText(): string {
-    const nameOf = (id?: string | null) => (id ? trips.data?.find((t) => t.id === id)?.name : "") || "بدون رحلة";
     const pax = (b: ReturnBookingRow) => b.passenger_count || 1;
-    const groups = new Map<string, ReturnBookingRow[]>();
+    const groups = new Map<string, { name: string; list: ReturnBookingRow[] }>();
     for (const b of bookings) {
-      const key = nameOf(b.trip_id);
-      const list = groups.get(key) ?? [];
-      list.push(b);
-      groups.set(key, list);
+      const key = returnGroupKey(b, groupBy);
+      const g = groups.get(key) ?? { name: returnGroupName(b, groupBy, lookups), list: [] };
+      g.list.push(b);
+      groups.set(key, g);
     }
     const total = bookings.reduce((s, b) => s + pax(b), 0);
     const parts: string[] = [`أسماء العودات في رحلة العودة ( ${returnTripName || "—"} ) = ${total}`, ""];
-    for (const [tripName, list] of groups) {
+    const label = (n: string) =>
+      groupBy === "trip" ? `رحلة ( ${n.replace(/^من /, "")} )` : groupBy === "outBus" ? `حافلة الذهاب ( ${n} )` : `فندق ( ${n} )`;
+    for (const { name: gName, list } of Array.from(groups.values()).sort((x, y) => x.name.localeCompare(y.name, "ar"))) {
       const sub = list.reduce((s, b) => s + pax(b), 0);
-      parts.push(`من رحلة ( ${tripName} ) = ${sub}`, "");
+      if (groupBy !== "none") parts.push(`${groupBy === "trip" ? "من " : ""}${label(gName)} = ${sub}`, "");
       for (const b of list) {
         const name = (b.customer_name || b.booking_code || "").trim();
         const source = (b.booking_source || b.rep_name || "").trim();

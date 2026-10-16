@@ -49,7 +49,12 @@ export interface OfficialSheetRow {
   extensionNights?: number;
   extensionTotal?: number;
   notes?: string;
+  /** حجز «عودة فقط» — يُظلَّل بلون أزرق مميز في الكشف. */
+  returnOnly?: boolean;
 }
+
+/** لون تظليل حجوزات «عودة فقط» (نفس لون كشف الحسابات). */
+const RETURN_ONLY_FILL = "DBEAFE";
 
 export interface OfficialSheetInput {
   title?: string;
@@ -357,6 +362,7 @@ export async function buildOfficialSheetWorkbook(input: OfficialSheetInput): Pro
         size: 11,
         bold: false,
         wrap: WRAP_COLS.has(ci + 1),
+        ...(r.returnOnly ? { fill: RETURN_ONLY_FILL } : {}),
       }),
     );
   });
@@ -571,7 +577,7 @@ export function printOfficialSheet(input: OfficialSheetInput, variant: "full" | 
     ${input.rows
       .map((r, i) => {
         const vals = rowValues(r, i);
-        return `<tr>${keep.map((ci) => `<td>${esc(vals[ci])}</td>`).join("")}</tr>`;
+        return `<tr${r.returnOnly ? ` style="background:#${RETURN_ONLY_FILL}"` : ""}>${keep.map((ci) => `<td${r.returnOnly ? ` style="background:#${RETURN_ONLY_FILL}"` : ""}>${esc(vals[ci])}</td>`).join("")}</tr>`;
       })
       .join("")}
   </tbody>
@@ -611,7 +617,13 @@ export async function buildRawWorkbook(input: OfficialSheetInput): Promise<Blob>
   const ws = wb.addWorksheet("البيانات", { views: [{ rightToLeft: true }] });
   ws.addRow([...TABLE_COLUMNS]);
   ws.getRow(1).font = { bold: true, size: 11 };
-  for (const values of rawRows(input)) ws.addRow(values);
+  rawRows(input).forEach((values, i) => {
+    const row = ws.addRow(values);
+    if (input.rows[i]?.returnOnly)
+      row.eachCell({ includeEmpty: true }, (c) => {
+        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${RETURN_ONLY_FILL}` } };
+      });
+  });
   const sum = (pick: (r: OfficialSheetRow) => number) => input.rows.reduce((s, r) => s + (pick(r) || 0), 0);
   const totals: Array<string | number> = new Array(TABLE_COLUMNS.length).fill("");
   totals[0] = "الإجمالي";
@@ -647,7 +659,7 @@ export function printRawSheet(input: OfficialSheetInput): boolean {
   <thead><tr>${TABLE_COLUMNS.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
   <tbody>
     ${input.rows
-      .map((r, i) => `<tr>${rowValues(r, i).map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`)
+      .map((r, i) => `<tr${r.returnOnly ? ` style="background:#${RETURN_ONLY_FILL}"` : ""}>${rowValues(r, i).map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`)
       .join("")}
   </tbody>
   <tfoot><tr>

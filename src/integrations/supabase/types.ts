@@ -56,6 +56,8 @@ export type Database = {
           hero_subtitle: string
           hero_title: string
           hide_seats_individual: boolean
+          hide_seats_return_trip_ids: string[]
+          hide_seats_trip_ids: string[]
           id: number
           instagram: string | null
           instagram_url: string | null
@@ -138,6 +140,8 @@ export type Database = {
           hero_subtitle?: string
           hero_title?: string
           hide_seats_individual?: boolean
+          hide_seats_return_trip_ids?: string[]
+          hide_seats_trip_ids?: string[]
           id?: number
           instagram?: string | null
           instagram_url?: string | null
@@ -220,6 +224,8 @@ export type Database = {
           hero_subtitle?: string
           hero_title?: string
           hide_seats_individual?: boolean
+          hide_seats_return_trip_ids?: string[]
+          hide_seats_trip_ids?: string[]
           id?: number
           instagram?: string | null
           instagram_url?: string | null
