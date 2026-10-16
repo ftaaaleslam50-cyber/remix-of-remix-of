@@ -35,6 +35,8 @@ interface Occupant {
   bookingType?: string | null;
 }
 
+export const EXT_TYPE = "application/x-zt-return-booking";
+
 const cellLabel = (c: LayoutCell) => (c.label && c.label.trim() ? c.label : `${c.row}-${c.col}`);
 
 export function LiveSeatBoard({
@@ -44,7 +46,12 @@ export function LiveSeatBoard({
   onSaved,
   transfer,
   seatField = "outbound",
+  externalPickedId,
+  onExternalPlace,
 }: {
+  /** حجز مختار من خارج اللوحة (غير موزعين/حافلة أخرى) — الضغط على مقعد يضعه هنا. */
+  externalPickedId?: string | null;
+  onExternalPlace?: (seat: string, bookingId: string) => void;
   /** outbound: يحفظ seat_numbers/seat_genders — return: يحفظ return_seat_numbers فقط. */
   seatField?: "outbound" | "return";
   layout: LayoutJson;
@@ -231,25 +238,30 @@ export function LiveSeatBoard({
               onDragStart={(e) => {
                 if (!occ) return;
                 e.dataTransfer.setData(dragScope, label);
+                if (onExternalPlace) e.dataTransfer.setData(EXT_TYPE, occ.bookingId);
                 e.dataTransfer.effectAllowed = "move";
                 setPicked(label);
               }}
               onDragOver={(e) => {
-                if (!e.dataTransfer.types.includes(dragScope)) return;
+                if (!e.dataTransfer.types.includes(dragScope) && !(onExternalPlace && e.dataTransfer.types.includes(EXT_TYPE))) return;
                 e.preventDefault();
                 setHover(label);
               }}
               onDragLeave={() => setHover((h) => (h === label ? null : h))}
               onDrop={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 const from = e.dataTransfer.getData(dragScope);
-                if (from) move(from, label);
+                if (from) return move(from, label);
+                const ext = onExternalPlace ? e.dataTransfer.getData(EXT_TYPE) : "";
+                if (ext) onExternalPlace!(label, ext);
               }}
               onDragEnd={() => {
                 setHover(null);
               }}
               onClick={() => {
                 if (transfer) return transfer.onSeatClick(label, occ ? { bookingId: occ.bookingId } : null);
+                if (externalPickedId && onExternalPlace && !occ) return onExternalPlace(label, externalPickedId);
                 if (picked) return move(picked, label);
                 if (occ) setPicked(label);
               }}
