@@ -11,6 +11,7 @@ import { departureDisplay, returnActualDisplay, tripWithDate } from "@/lib/retur
 import { ROOM_LABEL, roomDisplayLabel } from "@/lib/booking/pricing";
 import type { RoomType } from "@/lib/booking/types";
 import type { LayoutCell, LayoutJson } from "@/components/booking/LayoutSeatMap";
+import { DEFAULT_TICKET_OPTIONS, parseTicketOptions, type TicketOptions } from "@/lib/ticket-options";
 import ticketNotes from "@/assets/ticket-notes-v2.jpg.asset.json";
 
 export const Route = createFileRoute("/ticket/$code")({
@@ -111,10 +112,12 @@ function TicketPage() {
   const [returnLayout, setReturnLayout] = useState<LayoutJson | null>(null);
   // Admin option: hide seat numbers for individual bookings.
   const [hideSeatsOpt, setHideSeatsOpt] = useState(false);
+  const [opt, setOpt] = useState<TicketOptions>(DEFAULT_TICKET_OPTIONS);
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("app_settings").select("hide_seats_individual").eq("id", 1).maybeSingle();
+      const { data } = await supabase.from("app_settings").select("hide_seats_individual,ticket_template").eq("id", 1).maybeSingle();
       setHideSeatsOpt(Boolean((data as { hide_seats_individual?: boolean } | null)?.hide_seats_individual));
+      setOpt(parseTicketOptions((data as { ticket_template?: unknown } | null)?.ticket_template));
     })();
   }, []);
 
@@ -358,14 +361,14 @@ function TicketPage() {
                 {booking.booking_code}
               </p>
             </div>
-            {qr && <img src={qr} alt="QR" className="h-24 w-24" />}
+            {opt.show_qr && qr && <img src={qr} alt="QR" className="h-24 w-24" />}
           </div>
 
           <div className="grid grid-cols-2 gap-x-8 gap-y-4 px-8 py-6 text-sm">
             <TicketRow label="الاسم" value={booking.customer_name} />
-            <TicketRow label="رقم الهوية" value={booking.id_number} />
-            <TicketRow label="جوال التواصل" value={booking.contact_phone} ltr />
-            <TicketRow label="جوال الواتساب" value={booking.whatsapp_phone} ltr />
+            {opt.show_id_number && <TicketRow label="رقم الهوية" value={booking.id_number} />}
+            {opt.show_phones && <TicketRow label="جوال التواصل" value={booking.contact_phone} ltr />}
+            {opt.show_phones && <TicketRow label="جوال الواتساب" value={booking.whatsapp_phone} ltr />}
             <TicketRow
               label="الرحلة"
               value={tripWithDate(
@@ -374,28 +377,28 @@ function TicketPage() {
                 booking.trips?.departure_day,
               )}
             />
-            <TicketRow label="الفندق" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />
+            {opt.show_hotel && <TicketRow label="الفندق" value={booking.packages?.name ?? booking.hotels?.name ?? "-"} />}
             {Number(booking.extension_nights ?? 0) > 0 && (
               <TicketRow label="عدد ليال التمديد" value={String(booking.extension_nights)} />
             )}
             <TicketRow label="نوع الحجز" value={booking.booking_type === "individual" ? "أفراد" : "عوائل"} />
-            <TicketRow
+            {opt.show_room && <TicketRow
               label="نوع الغرفة"
               value={roomDisplayLabel(
                 booking.room_type as RoomType,
                 booking.booking_type,
                 !!(booking.packages?.name ?? booking.hotels?.name),
               )}
-            />
+            />}
             <TicketRow label="عدد الأفراد" value={String(booking.passenger_count)} />
-            <TicketRow label="رقم الباص" value={busLabel(booking.buses)} />
-            {booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
-            {booking.buses?.supervisor_name && <TicketRow label="اسم المشرف" value={booking.buses.supervisor_name} />}
+            {opt.show_bus_info && <TicketRow label="رقم الباص" value={busLabel(booking.buses)} />}
+            {opt.show_bus_info && booking.buses?.plate && <TicketRow label="لوحة الباص" value={booking.buses.plate} ltr />}
+            {opt.show_supervisor && booking.buses?.supervisor_name && <TicketRow label="اسم المشرف" value={booking.buses.supervisor_name} />}
             {!hideSeats && <TicketRow label="المقاعد" value={booking.seat_numbers.join(", ")} />}
             {booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 ? (
               <>
                 <TicketRow label="حافلة العودة" value={busLabel(booking.return_buses)} />
-                {booking.return_buses.supervisor_name && <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />}
+                {opt.show_supervisor && booking.return_buses.supervisor_name && <TicketRow label="مشرف العودة" value={booking.return_buses.supervisor_name} />}
                 {!hideSeats && <TicketRow label="مقاعد العودة" value={(booking.return_seat_numbers ?? []).join(", ")} />}
               </>
             ) : booking.trip_mode !== "outbound" && booking.actual_return_date ? (
@@ -412,17 +415,17 @@ function TicketPage() {
               )}
             />
             <TicketRow label="العودة الفعلية" value={returnValue(booking)} />
-            <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />
+            {opt.show_booking_date && <TicketRow label="تاريخ الحجز" value={formatDate(booking.created_at)} />}
           </div>
 
-          {booking.notes && (
+          {opt.show_booking_notes && booking.notes && (
             <div className="px-8 py-4 border-t border-dashed border-border">
               <p className="text-xs text-muted-foreground mb-1">ملاحظات</p>
               <p className="text-sm whitespace-pre-wrap">{booking.notes}</p>
             </div>
           )}
 
-          {idImageUrl && (
+          {opt.show_id_image && idImageUrl && (
             <div className="px-8 py-5 border-t border-dashed border-border">
               <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                 <FileImage className="h-3.5 w-3.5" /> صورة الهوية
@@ -431,7 +434,7 @@ function TicketPage() {
             </div>
           )}
 
-          <div className="bg-muted px-8 py-6 grid grid-cols-2 gap-4 border-t border-dashed border-border">
+          {opt.show_prices && <div className="bg-muted px-8 py-6 grid grid-cols-2 gap-4 border-t border-dashed border-border">
             <div>
               <p className="text-xs text-muted-foreground">سعر الفرد</p>
               <p className="text-lg font-extrabold">{sar(Number(booking.price_per_person))}</p>
@@ -448,15 +451,15 @@ function TicketPage() {
               <p className="text-xs text-muted-foreground">الإجمالي</p>
               <p className="text-2xl font-extrabold text-primary">{sar(Number(booking.total_price))}</p>
             </div>
-          </div>
+          </div>}
 
-          <div className="px-8 py-5 text-center text-xs text-muted-foreground">
-            يرجى إبراز التذكرة عند الصعود للباص.
-          </div>
+          {opt.footer_text.trim() && (
+            <div className="px-8 py-5 text-center text-xs text-muted-foreground whitespace-pre-wrap">{opt.footer_text}</div>
+          )}
         </div>
       </div>
 
-      {layout && !hideSeats && booking.trip_mode !== "return" && (
+      {opt.show_seat_maps && layout && !hideSeats && booking.trip_mode !== "return" && (
         <SeatSheet
           title="مخطط حافلة الذهاب"
           name={booking.customer_name}
@@ -465,7 +468,7 @@ function TicketPage() {
         />
       )}
 
-      {!hideSeats && booking.trip_mode !== "outbound" &&
+      {opt.show_seat_maps && !hideSeats && booking.trip_mode !== "outbound" &&
         (booking.return_buses && (booking.return_seat_numbers ?? []).length > 0 ? (
           <SeatSheet
             title={`مخطط حافلة العودة — ${busLabel(booking.return_buses)}`}

@@ -388,7 +388,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
     rtl(p2, "مقاعد أخرى", right - 198, legendY + 2, 10, GREY);
   };
 
-  if (!hideSeats) {
+  if (!hideSeats && opt.show_seat_maps) {
     const mode = b.trip_mode ?? "round";
     if (mode !== "return") {
       drawSeatPage("مخطط حافلة الذهاب", b.layout_json ?? defaultLayout(), b.seat_numbers ?? []);
@@ -412,7 +412,7 @@ export async function buildTicketPdf(b: TicketBooking): Promise<Uint8Array> {
 
 
   try {
-    const notes = await loadNotesImage();
+    const notes = opt.show_notes_image ? await loadNotesImage() : null;
     if (notes) {
       const img = await pdf.embedJpg(notes);
       const p3 = pdf.addPage(A4);
