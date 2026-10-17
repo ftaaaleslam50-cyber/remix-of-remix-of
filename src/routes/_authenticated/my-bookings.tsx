@@ -203,22 +203,30 @@ function MyBookingsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = sorted;
-    // فلتر الأسبوع يتحكم في الصفحة كلها (الملخص + القائمة).
+    // البحث يشمل كل الحجوزات بغض النظر عن فلتر الأسبوع، حتى لا يختفي أي حجز عند البحث عنه.
+    if (q) {
+      return list.filter((b) =>
+        (b.customer_name || "").toLowerCase().includes(q) ||
+        (b.booking_code || "").toLowerCase().includes(q) ||
+        (b.contact_phone || "").includes(q)
+      );
+    }
     if (weekBack === "nodate") {
-      // الحجوزات غير المرتبطة بتاريخ: بلا حافلة أو حافلتها بلا تاريخ.
       list = list.filter((b) => Number.isNaN(refTimeOf(b)));
+    } else if (weekBack === "upcoming") {
+      const start = startOfWeek(new Date()).getTime();
+      // الأسبوع الحالي وكل ما بعده + الحجوزات بلا تاريخ.
+      list = list.filter((b) => {
+        const t = refTimeOf(b);
+        return Number.isNaN(t) || t >= start;
+      });
     } else if (weekBack !== "all" && activeWeek) {
       list = list.filter((b) => {
         const t = refTimeOf(b);
         return t >= activeWeek.start && t < activeWeek.end;
       });
     }
-    if (!q) return list;
-    return list.filter((b) =>
-      (b.customer_name || "").toLowerCase().includes(q) ||
-      (b.booking_code || "").toLowerCase().includes(q) ||
-      (b.contact_phone || "").includes(q)
-    );
+    return list;
   }, [sorted, search, activeWeek, weekBack]);
 
   const tripLabelOf = (b: MyBooking) =>
@@ -331,6 +339,7 @@ function MyBookingsPage() {
               value={weekBack}
               onChange={(e) => setWeekBack(e.target.value)}
             >
+              <option value="upcoming">الأسبوع الحالي والقادمة</option>
               {weekOptions.map((w) => (
                 <option key={w.value} value={w.value}>{w.label}</option>
               ))}
