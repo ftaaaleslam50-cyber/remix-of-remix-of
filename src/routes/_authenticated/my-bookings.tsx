@@ -87,11 +87,11 @@ function tripEnded(b: MyBooking) {
   return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
 }
 
-/** التاريخ المرجعي للحجز = تاريخ الحافلة المرتبطة به (null إن لم يوجد). */
+/** التاريخ المرجعي للحجز = تاريخ رحلة الحجز نفسه، ثم تاريخ الحافلة، ثم العودة. */
 function refTimeOf(b: MyBooking) {
-  const s = b.buses?.assigned_date;
+  const s = b.departure_date ?? b.buses?.assigned_date ?? b.return_date;
   if (!s) return NaN;
-  return new Date(`${s}T00:00:00`).getTime();
+  return new Date(`${s.slice(0, 10)}T00:00:00`).getTime();
 }
 
 const dayMonth = (d: Date) => d.toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" });
@@ -156,7 +156,8 @@ function MyBookingsPage() {
   // ------------------------- فلتر الأسبوع بالتاريخ -------------------------
   // الافتراضي: الأسبوع الحالي (حسب تاريخ الحافلة المرتبطة بالحجز).
   // خيار "nodate": الحجوزات غير المرتبطة بتاريخ (بلا حافلة أو حافلتها بلا تاريخ).
-  const [weekBack, setWeekBack] = useState<string>("0");
+  // الافتراضي: الأسبوع الحالي وما بعده، حتى لا تختفي حجوزات الرحلات القادمة.
+  const [weekBack, setWeekBack] = useState<string>("upcoming");
 
   /** أسبوعان قادمان + الأسبوع الحالي + أسبوعان سابقان. */
   const weekOptions = useMemo(() => {
