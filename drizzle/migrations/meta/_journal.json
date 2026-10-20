@@ -120,6 +120,13 @@
       "when": 1792156213538,
       "tag": "0016_ticket_hide_seats_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792518474120,
+      "tag": "0017_return_seat_count_uses_new_passengers",
+      "breakpoints": true
     }
   ]
 }
