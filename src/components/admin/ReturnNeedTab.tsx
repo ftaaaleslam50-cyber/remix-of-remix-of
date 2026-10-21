@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { plannedBuses, returnStateOf } from "@/lib/return-need";
+import { formatTripDate } from "@/lib/trip-dates";
+import { isUpcomingReturn, planningTripId, riyadhToday, type PlanningReturnTrip } from "@/lib/return-planning-dates";
 
 interface Bk {
   id: string; booking_code: string; customer_name: string; passenger_count: number; trip_mode: string;
@@ -19,12 +21,17 @@ interface Bk {
 }
 interface Link { return_trip_id: string; trip_date: string; bus_id: string }
 interface BusRow { id: string; name: string | null; bus_number: number; capacity: number; layout_id: string | null; direction?: string | null; status?: string | null }
-interface RT { id: string; name: string; return_date: string | null }
+interface RT extends PlanningReturnTrip { name: string }
 
 
 export function ReturnNeedTab() {
   const qc = useQueryClient();
-  const today = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  const [now, setNow] = useState(() => new Date());
+  const today = riyadhToday(now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const { data: settings } = useQuery({
     queryKey: ["return_need_settings"],
@@ -52,13 +59,14 @@ export function ReturnNeedTab() {
 
   const { data, isLoading, isError, error: loadError, refetch, isFetching } = useQuery({
     retry: 1,
+    refetchInterval: 5000,
     queryKey: ["return_need_data", today],
     queryFn: async () => {
       const [bk, links, rts, buses] = await Promise.all([
         supabase.from("bookings").select("id,booking_code,customer_name,passenger_count,trip_mode,actual_return_date,return_trip_id,return_bus_id,return_seat_numbers")
           .is("deleted_at", null).neq("status", "cancelled").not("actual_return_date", "is", null).gte("actual_return_date", today).limit(5000),
         supabase.from("return_trip_buses").select("return_trip_id,trip_date,bus_id").gte("trip_date", today),
-        supabase.from("return_trips").select("id,name,return_date"),
+        supabase.from("return_trips").select("id,name,return_date,return_time,weekday"),
         supabase.from("buses").select("id,name,bus_number,capacity,layout_id,direction,status"),
       ]);
       const firstErr = bk.error ?? links.error ?? rts.error ?? buses.error;
@@ -95,12 +103,11 @@ export function ReturnNeedTab() {
     if (!data) return null;
     const busById = new Map(data.buses.map((b) => [b.id, b]));
     const rtName = new Map(data.rts.map((r) => [r.id, r.name]));
+    const upcoming = (date: string | null, tripId: string | null) => isUpcomingReturn(date, data.rts.find((r) => r.id === tripId)?.return_time ?? null, now);
+    const links = data.links.filter((l) => upcoming(l.trip_date, l.return_trip_id));
+    const bookings = data.bookings.filter((b) => b.actual_return_date && upcoming(b.actual_return_date, planningTripId(b.actual_return_date, b.return_trip_id, data.rts, links)));
     const linkKey = (t: string, d: string, b: string) => `${t}|${d}|${b}`;
     const linkSet = new Set(data.links.map((l) => linkKey(l.return_trip_id, l.trip_date, l.bus_id)));
-    // رحلات العودة المعروفة لكل تاريخ (للحجوزات غير المسندة)
-    const tripsOnDate = new Map<string, Set<string>>();
-    for (const l of data.links) (tripsOnDate.get(l.trip_date) ?? tripsOnDate.set(l.trip_date, new Set()).get(l.trip_date)!).add(l.return_trip_id);
-    for (const r of data.rts) if (r.return_date) (tripsOnDate.get(r.return_date) ?? tripsOnDate.set(r.return_date, new Set()).get(r.return_date)!).add(r.id);
 
     type G = { key: string; tripId: string | null; date: string; pax: number; confirmed: number; pending: number; invalid: number; busIds: Set<string> };
     const groups = new Map<string, G>();
@@ -110,14 +117,14 @@ export function ReturnNeedTab() {
       if (!x) groups.set(key, (x = { key, tripId, date, pax: 0, confirmed: 0, pending: 0, invalid: 0, busIds: new Set() }));
       return x;
     };
-    for (const l of data.links) g(l.return_trip_id, l.trip_date).busIds.add(l.bus_id);
+    for (const l of links) g(l.return_trip_id, l.trip_date).busIds.add(l.bus_id);
 
     const issues: { code: string; name: string; date: string; problem: string; action: string }[] = [];
     const pending: { code: string; name: string; date: string; pax: number; reason: string; buses: { name: string; free: number }[] }[] = [];
     // تكرارات وتجاوز السعة لكل حافلة/تاريخ
     const seatOwners = new Map<string, string[]>();
     const usedPerBus = new Map<string, number>();
-    for (const b of data.bookings) {
+    for (const b of bookings) {
       if (!b.return_bus_id || !b.actual_return_date) continue;
       for (const s of b.return_seat_numbers ?? []) {
         const k = `${b.return_bus_id}|${b.actual_return_date}|${s}`;
@@ -127,20 +134,21 @@ export function ReturnNeedTab() {
       usedPerBus.set(k2, (usedPerBus.get(k2) ?? 0) + (b.return_seat_numbers?.length ?? 0));
     }
 
-    for (const b of data.bookings) {
-      const date = b.actual_return_date!;
+    for (const b of bookings) {
+      const date = b.actual_return_date;
+      if (!date) continue;
       const st = returnStateOf(b);
       if (b.trip_mode === "outbound") {
         if ((b.return_seat_numbers?.length ?? 0) > 0) issues.push({ code: b.booking_code, name: b.customer_name, date, problem: "ذهاب فقط ولديه مقاعد عودة", action: "إزالة إسناد العودة يدويًا" });
         continue;
       }
-      const inferred = b.return_trip_id ?? ((s) => (s && s.size === 1 ? [...s][0] : null))(tripsOnDate.get(date));
+      const inferred = planningTripId(date, b.return_trip_id, data.rts, links);
       const grp = g(inferred, date);
       grp.pax += b.passenger_count;
       if (st !== "confirmed") {
         grp.pending += b.passenger_count;
         if (st === "pending") {
-          const linked = data.links.filter((l) => l.trip_date === date);
+          const linked = links.filter((l) => l.trip_date === date && (!inferred || l.return_trip_id === inferred));
           const free = linked.map((l) => {
             const bu = busById.get(l.bus_id);
             const lab = data.labels[l.bus_id]?.length ?? bu?.capacity ?? 0;
@@ -191,7 +199,7 @@ export function ReturnNeedTab() {
       .map((bu) => ({ bu, layout: data.labels[bu.id].length }));
     pending.sort((a, z) => a.date.localeCompare(z.date));
     return { rows, issues, busWarn, pending };
-  }, [data, T, CAP, form.extra]);
+  }, [data, T, CAP, form.extra, now]);
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -247,7 +255,7 @@ export function ReturnNeedTab() {
                   const need = r.plan.buses > r.busIds.size || r.shortage > 0;
                   return (
                     <TableRow key={r.key}>
-                      <TableCell className="whitespace-nowrap">{r.date}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatTripDate(r.date)}</TableCell>
                       <TableCell>{r.name}</TableCell>
                       <TableCell className="font-bold">{r.pax}</TableCell>
                       <TableCell>{r.busIds.size}</TableCell>
@@ -288,7 +296,7 @@ export function ReturnNeedTab() {
                 {report.pending.map((p) => (
                   <TableRow key={p.code}>
                     <TableCell className="font-mono text-xs">{p.code}</TableCell><TableCell>{p.name}</TableCell>
-                    <TableCell className="whitespace-nowrap">{p.date}</TableCell><TableCell>{p.pax}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatTripDate(p.date)}</TableCell><TableCell>{p.pax}</TableCell>
                     <TableCell className="text-xs">{p.buses.length ? p.buses.map((b) => `${b.name}: ${b.free}`).join("، ") : "—"}</TableCell>
                     <TableCell className="text-xs">{p.reason}</TableCell>
                   </TableRow>
@@ -312,7 +320,7 @@ export function ReturnNeedTab() {
                 {report.issues.map((i) => (
                   <TableRow key={i.code + i.problem}>
                     <TableCell className="font-mono text-xs">{i.code}</TableCell><TableCell>{i.name}</TableCell>
-                    <TableCell className="whitespace-nowrap">{i.date}</TableCell><TableCell className="text-destructive text-xs">{i.problem}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatTripDate(i.date)}</TableCell><TableCell className="text-destructive text-xs">{i.problem}</TableCell>
                     <TableCell className="text-xs">{i.action}</TableCell>
                   </TableRow>
                 ))}
