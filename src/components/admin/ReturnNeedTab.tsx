@@ -108,8 +108,6 @@ export function ReturnNeedTab() {
     const bookings = data.bookings.filter((b) => b.actual_return_date && upcoming(b.actual_return_date, planningTripId(b.actual_return_date, b.return_trip_id, data.rts, links)));
     const linkKey = (t: string, d: string, b: string) => `${t}|${d}|${b}`;
     const linkSet = new Set(data.links.map((l) => linkKey(l.return_trip_id, l.trip_date, l.bus_id)));
-    // رحلات العودة المعروفة لكل تاريخ (للحجوزات غير المسندة)
-    const tripsOnDate = new Map<string, Set<string>>();
 
     type G = { key: string; tripId: string | null; date: string; pax: number; confirmed: number; pending: number; invalid: number; busIds: Set<string> };
     const groups = new Map<string, G>();
