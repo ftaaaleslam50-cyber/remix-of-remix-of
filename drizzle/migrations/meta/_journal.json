@@ -127,6 +127,13 @@
       "when": 1792518474120,
       "tag": "0017_return_seat_count_uses_new_passengers",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792763377686,
+      "tag": "0018_booking_notifications_details",
+      "breakpoints": true
     }
   ]
 }
